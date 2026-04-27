@@ -1,0 +1,1484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEO Suite — Content Pipeline</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3250;
+    --accent: #6c63ff;
+    --accent2: #a78bfa;
+    --text: #e2e8f0;
+    --text-muted: #8892a4;
+    --text-faint: #4a5568;
+    --green: #10b981;
+    --yellow: #f59e0b;
+    --red: #ef4444;
+    --blue: #3b82f6;
+    --purple: #8b5cf6;
+    --pink: #ec4899;
+    --radius: 10px;
+    --card-radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ─── TOP NAV ─── */
+  .topnav {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 20px;
+    height: 56px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: -0.3px;
+    color: var(--text);
+    margin-right: 28px;
+    text-decoration: none;
+  }
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .nav-tabs {
+    display: flex;
+    gap: 2px;
+    flex: 1;
+  }
+  .nav-tab {
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: none;
+    background: none;
+  }
+  .nav-tab:hover { color: var(--text); background: var(--surface2); }
+  .nav-tab.active { color: var(--text); background: var(--surface2); }
+
+  .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+  }
+  .view-toggle {
+    display: flex;
+    background: var(--surface2);
+    border-radius: 6px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .view-btn {
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    background: none;
+    transition: all 0.15s;
+  }
+  .view-btn.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+  .avatar {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6c63ff, #a78bfa);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-primary:hover { background: #5a52d9; }
+
+  /* ─── LAYOUT ─── */
+  .layout {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ─── SIDEBAR ─── */
+  .sidebar {
+    width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .sidebar-section {
+    padding: 16px 12px 8px;
+  }
+  .sidebar-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    padding: 0 6px;
+    margin-bottom: 6px;
+  }
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-muted);
+    transition: all 0.12s;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+  }
+  .sidebar-item:hover { background: var(--surface2); color: var(--text); }
+  .sidebar-item.active { background: rgba(108,99,255,0.15); color: var(--accent2); }
+  .sidebar-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .count-badge {
+    margin-left: auto;
+    background: var(--surface2);
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 10px;
+  }
+  .sidebar-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 8px 12px;
+  }
+
+  /* ─── BOARD AREA ─── */
+  .board-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .board-header {
+    display: flex;
+    align-items: center;
+    padding: 14px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+    flex-shrink: 0;
+    background: var(--surface);
+  }
+  .board-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .board-subtitle {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 1px;
+  }
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+  }
+  .filter-pill {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    font-size: 12px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .filter-pill:hover { border-color: var(--accent); color: var(--text); }
+  .filter-pill.active { border-color: var(--accent); color: var(--accent2); background: rgba(108,99,255,0.1); }
+
+  /* ─── KANBAN BOARD ─── */
+  .kanban {
+    flex: 1;
+    display: flex;
+    gap: 14px;
+    padding: 18px 20px;
+    overflow-x: auto;
+    align-items: flex-start;
+  }
+  .column {
+    width: 280px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .column-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 4px 10px;
+  }
+  .col-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .col-name {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+  .col-count {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-faint);
+    background: var(--surface2);
+    padding: 1px 7px;
+    border-radius: 10px;
+  }
+  .column-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 60px;
+    transition: all 0.2s;
+  }
+  .column-body.drag-over {
+    background: rgba(108,99,255,0.05);
+    border-radius: 10px;
+    outline: 2px dashed rgba(108,99,255,0.3);
+    padding: 4px;
+  }
+
+  /* ─── CARD ─── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    padding: 13px 14px;
+    cursor: grab;
+    transition: all 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .card:hover {
+    border-color: rgba(108,99,255,0.4);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    transform: translateY(-1px);
+  }
+  .card:active { cursor: grabbing; }
+  .card.dragging {
+    opacity: 0.5;
+    transform: rotate(2deg);
+  }
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.4;
+    flex: 1;
+  }
+  .card-locale {
+    font-size: 16px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .card-action-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    margin-bottom: 8px;
+  }
+  .card-progress {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    background: rgba(255,255,255,0.03);
+    border-left: 2px solid var(--border);
+    padding: 5px 8px;
+    border-radius: 0 4px 4px 0;
+    margin-bottom: 8px;
+  }
+  .card-progress .ai-icon {
+    font-size: 10px;
+    margin-right: 3px;
+  }
+  .card-footer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+  }
+  .project-tag {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-faint);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .project-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .card-time {
+    font-size: 10px;
+    color: var(--text-faint);
+    margin-left: auto;
+  }
+  .card-accent-bar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  /* ─── ACTION BADGE COLORS ─── */
+  .badge-create { background: rgba(16,185,129,0.15); color: #6ee7b7; }
+  .badge-optimise { background: rgba(59,130,246,0.15); color: #93c5fd; }
+  .badge-mofu { background: rgba(245,158,11,0.15); color: #fcd34d; }
+  .badge-tofu { background: rgba(236,72,153,0.15); color: #f9a8d4; }
+  .badge-refine { background: rgba(139,92,246,0.15); color: #c4b5fd; }
+  .badge-localise { background: rgba(234,179,8,0.15); color: #fef08a; }
+  .badge-idle { background: rgba(255,255,255,0.05); color: var(--text-faint); }
+
+  /* ─── COLUMN DOT COLORS ─── */
+  .dot-new { background: var(--text-faint); }
+  .dot-queue { background: var(--blue); }
+  .dot-review { background: var(--yellow); }
+  .dot-publish { background: var(--green); }
+  .dot-done { background: var(--accent); }
+
+  /* ─── ADD CARD BUTTON ─── */
+  .add-card-btn {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px dashed var(--border);
+    border-radius: var(--card-radius);
+    background: none;
+    color: var(--text-faint);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    justify-content: center;
+  }
+  .add-card-btn:hover { border-color: var(--accent); color: var(--accent2); background: rgba(108,99,255,0.05); }
+
+  /* ─── MODAL ─── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    backdrop-filter: blur(2px);
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 560px;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 24px;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+    transform: translateY(16px);
+    transition: transform 0.2s;
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .modal-title { font-size: 17px; font-weight: 700; color: var(--text); }
+  .modal-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+  .modal-close {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 20px;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+  .modal-close:hover { background: var(--surface2); color: var(--text); }
+  .modal-section { margin-bottom: 18px; }
+  .modal-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 6px;
+  }
+  .modal-content-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+  .modal-meta {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .meta-chip {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    background: var(--surface2);
+    font-size: 12px;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+  }
+  .modal-btn {
+    flex: 1;
+    padding: 9px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-muted);
+    transition: all 0.15s;
+  }
+  .modal-btn:hover { background: var(--border); color: var(--text); }
+  .modal-btn.primary {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+  .modal-btn.primary:hover { background: #5a52d9; }
+  .modal-btn.success {
+    background: rgba(16,185,129,0.15);
+    color: #6ee7b7;
+    border-color: rgba(16,185,129,0.3);
+  }
+  .modal-btn.success:hover { background: rgba(16,185,129,0.25); }
+
+  /* ─── STATUS CHIP ─── */
+  .status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .status-new { background: rgba(255,255,255,0.06); color: var(--text-muted); }
+  .status-queue { background: rgba(59,130,246,0.15); color: #93c5fd; }
+  .status-review { background: rgba(245,158,11,0.15); color: #fcd34d; }
+  .status-publish { background: rgba(16,185,129,0.15); color: #6ee7b7; }
+
+  /* ─── CLIENT VIEW TOGGLE ─── */
+  .role-strip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 6px 0;
+    background: rgba(108,99,255,0.08);
+    border-bottom: 1px solid rgba(108,99,255,0.2);
+    font-size: 12px;
+    color: var(--accent2);
+    flex-shrink: 0;
+  }
+  .role-toggle-btn {
+    background: rgba(108,99,255,0.2);
+    color: var(--accent2);
+    border: 1px solid rgba(108,99,255,0.3);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .role-toggle-btn:hover { background: rgba(108,99,255,0.35); }
+
+  /* ─── EMPTY STATE ─── */
+  .empty-col {
+    border: 1px dashed var(--border);
+    border-radius: var(--card-radius);
+    padding: 20px;
+    text-align: center;
+    color: var(--text-faint);
+    font-size: 12px;
+  }
+
+  /* ─── SCROLLBAR ─── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
+
+  /* ─── TOOLTIP ─── */
+  [title] { cursor: pointer; }
+
+  /* ─── NOTIFICATION DOT ─── */
+  .notif {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--red);
+    position: absolute;
+    top: 0; right: 0;
+  }
+
+  /* ─── TOAST NOTIFICATIONS ─── */
+  #toastContainer {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 9999;
+  }
+  .toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    min-width: 280px;
+    max-width: 360px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    animation: slideIn 0.2s ease;
+    font-size: 13px;
+  }
+  .toast.success { border-color: rgba(16,185,129,0.4); }
+  .toast.error   { border-color: rgba(239,68,68,0.4); }
+  .toast.loading { border-color: rgba(59,130,246,0.4); }
+  .toast-icon { font-size: 16px; flex-shrink: 0; }
+  .toast-body { flex: 1; }
+  .toast-title { font-weight: 600; color: var(--text); margin-bottom: 2px; }
+  .toast-msg   { color: var(--text-muted); font-size: 12px; }
+  @keyframes slideIn { from { transform: translateX(20px); opacity:0; } to { transform:none; opacity:1; } }
+
+  /* ─── WEBHOOK CONFIG PANEL ─── */
+  .wh-panel-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 2000;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+    backdrop-filter: blur(2px);
+  }
+  .wh-panel-overlay.open { opacity: 1; pointer-events: all; }
+  .wh-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 520px;
+    padding: 24px;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+  }
+  .wh-panel h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .wh-panel p  { font-size: 12px; color: var(--text-muted); margin-bottom: 18px; }
+  .wh-field { margin-bottom: 14px; }
+  .wh-label { font-size: 11px; font-weight: 600; letter-spacing:.05em; text-transform:uppercase; color:var(--text-faint); margin-bottom:5px; }
+  .wh-input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 7px; padding: 9px 12px; font-size: 12px; color: var(--text);
+    font-family: 'Courier New', monospace;
+    outline: none; transition: border-color 0.15s;
+  }
+  .wh-input:focus { border-color: var(--accent); }
+  .wh-row { display: flex; gap: 8px; margin-top: 18px; }
+  .wh-btn {
+    flex:1; padding: 9px; border-radius: 8px; font-size: 13px; font-weight: 500;
+    cursor: pointer; border: 1px solid var(--border); background: var(--surface2);
+    color: var(--text-muted); transition: all 0.15s;
+  }
+  .wh-btn:hover { background: var(--border); color: var(--text); }
+  .wh-btn.primary { background: var(--accent); color: white; border-color: var(--accent); }
+  .wh-btn.primary:hover { background: #5a52d9; }
+  .wh-status {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 12px; border-radius: 7px;
+    font-size: 12px; margin-bottom: 14px;
+    background: var(--surface2); border: 1px solid var(--border);
+  }
+  .wh-status-dot { width:8px; height:8px; border-radius:50%; background:var(--text-faint); }
+  .wh-status-dot.ok  { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .wh-status-dot.err { background: var(--red); }
+  .wh-status-dot.spin {
+    border: 2px solid var(--border); border-top-color: var(--blue);
+    border-radius: 50%; animation: spin 0.7s linear infinite; background: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ─── WEBHOOK INDICATOR IN NAV ─── */
+  .wh-nav-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--text-faint);
+    display: inline-block; margin-right: 4px;
+  }
+  .wh-nav-dot.ok  { background: var(--green); box-shadow: 0 0 5px var(--green); }
+  .wh-nav-dot.err { background: var(--red); }
+  .spinner {
+    display: inline-block; width:12px; height:12px;
+    border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.7s linear infinite;
+    vertical-align: middle; margin-right:5px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Role toggle strip -->
+<div class="role-strip" id="roleStrip">
+  <span id="roleLabel">👁️ Viewing as: <strong>Team / Admin</strong></span>
+  <button class="role-toggle-btn" onclick="toggleRole()">Switch to Client View</button>
+</div>
+
+<!-- Top Nav -->
+<nav class="topnav">
+  <a class="logo" href="#">
+    <div class="logo-icon">⚡</div>
+    SEO Suite
+  </a>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchTab(this, 'bofu')">BOFU / Topical Maps</button>
+    <button class="nav-tab" onclick="switchTab(this, 'mofu')">MOFU</button>
+    <button class="nav-tab" onclick="switchTab(this, 'tofu')">TOFU</button>
+    <button class="nav-tab" onclick="switchTab(this, 'cat')">Category / Navigation</button>
+    <button class="nav-tab" onclick="switchTab(this, 'company')" id="companyTab">Company Info</button>
+  </div>
+  <div class="nav-right">
+    <div class="view-toggle">
+      <button class="view-btn active" onclick="setView(this,'kanban')">🗂 Kanban</button>
+      <button class="view-btn" onclick="setView(this,'list')">☰ List</button>
+      <button class="view-btn" onclick="setView(this,'calendar')">📅 Calendar</button>
+    </div>
+    <button class="btn-primary" onclick="openNewCard()">+ New Page</button>
+    <button class="filter-pill" onclick="openWhPanel()" id="whNavBtn">
+      <span class="wh-nav-dot" id="whNavDot"></span> Webhook
+    </button>
+    <div class="avatar" title="Kaj Slier">KS</div>
+  </div>
+</nav>
+
+<!-- Main layout -->
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebarEl">
+    <div class="sidebar-section">
+      <div class="sidebar-label">All Projects</div>
+      <button class="sidebar-item active" onclick="filterProject(this, 'all')">
+        <span>🌐</span> All Projects
+        <span class="count-badge">11</span>
+      </button>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Clients</div>
+      <button class="sidebar-item" onclick="filterProject(this, 'Control Union')">
+        <span class="sidebar-dot" style="background:#6c63ff"></span> Control Union
+        <span class="count-badge">3</span>
+      </button>
+      <button class="sidebar-item" onclick="filterProject(this, 'Cyflux')">
+        <span class="sidebar-dot" style="background:#10b981"></span> Cyflux
+        <span class="count-badge">4</span>
+      </button>
+      <button class="sidebar-item" onclick="filterProject(this, 'Turn.One')">
+        <span class="sidebar-dot" style="background:#f59e0b"></span> Turn.One
+        <span class="count-badge">3</span>
+      </button>
+      <button class="sidebar-item" onclick="filterProject(this, 'Zonneplan')">
+        <span class="sidebar-dot" style="background:#3b82f6"></span> Zonneplan
+        <span class="count-badge">1</span>
+      </button>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Quick Filters</div>
+      <button class="sidebar-item" onclick="filterLocale('🇬🇧')">
+        <span>🇬🇧</span> English (UK)
+      </button>
+      <button class="sidebar-item" onclick="filterLocale('🇳🇱')">
+        <span>🇳🇱</span> Dutch (NL)
+      </button>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Activity</div>
+      <button class="sidebar-item">
+        <span>⚙️</span> N8N Workflows
+      </button>
+      <button class="sidebar-item">
+        <span>📊</span> Analytics
+      </button>
+    </div>
+  </aside>
+
+  <!-- Board area -->
+  <div class="board-area">
+    <div class="board-header">
+      <div>
+        <div class="board-title" id="boardTitle">BOFU / Topical Maps</div>
+        <div class="board-subtitle" id="boardSubtitle">11 pages across 4 clients</div>
+      </div>
+      <div class="filter-bar">
+        <div class="filter-pill" onclick="this.classList.toggle('active')">
+          🤖 AI Actions
+        </div>
+        <div class="filter-pill" onclick="this.classList.toggle('active')">
+          🌍 Locale
+        </div>
+        <div class="filter-pill" onclick="this.classList.toggle('active')">
+          ↕ Sort
+        </div>
+      </div>
+    </div>
+
+    <!-- Kanban -->
+    <div class="kanban" id="kanbanBoard">
+
+      <!-- NEW -->
+      <div class="column" id="col-new">
+        <div class="column-header">
+          <span class="col-dot dot-new"></span>
+          <span class="col-name">New</span>
+          <span class="col-count" id="cnt-new">0</span>
+        </div>
+        <div class="column-body" id="body-new" ondragover="onDragOver(event)" ondrop="onDrop(event,'new')" ondragleave="onDragLeave(event)"></div>
+        <button class="add-card-btn" onclick="openNewCard('new')">＋ Add page</button>
+      </div>
+
+      <!-- IN PROGRESS / QUEUE -->
+      <div class="column" id="col-queue">
+        <div class="column-header">
+          <span class="col-dot dot-queue"></span>
+          <span class="col-name">In Progress / Queue</span>
+          <span class="col-count" id="cnt-queue">0</span>
+        </div>
+        <div class="column-body" id="body-queue" ondragover="onDragOver(event)" ondrop="onDrop(event,'queue')" ondragleave="onDragLeave(event)"></div>
+        <button class="add-card-btn" onclick="openNewCard('queue')">＋ Add page</button>
+      </div>
+
+      <!-- FOR REVIEW -->
+      <div class="column" id="col-review">
+        <div class="column-header">
+          <span class="col-dot dot-review"></span>
+          <span class="col-name">For Review</span>
+          <span class="col-count" id="cnt-review">0</span>
+        </div>
+        <div class="column-body" id="body-review" ondragover="onDragOver(event)" ondrop="onDrop(event,'review')" ondragleave="onDragLeave(event)"></div>
+        <button class="add-card-btn" onclick="openNewCard('review')">＋ Add page</button>
+      </div>
+
+      <!-- READY TO PUBLISH -->
+      <div class="column" id="col-publish">
+        <div class="column-header">
+          <span class="col-dot dot-publish"></span>
+          <span class="col-name">Ready to Publish</span>
+          <span class="col-count" id="cnt-publish">0</span>
+        </div>
+        <div class="column-body" id="body-publish" ondragover="onDragOver(event)" ondrop="onDrop(event,'publish')" ondragleave="onDragLeave(event)"></div>
+        <button class="add-card-btn" onclick="openNewCard('publish')">＋ Add page</button>
+      </div>
+
+      <!-- PUBLISHED -->
+      <div class="column" id="col-done">
+        <div class="column-header">
+          <span class="col-dot dot-done"></span>
+          <span class="col-name">Published</span>
+          <span class="col-count" id="cnt-done">0</span>
+        </div>
+        <div class="column-body" id="body-done" ondragover="onDragOver(event)" ondrop="onDrop(event,'done')" ondragleave="onDragLeave(event)">
+          <div class="empty-col">No pages published yet</div>
+        </div>
+        <button class="add-card-btn" onclick="openNewCard('done')">＋ Add page</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Card Detail Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" id="modalBox">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="mTitle">—</div>
+        <div class="modal-subtitle" id="mSubtitle">—</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-section">
+      <div class="modal-label">Status & Details</div>
+      <div class="modal-meta" id="mMeta"></div>
+    </div>
+    <div class="modal-section" id="mProgressSection">
+      <div class="modal-label">🤖 AI Progress</div>
+      <div class="modal-content-box" id="mProgress"></div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-label">Move to stage</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;" id="mStageBtns"></div>
+    </div>
+    <div class="modal-actions" id="mActions"></div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toastContainer"></div>
+
+<!-- Webhook Config Panel -->
+<div class="wh-panel-overlay" id="whPanelOverlay" onclick="closeWhPanel(event)">
+  <div class="wh-panel" onclick="event.stopPropagation()">
+    <h3>⚡ N8N Webhook Config</h3>
+    <p>Connect the prototype to your live N8N workflow. Use the <strong>webhook-test</strong> URL while N8N is in test/listen mode, or <strong>webhook</strong> for production.</p>
+
+    <div class="wh-status" id="whStatus">
+      <span class="wh-status-dot" id="whStatusDot"></span>
+      <span id="whStatusText">Not connected — click Test to verify</span>
+    </div>
+
+    <div class="wh-field">
+      <div class="wh-label">Base URL</div>
+      <input class="wh-input" id="whBaseUrl" value="https://production.turnone.cloud" placeholder="https://your-n8n-instance.cloud" />
+    </div>
+    <div class="wh-field">
+      <div class="wh-label">Webhook Path</div>
+      <input class="wh-input" id="whPath" value="/webhook/1985462a-48f9-4269-8ab3-f1dc1c0f46a6/1985462a-48f9-4269-8ab3-f1dc1c0f46a6/" placeholder="/webhook/uuid/uuid/" />
+      <div style="font-size:11px;color:var(--text-faint);margin-top:4px;">💡 Using production webhook — always on, no listening session needed</div>
+    </div>
+    <div class="wh-field">
+      <div class="wh-label">User Token</div>
+      <input class="wh-input" id="whToken" value="tok_userT1_qPz7yWnd45gw4g" placeholder="tok_userT1_..." />
+      <div style="font-size:11px;color:var(--text-faint);margin-top:4px;">💡 Turn.One token. Use <code>tok_userPCU_aKq82Xdfhgdfp</code> for Control Union.</div>
+    </div>
+
+    <div class="wh-field">
+      <div class="wh-label">Full URL (after Test)</div>
+      <div id="whFullUrl" style="font-family:monospace;font-size:11px;color:#a78bfa;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;word-break:break-all;min-height:32px;">
+        Click "Test Connection" to see the URL
+      </div>
+      <div style="font-size:11px;color:var(--text-faint);margin-top:4px;">Copy this and paste it into N8N's "Make a POST request to:" field to verify they match</div>
+    </div>
+
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--text-muted);margin-bottom:14px;">
+      <strong style="color:var(--text);">Payload sent on each action:</strong><br/>
+      <code style="color:#a78bfa;">{ action, locale, recordId, baseURL, baseRecordURL }</code>
+    </div>
+
+    <div class="wh-row">
+      <button class="wh-btn" onclick="closeWhPanel()">Cancel</button>
+      <button class="wh-btn" onclick="testWebhook()">🔌 Test Connection</button>
+      <button class="wh-btn primary" onclick="saveWhConfig()">Save & Connect</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────
+const projectColors = {
+  'Control Union': '#6c63ff',
+  'Cyflux': '#10b981',
+  'Turn.One': '#f59e0b',
+  'Zonneplan': '#3b82f6',
+};
+
+const actionMeta = {
+  'Create New Page': { cls: 'badge-create', icon: '✨', label: 'Create New Page' },
+  'Optimise Existing Page': { cls: 'badge-optimise', icon: '🔧', label: 'Optimise' },
+  'Generate MOFU': { cls: 'badge-mofu', icon: '📝', label: 'Generate MOFU' },
+  'Generate TOFU': { cls: 'badge-tofu', icon: '📢', label: 'Generate TOFU' },
+  'Refine Concept': { cls: 'badge-refine', icon: '🔍', label: 'Refine Concept' },
+  'Duplicate Record For Localisation': { cls: 'badge-localise', icon: '🌍', label: 'Localise' },
+  'Idle': { cls: 'badge-idle', icon: '⏸', label: 'Idle' },
+};
+
+const stageBarColors = {
+  'new': '#4a5568',
+  'queue': '#3b82f6',
+  'review': '#f59e0b',
+  'publish': '#10b981',
+  'done': '#6c63ff',
+};
+
+let cards = [
+  { id: 1, title: 'Organic certifications', project: 'Control Union', action: 'Idle', status: 'review', locale: '🇳🇱', localeLabel: 'Dutch (NL)', progress: 'The page is ready in Dutch (Netherlands). Hope you like it 😊', time: '2h ago' },
+  { id: 2, title: 'Personal fall protection', project: 'Control Union', action: 'Idle', status: 'new', locale: '🇳🇱', localeLabel: 'Dutch (NL)', progress: '', time: '3h ago' },
+  { id: 3, title: 'Organic certifications', project: 'Control Union', action: 'Create New Page', status: 'new', locale: '🇳🇱', localeLabel: 'Dutch (NL)', progress: 'Page duplicated for localisation to Dutch (Netherlands)', time: '3h ago' },
+  { id: 4, title: 'Cyflux.ai - Automatisering', project: 'Cyflux', action: 'Idle', status: 'review', locale: '🇳🇱', localeLabel: 'Dutch (NL)', progress: 'The page is ready in Dutch (Netherlands). Hope you like it 😊', time: '1d ago' },
+  { id: 5, title: 'Cyfluxtest', project: 'Cyflux', action: 'Idle', status: 'publish', locale: '🇬🇧', localeLabel: 'English (UK)', progress: 'Thanks for approving the page. We have duplicated it for localisation!', time: '1d ago' },
+  { id: 6, title: 'Testing now', project: 'Cyflux', action: 'Idle', status: 'review', locale: '🇬🇧', localeLabel: 'English (UK)', progress: 'We have made the briefing, now doing some more SEO research. Just a couple more minutes...', time: '5h ago' },
+  { id: 7, title: 'Cyfluxtest', project: 'Cyflux', action: 'Create New Page', status: 'new', locale: '🇳🇱', localeLabel: 'Dutch (NL)', progress: 'Page duplicated for localisation to Dutch (Netherlands)', time: '1d ago' },
+  { id: 8, title: 'AI training basic', project: 'Turn.One', action: 'Generate MOFU', status: 'queue', locale: '🇬🇧', localeLabel: 'English (UK)', progress: 'Briefing generation started. AI is researching keywords and competitors...', time: '30m ago' },
+  { id: 9, title: 'Untitled page 9', project: 'Turn.One', action: 'Idle', status: 'new', locale: '🇬🇧', localeLabel: 'English (UK)', progress: '', time: '2d ago' },
+  { id: 10, title: 'Untitled page 10', project: 'Turn.One', action: 'Idle', status: 'new', locale: '🇬🇧', localeLabel: 'English (UK)', progress: '', time: '2d ago' },
+  { id: 11, title: 'Zonneplan laadpaal', project: 'Zonneplan', action: 'Idle', status: 'review', locale: '🇳🇱', localeLabel: 'Dutch (NL)', progress: 'The page is ready in Dutch (Netherlands). Hope you like it 😊', time: '6h ago' },
+];
+
+let activeFilter = 'all';
+let activeLocale = null;
+let isClientView = false;
+let dragCardId = null;
+let openCardId = null;
+
+// ─── RENDER ─────────────────────────────────────────────
+function renderAll() {
+  const cols = ['new','queue','review','publish','done'];
+  cols.forEach(col => {
+    document.getElementById('body-' + col).innerHTML = '';
+  });
+
+  let filtered = cards.filter(c => {
+    if (activeFilter !== 'all' && c.project !== activeFilter) return false;
+    if (activeLocale && c.locale !== activeLocale) return false;
+    if (isClientView) return true; // client sees all their cards
+    return true;
+  });
+
+  cols.forEach(col => {
+    const colCards = filtered.filter(c => c.status === col);
+    const body = document.getElementById('body-' + col);
+    if (colCards.length === 0 && col !== 'done') {
+      body.innerHTML = `<div class="empty-col">Drop cards here</div>`;
+    } else if (col === 'done' && colCards.length === 0) {
+      body.innerHTML = `<div class="empty-col">No pages published yet</div>`;
+    }
+    colCards.forEach(card => {
+      body.appendChild(buildCard(card));
+    });
+    document.getElementById('cnt-' + col).textContent = colCards.length;
+  });
+}
+
+function buildCard(card) {
+  const action = actionMeta[card.action] || actionMeta['Idle'];
+  const pColor = projectColors[card.project] || '#6c63ff';
+  const barColor = stageBarColors[card.status] || '#4a5568';
+
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.draggable = true;
+  el.dataset.id = card.id;
+  el.addEventListener('dragstart', onDragStart);
+  el.addEventListener('click', () => openCard(card.id));
+
+  el.innerHTML = `
+    <div class="card-accent-bar" style="background:${barColor}"></div>
+    <div class="card-top">
+      <div class="card-title">${card.title}</div>
+      <span class="card-locale" title="${card.localeLabel}">${card.locale}</span>
+    </div>
+    <div class="card-action-badge ${action.cls}">${action.icon} ${action.label}</div>
+    ${card.progress ? `<div class="card-progress"><span class="ai-icon">🤖</span>${truncate(card.progress, 80)}</div>` : ''}
+    <div class="card-footer">
+      <span class="project-tag">
+        <span class="project-dot" style="background:${pColor}"></span>
+        ${card.project}
+      </span>
+      <span class="card-time">${card.time}</span>
+    </div>
+  `;
+  return el;
+}
+
+function truncate(str, n) {
+  return str.length > n ? str.slice(0, n) + '…' : str;
+}
+
+// ─── DRAG & DROP ────────────────────────────────────────
+function onDragStart(e) {
+  dragCardId = parseInt(e.currentTarget.dataset.id);
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function onDragOver(e) {
+  e.preventDefault();
+  e.currentTarget.classList.add('drag-over');
+}
+
+function onDragLeave(e) {
+  e.currentTarget.classList.remove('drag-over');
+}
+
+function onDrop(e, col) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (dragCardId !== null) {
+    const card = cards.find(c => c.id === dragCardId);
+    if (card) {
+      card.status = col;
+      renderAll();
+    }
+    dragCardId = null;
+  }
+  document.querySelectorAll('.card.dragging').forEach(el => el.classList.remove('dragging'));
+}
+
+// ─── MODAL ──────────────────────────────────────────────
+function openCard(id) {
+  const card = cards.find(c => c.id === id);
+  if (!card) return;
+  openCardId = id;
+
+  const action = actionMeta[card.action] || actionMeta['Idle'];
+  const pColor = projectColors[card.project] || '#6c63ff';
+
+  document.getElementById('mTitle').textContent = card.title;
+  document.getElementById('mSubtitle').textContent = card.project + ' · ' + card.localeLabel;
+
+  // Meta chips
+  document.getElementById('mMeta').innerHTML = `
+    <div class="meta-chip"><span class="project-dot" style="background:${pColor}"></span>${card.project}</div>
+    <div class="meta-chip">${card.locale} ${card.localeLabel}</div>
+    <div class="meta-chip card-action-badge ${action.cls}" style="border:none;">${action.icon} ${action.label}</div>
+    <div class="meta-chip">🕐 ${card.time}</div>
+  `;
+
+  // Progress
+  if (card.progress) {
+    document.getElementById('mProgressSection').style.display = '';
+    document.getElementById('mProgress').textContent = card.progress;
+  } else {
+    document.getElementById('mProgressSection').style.display = 'none';
+  }
+
+  // Stage move buttons
+  const stageMap = { new: 'New', queue: 'In Progress', review: 'For Review', publish: 'Ready to Publish', done: 'Published' };
+  const stageBtns = document.getElementById('mStageBtns');
+  stageBtns.innerHTML = '';
+  Object.entries(stageMap).forEach(([key, label]) => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-pill' + (card.status === key ? ' active' : '');
+    btn.textContent = label;
+    btn.onclick = () => {
+      card.status = key;
+      renderAll();
+      closeModal();
+    };
+    stageBtns.appendChild(btn);
+  });
+
+  // Action buttons based on status
+  const actions = document.getElementById('mActions');
+  actions.innerHTML = '';
+
+  if (!isClientView) {
+    const editBtn = document.createElement('button');
+    editBtn.className = 'modal-btn';
+    editBtn.textContent = '✏️ Edit Briefing';
+    actions.appendChild(editBtn);
+  }
+
+  if (card.status === 'review') {
+    const approveBtn = document.createElement('button');
+    approveBtn.className = 'modal-btn success';
+    approveBtn.textContent = '✅ Approve Page';
+    approveBtn.onclick = async () => {
+      approveBtn.disabled = true;
+      approveBtn.innerHTML = '<span class="spinner"></span> Approving…';
+      await fireWebhook('Approve Page', card);
+      card.status = 'publish';
+      renderAll();
+      closeModal();
+    };
+    actions.appendChild(approveBtn);
+
+    const refineBtn = document.createElement('button');
+    refineBtn.className = 'modal-btn';
+    refineBtn.textContent = '🔁 Request Revision';
+    refineBtn.onclick = async () => {
+      refineBtn.disabled = true;
+      refineBtn.innerHTML = '<span class="spinner"></span> Sending…';
+      await fireWebhook('Refine Concept', card);
+      card.status = 'queue';
+      card.progress = 'Revision requested. AI is reworking the content…';
+      renderAll();
+      closeModal();
+    };
+    actions.appendChild(refineBtn);
+  }
+
+  if (card.status === 'publish') {
+    const pubBtn = document.createElement('button');
+    pubBtn.className = 'modal-btn primary';
+    pubBtn.textContent = '🚀 Mark as Published';
+    pubBtn.onclick = () => { card.status = 'done'; renderAll(); closeModal(); };
+    actions.appendChild(pubBtn);
+
+    const localiseBtn = document.createElement('button');
+    localiseBtn.className = 'modal-btn';
+    localiseBtn.textContent = '🌍 Localise to Dutch';
+    localiseBtn.onclick = async () => {
+      localiseBtn.disabled = true;
+      localiseBtn.innerHTML = '<span class="spinner"></span> Sending…';
+      await fireWebhook('Duplicate Record For Localisation', card);
+      closeModal();
+    };
+    actions.appendChild(localiseBtn);
+  }
+
+  if (!isClientView && card.status === 'new') {
+    const startBtn = document.createElement('button');
+    startBtn.className = 'modal-btn primary';
+    startBtn.textContent = '▶ Start AI Generation';
+    startBtn.onclick = async () => {
+      startBtn.disabled = true;
+      startBtn.innerHTML = '<span class="spinner"></span> Queuing…';
+      await fireWebhook(card.action !== 'Idle' ? card.action : 'Create New Page', card);
+      card.status = 'queue';
+      card.progress = 'AI generation queued. Processing…';
+      renderAll();
+      closeModal();
+    };
+    actions.appendChild(startBtn);
+  }
+
+  if (!isClientView && (card.status === 'new' || card.status === 'queue')) {
+    const mofu = document.createElement('button');
+    mofu.className = 'modal-btn';
+    mofu.textContent = '📝 Generate MOFU';
+    mofu.onclick = async () => {
+      mofu.disabled = true;
+      mofu.innerHTML = '<span class="spinner"></span> Sending…';
+      await fireWebhook('Generate MOFU', card);
+      card.status = 'queue'; card.action = 'Generate MOFU';
+      card.progress = 'MOFU generation queued…';
+      renderAll(); closeModal();
+    };
+    actions.appendChild(mofu);
+  }
+
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modalOverlay')) return;
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+function openNewCard(col) {
+  // Simplified: just add a placeholder card
+  const newId = Math.max(...cards.map(c => c.id)) + 1;
+  const project = activeFilter !== 'all' ? activeFilter : 'Cyflux';
+  cards.push({
+    id: newId,
+    title: 'New page (untitled)',
+    project: project,
+    action: 'Idle',
+    status: col || 'new',
+    locale: '🇬🇧',
+    localeLabel: 'English (UK)',
+    progress: '',
+    time: 'just now',
+  });
+  renderAll();
+  openCard(newId);
+}
+
+// ─── FILTERS ────────────────────────────────────────────
+function filterProject(el, project) {
+  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+  activeFilter = project;
+  activeLocale = null;
+  const titleMap = { all: 'All Projects', 'Control Union': 'Control Union', 'Cyflux': 'Cyflux', 'Turn.One': 'Turn.One', 'Zonneplan': 'Zonneplan' };
+  document.getElementById('boardTitle').textContent = 'BOFU / Topical Maps — ' + titleMap[project];
+  renderAll();
+}
+
+function filterLocale(flag) {
+  activeLocale = activeLocale === flag ? null : flag;
+  renderAll();
+}
+
+// ─── VIEW SWITCHES ──────────────────────────────────────
+function switchTab(el, tab) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function setView(el, view) {
+  document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ─── WEBHOOK ─────────────────────────────────────────────
+let whConfig = {
+  baseUrl: 'https://production.turnone.cloud',
+  path: '/webhook/1985462a-48f9-4269-8ab3-f1dc1c0f46a6/1985462a-48f9-4269-8ab3-f1dc1c0f46a6/',
+  token: 'tok_userT1_qPz7yWnd45gw4g',
+  connected: false,
+};
+
+function getWebhookUrl() {
+  return whConfig.baseUrl + whConfig.path + whConfig.token;
+}
+
+async function fireWebhook(action, card) {
+  const localeMap = { '🇬🇧': 'English (UK)', '🇳🇱': 'Dutch (Netherlands)' };
+
+  const payload = {
+    action,
+    locale:        localeMap[card.locale] || card.localeLabel,
+    recordId:      card.airtableId || 'test-record-' + card.id,
+    baseURL:       card.baseURL || 'https://airtable.com/appSEOSuite',
+    baseRecordURL: card.baseRecordURL || 'https://airtable.com/appSEOSuite/tblBOFU',
+    title:         card.title,
+    project:       card.project,
+  };
+
+  const url = getWebhookUrl();
+  console.log('[SEO Suite] → firing', url, payload);
+  const toastId = showToast('loading', '⏳ Sending to N8N...', `${action} → ${card.title}`);
+
+  // Strategy 1: proper JSON fetch (works when N8N has allowedOrigins: * set on webhook)
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    removeToast(toastId);
+    if (res.ok || res.status === 0) {
+      showToast('success', '✅ N8N received it!', `"${action}" confirmed for "${card.title}"`);
+      whConfig.connected = true; updateWhDot('ok');
+    } else {
+      showToast('error', `❌ N8N returned ${res.status}`, await res.text().catch(()=>''));
+      updateWhDot('err');
+    }
+    return;
+  } catch (corsErr) {
+    console.warn('[SEO Suite] JSON fetch blocked (CORS) — falling back to sendBeacon');
+  }
+
+  // Strategy 2: sendBeacon fallback (bypasses CORS, no response confirmation)
+  const params = new URLSearchParams(payload);
+  const sent = navigator.sendBeacon(url, params);
+  removeToast(toastId);
+  if (sent) {
+    showToast('success', '✅ Sent! Check N8N Executions tab.', `"${action}" → ${card.title}`);
+    whConfig.connected = true; updateWhDot('ok');
+  } else {
+    showToast('error', '❌ Could not reach N8N', 'Check the webhook URL in config');
+    updateWhDot('err');
+  }
+}
+
+async function testWebhook() {
+  const dot = document.getElementById('whStatusDot');
+  const txt = document.getElementById('whStatusText');
+  dot.className = 'wh-status-dot spin';
+  txt.textContent = 'Testing connection…';
+
+  // Save current inputs first
+  whConfig.baseUrl = document.getElementById('whBaseUrl').value.trim().replace(/\/$/, '');
+  whConfig.path    = document.getElementById('whPath').value.trim();
+  whConfig.token   = document.getElementById('whToken').value.trim();
+
+  const params = new URLSearchParams();
+  params.append('action', 'ping');
+  params.append('locale', 'English (UK)');
+  params.append('recordId', 'test-ping-001');
+  params.append('title', 'Connection Test');
+
+  const url = getWebhookUrl();
+  console.log('[SEO Suite] Test URL:', url);
+
+  // Show the full URL so user can verify + copy it
+  document.getElementById('whFullUrl').textContent = url;
+
+  const sent = navigator.sendBeacon(url, params);
+  console.log('[SEO Suite] sendBeacon result:', sent);
+
+  if (sent) {
+    dot.className = 'wh-status-dot ok';
+    txt.textContent = '✅ Beacon queued! Check N8N — it should show the ping now.';
+    whConfig.connected = true;
+    updateWhDot('ok');
+  } else {
+    dot.className = 'wh-status-dot err';
+    txt.textContent = '❌ sendBeacon returned false — check the URL below';
+    updateWhDot('err');
+  }
+}
+
+function saveWhConfig() {
+  whConfig.baseUrl = document.getElementById('whBaseUrl').value.trim().replace(/\/$/, '');
+  whConfig.path    = document.getElementById('whPath').value.trim();
+  whConfig.token   = document.getElementById('whToken').value.trim();
+  closeWhPanel();
+  showToast('success', '💾 Config saved', getWebhookUrl().slice(0, 60) + '…');
+}
+
+function openWhPanel() {
+  document.getElementById('whPanelOverlay').classList.add('open');
+  document.getElementById('whBaseUrl').value = whConfig.baseUrl;
+  document.getElementById('whPath').value    = whConfig.path;
+  document.getElementById('whToken').value   = whConfig.token;
+}
+function closeWhPanel(e) {
+  if (e && e.target !== document.getElementById('whPanelOverlay')) return;
+  document.getElementById('whPanelOverlay').classList.remove('open');
+}
+
+function updateWhDot(state) {
+  const dot = document.getElementById('whNavDot');
+  dot.className = 'wh-nav-dot ' + (state || '');
+}
+
+// ─── TOAST ──────────────────────────────────────────────
+let toastCounter = 0;
+function showToast(type, title, msg) {
+  const id = 'toast-' + (++toastCounter);
+  const icons = { success: '✅', error: '❌', loading: '⏳' };
+  const container = document.getElementById('toastContainer');
+  const el = document.createElement('div');
+  el.id = id;
+  el.className = 'toast ' + type;
+  el.innerHTML = `<span class="toast-icon">${icons[type]||'ℹ️'}</span>
+    <div class="toast-body"><div class="toast-title">${title}</div><div class="toast-msg">${msg}</div></div>`;
+  container.appendChild(el);
+  if (type !== 'loading') {
+    setTimeout(() => removeToast(id), 4000);
+  }
+  return id;
+}
+function removeToast(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+// ─── ROLE TOGGLE ────────────────────────────────────────
+function toggleRole() {
+  isClientView = !isClientView;
+  const strip = document.getElementById('roleStrip');
+  const label = document.getElementById('roleLabel');
+  const btn = strip.querySelector('.role-toggle-btn');
+  const companyTab = document.getElementById('companyTab');
+
+  if (isClientView) {
+    label.innerHTML = '👤 Viewing as: <strong>Client (Cyflux)</strong>';
+    btn.textContent = 'Switch to Team View';
+    strip.style.background = 'rgba(16,185,129,0.08)';
+    strip.style.borderColor = 'rgba(16,185,129,0.2)';
+    strip.querySelector('strong').style.color = '#6ee7b7';
+    label.style.color = '#6ee7b7';
+    btn.style.background = 'rgba(16,185,129,0.2)';
+    btn.style.color = '#6ee7b7';
+    btn.style.borderColor = 'rgba(16,185,129,0.3)';
+    // Filter to just one client
+    document.querySelectorAll('.sidebar-item')[1].click(); // Cyflux
+    document.getElementById('sidebarEl').style.display = 'none';
+  } else {
+    label.innerHTML = '👁️ Viewing as: <strong>Team / Admin</strong>';
+    btn.textContent = 'Switch to Client View';
+    strip.style.background = 'rgba(108,99,255,0.08)';
+    strip.style.borderColor = 'rgba(108,99,255,0.2)';
+    strip.querySelector('strong').style.color = 'var(--accent2)';
+    label.style.color = 'var(--accent2)';
+    btn.style.background = 'rgba(108,99,255,0.2)';
+    btn.style.color = 'var(--accent2)';
+    btn.style.borderColor = 'rgba(108,99,255,0.3)';
+    document.getElementById('sidebarEl').style.display = '';
+    document.querySelectorAll('.sidebar-item')[0].click(); // All
+  }
+  renderAll();
+}
+
+// ─── INIT ────────────────────────────────────────────────
+renderAll();
+</script>
+</body>
+</html>
