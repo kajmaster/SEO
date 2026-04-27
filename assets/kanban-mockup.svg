@@ -1,0 +1,373 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f0f1a"/>
+      <stop offset="100%" style="stop-color:#13131f"/>
+    </linearGradient>
+    <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#7c3aed"/>
+      <stop offset="100%" style="stop-color:#a855f7"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e1e2e"/>
+      <stop offset="100%" style="stop-color:#1a1a28"/>
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+    <filter id="glowPurple">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="roundedBoard">
+      <rect width="1400" height="900" rx="0"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1400" height="900" fill="url(#bgGrad)"/>
+
+  <!-- Subtle grid texture -->
+  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#ffffff" stroke-width="0.3" opacity="0.03"/>
+  </pattern>
+  <rect width="1400" height="900" fill="url(#grid)"/>
+
+  <!-- ===== TOP NAV BAR ===== -->
+  <rect x="0" y="0" width="1400" height="58" fill="#16162a" opacity="0.98"/>
+  <rect x="0" y="58" width="1400" height="1" fill="#2d2d4e"/>
+
+  <!-- Logo -->
+  <rect x="20" y="14" width="30" height="30" rx="8" fill="url(#purpleGrad)" filter="url(#glowPurple)"/>
+  <text x="35" y="34" font-family="Arial" font-size="16" font-weight="bold" fill="white" text-anchor="middle">S</text>
+  <text x="60" y="34" font-family="Arial" font-size="15" font-weight="700" fill="white">SEO Suite</text>
+  <text x="130" y="34" font-family="Arial" font-size="11" fill="#7c3aed">PRO</text>
+
+  <!-- Nav items -->
+  <text x="210" y="34" font-family="Arial" font-size="13" fill="#a0a0c0">Dashboard</text>
+  <rect x="270" y="20" width="1" height="18" fill="#2d2d4e"/>
+  <rect x="280" y="16" width="72" height="26" rx="6" fill="#7c3aed" opacity="0.2"/>
+  <text x="316" y="34" font-family="Arial" font-size="13" font-weight="600" fill="#a855f7" text-anchor="middle">Kanban</text>
+  <rect x="280" y="42" width="72" height="2" rx="1" fill="#7c3aed"/>
+  <text x="370" y="34" font-family="Arial" font-size="13" fill="#a0a0c0">  Analytics</text>
+  <text x="455" y="34" font-family="Arial" font-size="13" fill="#a0a0c0">  Settings</text>
+
+  <!-- Right nav -->
+  <rect x="1180" y="15" width="80" height="28" rx="6" fill="#1e1e30" stroke="#2d2d4e" stroke-width="1"/>
+  <text x="1220" y="33" font-family="Arial" font-size="12" fill="#a0a0c0" text-anchor="middle">🔍 Search</text>
+
+  <!-- Webhook status dot -->
+  <circle cx="1290" cy="29" r="5" fill="#22c55e" filter="url(#glowPurple)"/>
+  <text x="1302" y="33" font-family="Arial" font-size="11" fill="#a0a0c0">Live</text>
+
+  <!-- Avatar -->
+  <circle cx="1360" cy="29" r="16" fill="url(#purpleGrad)"/>
+  <text x="1360" y="34" font-family="Arial" font-size="12" font-weight="bold" fill="white" text-anchor="middle">K</text>
+
+  <!-- ===== SUB BAR (filters) ===== -->
+  <rect x="0" y="59" width="1400" height="50" fill="#13131f"/>
+  <rect x="0" y="109" width="1400" height="1" fill="#2d2d4e" opacity="0.5"/>
+
+  <!-- Project filter pills -->
+  <rect x="20" y="72" width="95" height="26" rx="13" fill="#7c3aed"/>
+  <text x="67" y="89" font-family="Arial" font-size="12" font-weight="600" fill="white" text-anchor="middle">All Projects</text>
+
+  <rect x="124" y="72" width="100" height="26" rx="13" fill="#1e1e30" stroke="#2d2d4e" stroke-width="1"/>
+  <text x="174" y="89" font-family="Arial" font-size="12" fill="#a0a0c0" text-anchor="middle">Turn.One ●</text>
+
+  <rect x="233" y="72" width="115" height="26" rx="13" fill="#1e1e30" stroke="#2d2d4e" stroke-width="1"/>
+  <text x="290" y="89" font-family="Arial" font-size="12" fill="#a0a0c0" text-anchor="middle">Roelof Digital ●</text>
+
+  <rect x="357" y="72" width="90" height="26" rx="13" fill="#1e1e30" stroke="#2d2d4e" stroke-width="1"/>
+  <text x="402" y="89" font-family="Arial" font-size="12" fill="#a0a0c0" text-anchor="middle">+ Add Filter</text>
+
+  <!-- Right controls -->
+  <rect x="1180" y="72" width="100" height="26" rx="6" fill="#1e1e30" stroke="#2d2d4e" stroke-width="1"/>
+  <text x="1230" y="89" font-family="Arial" font-size="12" fill="#a0a0c0" text-anchor="middle">👥 Team View</text>
+  <rect x="1290" y="72" width="90" height="26" rx="6" fill="url(#purpleGrad)"/>
+  <text x="1335" y="89" font-family="Arial" font-size="12" font-weight="600" fill="white" text-anchor="middle">+ New Page</text>
+
+  <!-- ===== KANBAN COLUMNS ===== -->
+
+  <!-- === COLUMN 1: New === -->
+  <rect x="16" y="120" width="254" height="760" rx="12" fill="#16162a" stroke="#2d2d4e" stroke-width="1" opacity="0.7"/>
+
+  <!-- Column header -->
+  <rect x="16" y="120" width="254" height="44" rx="12" fill="#1a1a2e"/>
+  <rect x="16" y="143" width="254" height="21" fill="#1a1a2e"/>
+  <circle cx="40" cy="142" r="7" fill="#64748b"/>
+  <text x="54" y="147" font-family="Arial" font-size="13" font-weight="700" fill="#94a3b8">NEW</text>
+  <rect x="245" y="133" width="18" height="18" rx="9" fill="#2d2d4e"/>
+  <text x="254" y="146" font-family="Arial" font-size="10" fill="#94a3b8" text-anchor="middle">3</text>
+
+  <!-- Card 1.1 -->
+  <rect x="24" y="174" width="238" height="105" rx="10" fill="url(#cardGrad)" stroke="#2d2d4e" stroke-width="1" filter="url(#shadow)"/>
+  <rect x="24" y="174" width="238" height="3" rx="2" fill="#64748b"/>
+  <!-- Flag + badge -->
+  <text x="36" y="195" font-family="Arial" font-size="14">🇬🇧</text>
+  <rect x="58" y="183" width="36" height="16" rx="8" fill="#7c3aed" opacity="0.25"/>
+  <text x="76" y="195" font-family="Arial" font-size="9" fill="#a855f7" text-anchor="middle">BOFU</text>
+  <rect x="102" y="183" width="55" height="16" rx="8" fill="#1e3a5f" opacity="0.8"/>
+  <text x="129" y="195" font-family="Arial" font-size="9" fill="#60a5fa" text-anchor="middle">Turn.One</text>
+  <!-- Title -->
+  <text x="36" y="213" font-family="Arial" font-size="12" font-weight="600" fill="#e2e8f0">Best AI Automation Tools</text>
+  <text x="36" y="228" font-family="Arial" font-size="12" font-weight="600" fill="#e2e8f0">for SMEs 2025</text>
+  <!-- Actions row -->
+  <rect x="36" y="242" width="60" height="22" rx="5" fill="#7c3aed" opacity="0.15" stroke="#7c3aed" stroke-width="0.5"/>
+  <text x="66" y="257" font-family="Arial" font-size="9" fill="#a855f7" text-anchor="middle">⚡ Generate</text>
+  <rect x="104" y="242" width="55" height="22" rx="5" fill="#1e293b"/>
+  <text x="131" y="257" font-family="Arial" font-size="9" fill="#64748b" text-anchor="middle">✦ Refine</text>
+  <rect x="167" y="242" width="55" height="22" rx="5" fill="#1e293b"/>
+  <text x="194" y="257" font-family="Arial" font-size="9" fill="#64748b" text-anchor="middle">⧉ Clone</text>
+
+  <!-- Card 1.2 -->
+  <rect x="24" y="289" width="238" height="100" rx="10" fill="url(#cardGrad)" stroke="#2d2d4e" stroke-width="1" filter="url(#shadow)"/>
+  <rect x="24" y="289" width="238" height="3" rx="2" fill="#64748b"/>
+  <text x="36" y="310" font-family="Arial" font-size="14">🇳🇱</text>
+  <rect x="58" y="298" width="36" height="16" rx="8" fill="#0f4c2e" opacity="0.8"/>
+  <text x="76" y="310" font-family="Arial" font-size="9" fill="#4ade80" text-anchor="middle">TOFU</text>
+  <rect x="102" y="298" width="68" height="16" rx="8" fill="#1e3a5f" opacity="0.8"/>
+  <text x="136" y="310" font-family="Arial" font-size="9" fill="#60a5fa" text-anchor="middle">Roelof Digital</text>
+  <text x="36" y="328" font-family="Arial" font-size="12" font-weight="600" fill="#e2e8f0">Wat is Marketing</text>
+  <text x="36" y="343" font-family="Arial" font-size="12" font-weight="600" fill="#e2e8f0">Automatisering?</text>
+  <rect x="36" y="357" width="60" height="22" rx="5" fill="#7c3aed" opacity="0.15" stroke="#7c3aed" stroke-width="0.5"/>
+  <text x="66" y="372" font-family="Arial" font-size="9" fill="#a855f7" text-anchor="middle">⚡ Generate</text>
+  <rect x="104" y="357" width="55" height="22" rx="5" fill="#1e293b"/>
+  <text x="131" y="372" font-family="Arial" font-size="9" fill="#64748b" text-anchor="middle">✦ Refine</text>
+
+  <!-- Card 1.3 MOFU -->
+  <rect x="24" y="399" width="238" height="90" rx="10" fill="url(#cardGrad)" stroke="#2d2d4e" stroke-width="1" filter="url(#shadow)"/>
+  <rect x="24" y="399" width="238" height="3" rx="2" fill="#64748b"/>
+  <text x="36" y="420" font-family="Arial" font-size="14">🇬🇧</text>
+  <rect x="58" y="408" width="40" height="16" rx="8" fill="#4a2010" opacity="0.8"/>
+  <text x="78" y="420" font-family="Arial" font-size="9" fill="#fb923c" text-anchor="middle">MOFU</text>
+  <rect x="106" y="408" width="55" height="16" rx="8" fill="#1e3a5f" opacity="0.8"/>
+  <text x="133" y="420" font-family="Arial" font-size="9" fill="#60a5fa" text-anchor="middle">Turn.One</text>
+  <text x="36" y="438" font-family="Arial" font-size="12" font-weight="600" fill="#e2e8f0">How to Choose an AI</text>
+  <text x="36" y="453" font-family="Arial" font-size="12" font-weight="600" fill="#e2e8f0">Vendor: Buyer's Guide</text>
+  <rect x="36" y="464" width="60" height="22" rx="5" fill="#7c3aed" opacity="0.15" stroke="#7c3aed" stroke-width="0.5"/>
+  <text x="66" y="479" font-family="Arial" font-size="9" fill="#a855f7" text-anchor="middle">⚡ Generate</text>
+
+  <!-- === COLUMN 2: In Progress / Queue === -->
+  <rect x="278" y="120" width="254" height="760" rx="12" fill="#16162a" stroke="#2d2d4e" stroke-width="1" opacity="0.7"/>
+  <rect x="278" y="120" width="254" height="44" rx="12" fill="#1a1a2e"/>
+  <rect x="278" y="143" width="254" height="21" fill="#1a1a2e"/>
+  <circle cx="302" cy="142" r="7" fill="#f59e0b"/>
+  <text x="316" y="147" font-family="Arial" font-size="13" font-weight="700" fill="#fbbf24">IN PROGRESS</text>
+  <rect x="507" y="133" width="18" height="18" rx="9" fill="#2d2d4e"/>
+  <text x="516" y="146" font-family="Arial" font-size="10" fill="#94a3b8" text-anchor="middle">4</text>
+
+  <!-- AI Processing card with glow -->
+  <rect x="286" y="174" width="238" height="115" rx="10" fill="#1a1a2e" stroke="#f59e0b" stroke-width="1.5" filter="url(#shadow)"/>
+  <rect x="286" y="174" width="238" height="3" rx="2" fill="#f59e0b"/>
+  <!-- AI spinner indicator -->
+  <circle cx="494" cy="190" r="8" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="20 10" opacity="0.8"/>
+  <text x="36" y="0" font-family="Arial" font-size="8" fill="#f59e0b"/>
+  <text x="298" y="195" font-family="Arial" font-size="14">🇬🇧</text>
+  <rect x="320" y="183" width="36" height="16" rx="8" fill="#7c3aed" opacity="0.25"/>
+  <text x="338" y="195" font-family="Arial" font-size="9" fill="#a855f7" text-anchor="middle">BOFU</text>
+  <text x="298" y="218" font-family="Arial" font-size="12" font-weight="600" fill="#e2e8f0">N8N Workflow Automation</text>
+  <text x="298" y="233" font-family="Arial" font-size="12" font-weight="600" fill="#e2e8f0">for Marketing Teams</text>
+  <!-- Progress bar -->
+  <rect x="298" y="245" width="214" height="6" rx="3" fill="#2d2d4e"/>
+  <rect x="298" y="245" width="140" height="6" rx="3" fill="#f59e0b"/>
+  <text x="298" y="266" font-family="Arial" font-size="9" fill="#f59e0b">⚡ AI Writing... 65%</text>
+  <text x="436" y="266" font-family="Arial" font-size="9" fill="#64748b" text-anchor="end">~2 min left</text>
+  <text x="480" y="283" font-family="Arial" font-size="9" fill="#64748b">✓ Research done</text>
+
+  <!-- Card 2.2 -->
+  <rect x="286" y="299" width="238" height="100" rx="10" fill="url(#cardGrad)" stroke="#2d2d4e" stroke-width="1" filter="url(#shadow)"/>
+  <rect x="286" y="299" width="238" height="3" rx="2" fill="#f59e0b"/>
+  <text x="298" y="320" font-family="Arial" font-size="14">🇳🇱</text>
+  <rect x="320" y="308" width="40" height="16" rx="8" fill="#4a2010" opacity="0.8"/>
+  <text x="340" y="320" font-family="Arial" font-size="9" fill="#fb923c" text-anchor="middle">MOFU</text>
+  <text x="298" y="338" font-family="Arial" font-size="12" font-weight="600" fill="#e2e8f0">AI Integratie voor</text>
+  <text x="298" y="353" font-family="Arial" font-size="12" font-weight="600" fill="#e2e8f0">MKB Bedrijven</text>
+  <rect x="298" y="364" width="50" height="22" rx="5" fill="#1e293b"/>
+  <text x="323" y="379" font-family="Arial" font-size="9" fill="#64748b" text-anchor="middle">📋 Queue</text>
+
+  <!-- Card 2.3 -->
+  <rect x="286" y="409" width="238" height="100" rx="10" fill="url(#cardGrad)" stroke="#2d2d4e" stroke-width="1" filter="url(#shadow)"/>
+  <rect x="286" y="409" width="238" height="3" rx="2" fill="#f59e0b"/>
+  <text x="298" y="430" font-family="Arial" font-size="14">🇬🇧</text>
+  <rect x="320" y="418" width="36" height="16" rx="8" fill="#0f4c2e" opacity="0.8"/>
+  <text x="338" y="430" font-family="Arial" font-size="9" fill="#4ade80" text-anchor="middle">TOFU</text>
+  <text x="298" y="448" font-family="Arial" font-size="12" font-weight="600" fill="#e2e8f0">What is Generative AI?</text>
+  <text x="298" y="463" font-family="Arial" font-size="12" font-weight="600" fill="#e2e8f0">Complete 2025 Guide</text>
+  <rect x="298" y="474" width="50" height="22" rx="5" fill="#1e293b"/>
+  <text x="323" y="489" font-family="Arial" font-size="9" fill="#64748b" text-anchor="middle">📋 Queue</text>
+
+  <!-- === COLUMN 3: For Review === -->
+  <rect x="540" y="120" width="254" height="760" rx="12" fill="#16162a" stroke="#2d2d4e" stroke-width="1" opacity="0.7"/>
+  <rect x="540" y="120" width="254" height="44" rx="12" fill="#1a1a2e"/>
+  <rect x="540" y="143" width="254" height="21" fill="#1a1a2e"/>
+  <circle cx="564" cy="142" r="7" fill="#6366f1"/>
+  <text x="578" y="147" font-family="Arial" font-size="13" font-weight="700" fill="#818cf8">FOR REVIEW</text>
+  <rect x="769" y="133" width="18" height="18" rx="9" fill="#2d2d4e"/>
+  <text x="778" y="146" font-family="Arial" font-size="10" fill="#94a3b8" text-anchor="middle">2</text>
+
+  <!-- Card 3.1 - Review card with action buttons -->
+  <rect x="548" y="174" width="238" height="120" rx="10" fill="url(#cardGrad)" stroke="#6366f1" stroke-width="1" filter="url(#shadow)"/>
+  <rect x="548" y="174" width="238" height="3" rx="2" fill="#6366f1"/>
+  <text x="560" y="195" font-family="Arial" font-size="14">🇬🇧</text>
+  <rect x="582" y="183" width="36" height="16" rx="8" fill="#7c3aed" opacity="0.25"/>
+  <text x="600" y="195" font-family="Arial" font-size="9" fill="#a855f7" text-anchor="middle">BOFU</text>
+  <rect x="626" y="183" width="55" height="16" rx="8" fill="#1e3a5f" opacity="0.8"/>
+  <text x="653" y="195" font-family="Arial" font-size="9" fill="#60a5fa" text-anchor="middle">Turn.One</text>
+  <text x="560" y="213" font-family="Arial" font-size="12" font-weight="600" fill="#e2e8f0">Top 10 Use Cases for</text>
+  <text x="560" y="228" font-family="Arial" font-size="12" font-weight="600" fill="#e2e8f0">AI in B2B Sales</text>
+  <text x="560" y="247" font-family="Arial" font-size="10" fill="#64748b">1,847 words  ·  SEO score: 87/100</text>
+  <!-- Approve / Changes buttons -->
+  <rect x="560" y="258" width="80" height="26" rx="6" fill="#166534" stroke="#22c55e" stroke-width="0.8"/>
+  <text x="600" y="275" font-family="Arial" font-size="10" font-weight="600" fill="#4ade80" text-anchor="middle">✓ Approve</text>
+  <rect x="648" y="258" width="90" height="26" rx="6" fill="#7f1d1d" stroke="#ef4444" stroke-width="0.8"/>
+  <text x="693" y="275" font-family="Arial" font-size="10" font-weight="600" fill="#f87171" text-anchor="middle">↩ Req. Changes</text>
+
+  <!-- Card 3.2 -->
+  <rect x="548" y="304" width="238" height="115" rx="10" fill="url(#cardGrad)" stroke="#6366f1" stroke-width="1" filter="url(#shadow)"/>
+  <rect x="548" y="304" width="238" height="3" rx="2" fill="#6366f1"/>
+  <text x="560" y="325" font-family="Arial" font-size="14">🇳🇱</text>
+  <rect x="582" y="313" width="40" height="16" rx="8" fill="#4a2010" opacity="0.8"/>
+  <text x="602" y="325" font-family="Arial" font-size="9" fill="#fb923c" text-anchor="middle">MOFU</text>
+  <text x="560" y="343" font-family="Arial" font-size="12" font-weight="600" fill="#e2e8f0">Hoe kies je de juiste</text>
+  <text x="560" y="358" font-family="Arial" font-size="12" font-weight="600" fill="#e2e8f0">AI tool voor sales?</text>
+  <text x="560" y="376" font-family="Arial" font-size="10" fill="#64748b">2,102 words  ·  SEO score: 79/100</text>
+  <rect x="560" y="388" width="80" height="22" rx="6" fill="#166534" stroke="#22c55e" stroke-width="0.8"/>
+  <text x="600" y="403" font-family="Arial" font-size="10" font-weight="600" fill="#4ade80" text-anchor="middle">✓ Approve</text>
+  <rect x="648" y="388" width="90" height="22" rx="6" fill="#7f1d1d" stroke="#ef4444" stroke-width="0.8"/>
+  <text x="693" y="403" font-family="Arial" font-size="10" font-weight="600" fill="#f87171" text-anchor="middle">↩ Req. Changes</text>
+
+  <!-- === COLUMN 4: Ready to Publish === -->
+  <rect x="802" y="120" width="254" height="760" rx="12" fill="#16162a" stroke="#2d2d4e" stroke-width="1" opacity="0.7"/>
+  <rect x="802" y="120" width="254" height="44" rx="12" fill="#1a1a2e"/>
+  <rect x="802" y="143" width="254" height="21" fill="#1a1a2e"/>
+  <circle cx="826" cy="142" r="7" fill="#06b6d4"/>
+  <text x="840" y="147" font-family="Arial" font-size="13" font-weight="700" fill="#22d3ee">READY TO PUBLISH</text>
+  <rect x="1031" y="133" width="18" height="18" rx="9" fill="#2d2d4e"/>
+  <text x="1040" y="146" font-family="Arial" font-size="10" fill="#94a3b8" text-anchor="middle">2</text>
+
+  <!-- Card 4.1 ready with publish button -->
+  <rect x="810" y="174" width="238" height="120" rx="10" fill="url(#cardGrad)" stroke="#06b6d4" stroke-width="1" filter="url(#shadow)"/>
+  <rect x="810" y="174" width="238" height="3" rx="2" fill="#06b6d4"/>
+  <text x="822" y="195" font-family="Arial" font-size="14">🇬🇧</text>
+  <rect x="844" y="183" width="36" height="16" rx="8" fill="#7c3aed" opacity="0.25"/>
+  <text x="862" y="195" font-family="Arial" font-size="9" fill="#a855f7" text-anchor="middle">BOFU</text>
+  <text x="822" y="213" font-family="Arial" font-size="12" font-weight="600" fill="#e2e8f0">ROI of AI: How to</text>
+  <text x="822" y="228" font-family="Arial" font-size="12" font-weight="600" fill="#e2e8f0">Measure Real Results</text>
+  <text x="822" y="247" font-family="Arial" font-size="10" fill="#64748b">Approved by Roelof  ·  ★ 91/100</text>
+  <!-- Publish button -->
+  <rect x="822" y="258" width="210" height="28" rx="7" fill="url(#purpleGrad)"/>
+  <text x="927" y="277" font-family="Arial" font-size="11" font-weight="700" fill="white" text-anchor="middle">🚀 Publish to Airtable</text>
+
+  <!-- Card 4.2 -->
+  <rect x="810" y="304" width="238" height="115" rx="10" fill="url(#cardGrad)" stroke="#06b6d4" stroke-width="1" filter="url(#shadow)"/>
+  <rect x="810" y="304" width="238" height="3" rx="2" fill="#06b6d4"/>
+  <text x="822" y="325" font-family="Arial" font-size="14">🇳🇱</text>
+  <rect x="844" y="313" width="36" height="16" rx="8" fill="#7c3aed" opacity="0.25"/>
+  <text x="862" y="325" font-family="Arial" font-size="9" fill="#a855f7" text-anchor="middle">BOFU</text>
+  <text x="822" y="343" font-family="Arial" font-size="12" font-weight="600" fill="#e2e8f0">AI voor Accountancy:</text>
+  <text x="822" y="358" font-family="Arial" font-size="12" font-weight="600" fill="#e2e8f0">Praktische Gids 2025</text>
+  <text x="822" y="376" font-family="Arial" font-size="10" fill="#64748b">Approved  ·  ★ 88/100</text>
+  <rect x="822" y="388" width="210" height="24" rx="7" fill="url(#purpleGrad)"/>
+  <text x="927" y="404" font-family="Arial" font-size="11" font-weight="700" fill="white" text-anchor="middle">🚀 Publish to Airtable</text>
+
+  <!-- === COLUMN 5: Published === -->
+  <rect x="1064" y="120" width="254" height="760" rx="12" fill="#16162a" stroke="#2d2d4e" stroke-width="1" opacity="0.7"/>
+  <rect x="1064" y="120" width="254" height="44" rx="12" fill="#1a1a2e"/>
+  <rect x="1064" y="143" width="254" height="21" fill="#1a1a2e"/>
+  <circle cx="1088" cy="142" r="7" fill="#22c55e"/>
+  <text x="1102" y="147" font-family="Arial" font-size="13" font-weight="700" fill="#4ade80">PUBLISHED</text>
+  <rect x="1293" y="133" width="18" height="18" rx="9" fill="#2d2d4e"/>
+  <text x="1302" y="146" font-family="Arial" font-size="10" fill="#94a3b8" text-anchor="middle">5</text>
+
+  <!-- Published card 5.1 -->
+  <rect x="1072" y="174" width="238" height="110" rx="10" fill="#0d1a12" stroke="#22c55e" stroke-width="1" filter="url(#shadow)"/>
+  <rect x="1072" y="174" width="238" height="3" rx="2" fill="#22c55e"/>
+  <text x="1084" y="195" font-family="Arial" font-size="14">🇬🇧</text>
+  <rect x="1106" y="183" width="36" height="16" rx="8" fill="#7c3aed" opacity="0.25"/>
+  <text x="1124" y="195" font-family="Arial" font-size="9" fill="#a855f7" text-anchor="middle">BOFU</text>
+  <rect x="1150" y="183" width="55" height="16" rx="8" fill="#22c55e" opacity="0.15"/>
+  <text x="1177" y="195" font-family="Arial" font-size="9" fill="#4ade80" text-anchor="middle">● Live</text>
+  <text x="1084" y="213" font-family="Arial" font-size="12" font-weight="600" fill="#e2e8f0">AI Tools Comparison:</text>
+  <text x="1084" y="228" font-family="Arial" font-size="12" font-weight="600" fill="#e2e8f0">GPT-4 vs Claude</text>
+  <text x="1084" y="247" font-family="Arial" font-size="10" fill="#64748b">Published Mar 15  ·  👁 1.2k views</text>
+  <rect x="1084" y="258" width="55" height="20" rx="5" fill="#0d1a12" stroke="#22c55e" stroke-width="0.5"/>
+  <text x="1111" y="272" font-family="Arial" font-size="9" fill="#4ade80" text-anchor="middle">↗ View Live</text>
+  <rect x="1147" y="258" width="55" height="20" rx="5" fill="#1e293b"/>
+  <text x="1174" y="272" font-family="Arial" font-size="9" fill="#64748b" text-anchor="middle">⧉ Localise</text>
+
+  <!-- Published card 5.2 -->
+  <rect x="1072" y="294" width="238" height="105" rx="10" fill="#0d1a12" stroke="#22c55e" stroke-width="1" filter="url(#shadow)"/>
+  <rect x="1072" y="294" width="238" height="3" rx="2" fill="#22c55e"/>
+  <text x="1084" y="315" font-family="Arial" font-size="14">🇳🇱</text>
+  <rect x="1106" y="303" width="36" height="16" rx="8" fill="#0f4c2e" opacity="0.8"/>
+  <text x="1124" y="315" font-family="Arial" font-size="9" fill="#4ade80" text-anchor="middle">TOFU</text>
+  <rect x="1150" y="303" width="55" height="16" rx="8" fill="#22c55e" opacity="0.15"/>
+  <text x="1177" y="315" font-family="Arial" font-size="9" fill="#4ade80" text-anchor="middle">● Live</text>
+  <text x="1084" y="333" font-family="Arial" font-size="12" font-weight="600" fill="#e2e8f0">Wat is Kunstmatige</text>
+  <text x="1084" y="348" font-family="Arial" font-size="12" font-weight="600" fill="#e2e8f0">Intelligentie? (2025)</text>
+  <text x="1084" y="366" font-family="Arial" font-size="10" fill="#64748b">Published Mar 20  ·  👁 834 views</text>
+  <rect x="1084" y="375" width="55" height="20" rx="5" fill="#0d1a12" stroke="#22c55e" stroke-width="0.5"/>
+  <text x="1111" y="389" font-family="Arial" font-size="9" fill="#4ade80" text-anchor="middle">↗ View Live</text>
+
+  <!-- Published card 5.3 -->
+  <rect x="1072" y="409" width="238" height="100" rx="10" fill="#0d1a12" stroke="#22c55e" stroke-width="1" filter="url(#shadow)"/>
+  <rect x="1072" y="409" width="238" height="3" rx="2" fill="#22c55e"/>
+  <text x="1084" y="430" font-family="Arial" font-size="14">🇬🇧</text>
+  <rect x="1106" y="418" width="40" height="16" rx="8" fill="#4a2010" opacity="0.8"/>
+  <text x="1126" y="430" font-family="Arial" font-size="9" fill="#fb923c" text-anchor="middle">MOFU</text>
+  <rect x="1154" y="418" width="55" height="16" rx="8" fill="#22c55e" opacity="0.15"/>
+  <text x="1181" y="430" font-family="Arial" font-size="9" fill="#4ade80" text-anchor="middle">● Live</text>
+  <text x="1084" y="448" font-family="Arial" font-size="12" font-weight="600" fill="#e2e8f0">Case Study: 3x Growth</text>
+  <text x="1084" y="463" font-family="Arial" font-size="12" font-weight="600" fill="#e2e8f0">with AI Content</text>
+  <text x="1084" y="481" font-family="Arial" font-size="10" fill="#64748b">Published Mar 22  ·  👁 2.1k views</text>
+  <rect x="1084" y="490" width="55" height="20" rx="5" fill="#0d1a12" stroke="#22c55e" stroke-width="0.5"/>
+  <text x="1111" y="504" font-family="Arial" font-size="9" fill="#4ade80" text-anchor="middle">↗ View Live</text>
+
+  <!-- ===== DRAG HINT between columns ===== -->
+  <text x="141" y="590" font-family="Arial" font-size="10" fill="#2d2d4e" text-anchor="middle">↕ drag cards to move</text>
+  <text x="403" y="590" font-family="Arial" font-size="10" fill="#2d2d4e" text-anchor="middle">↕ drag cards to move</text>
+
+  <!-- ===== STATS BAR at bottom ===== -->
+  <rect x="0" y="860" width="1400" height="40" fill="#16162a" stroke="#2d2d4e" stroke-width="1"/>
+  <!-- Stats -->
+  <text x="30" y="885" font-family="Arial" font-size="11" fill="#64748b">Total pages:</text>
+  <text x="100" y="885" font-family="Arial" font-size="11" font-weight="700" fill="#e2e8f0">16</text>
+  <rect x="130" y="872" width="1" height="16" fill="#2d2d4e"/>
+  <text x="145" y="885" font-family="Arial" font-size="11" fill="#64748b">Published:</text>
+  <text x="210" y="885" font-family="Arial" font-size="11" font-weight="700" fill="#4ade80">5</text>
+  <rect x="235" y="872" width="1" height="16" fill="#2d2d4e"/>
+  <text x="250" y="885" font-family="Arial" font-size="11" fill="#64748b">In Review:</text>
+  <text x="315" y="885" font-family="Arial" font-size="11" font-weight="700" fill="#818cf8">2</text>
+  <rect x="340" y="872" width="1" height="16" fill="#2d2d4e"/>
+  <text x="355" y="885" font-family="Arial" font-size="11" fill="#64748b">Processing:</text>
+  <text x="425" y="885" font-family="Arial" font-size="11" font-weight="700" fill="#fbbf24">1</text>
+  <rect x="450" y="872" width="1" height="16" fill="#2d2d4e"/>
+  <text x="465" y="885" font-family="Arial" font-size="11" fill="#64748b">🇳🇱 Dutch:</text>
+  <text x="527" y="885" font-family="Arial" font-size="11" font-weight="700" fill="#e2e8f0">7</text>
+  <rect x="555" y="872" width="1" height="16" fill="#2d2d4e"/>
+  <text x="570" y="885" font-family="Arial" font-size="11" fill="#64748b">🇬🇧 English:</text>
+  <text x="640" y="885" font-family="Arial" font-size="11" font-weight="700" fill="#e2e8f0">9</text>
+
+  <!-- N8N status right -->
+  <circle cx="1310" cy="880" r="5" fill="#22c55e"/>
+  <text x="1323" y="885" font-family="Arial" font-size="11" fill="#64748b">N8N Connected  ·  Last trigger: 2 min ago</text>
+
+  <!-- ===== TOAST notification (top right) ===== -->
+  <rect x="1060" y="70" width="300" height="56" rx="10" fill="#0d1a12" stroke="#22c55e" stroke-width="1.5" filter="url(#shadow)" opacity="0.95"/>
+  <circle cx="1083" cy="98" r="10" fill="#166534"/>
+  <text x="1083" y="103" font-family="Arial" font-size="12" fill="#4ade80" text-anchor="middle">✓</text>
+  <text x="1100" y="91" font-family="Arial" font-size="12" font-weight="700" fill="#4ade80">✅ N8N received it!</text>
+  <text x="1100" y="109" font-family="Arial" font-size="10" fill="#64748b">"Approve Page" confirmed for "ROI of AI"</text>
+
+  <!-- ===== Floating "card open" modal hint ===== -->
+  <!-- just a subtle shadow behind one column -->
+
+  <!-- ===== Column drag highlight ===== -->
+  <!-- subtle glow on In-Progress column to show activity -->
+  <rect x="278" y="120" width="254" height="760" rx="12" fill="none" stroke="#f59e0b" stroke-width="1.5" opacity="0.3"/>
+
+  <!-- ===== LEGEND / LABELS ===== -->
+  <text x="16" y="895" font-family="Arial" font-size="10" fill="#2d2d4e">BOFU = Bottom of Funnel  ·  MOFU = Middle of Funnel  ·  TOFU = Top of Funnel  ·  Cards are drag-and-drop  ·  Buttons trigger N8N workflows via webhook</text>
+
+</svg>

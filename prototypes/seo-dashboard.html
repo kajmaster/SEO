@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEO Suite</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0c0c10;
+    --sidebar: #101014;
+    --surface: #141418;
+    --border: #1c1c24;
+    --border2: #222230;
+    --accent: #7c3aed;
+    --text: #ebebf5;
+    --text-2: #707088;
+    --text-3: #363648;
+    --green: #22c55e;
+    --yellow: #e8a000;
+    --blue: #5b8df0;
+    --purple: #9b70ff;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  /* ─── SIDEBAR ─── */
+  .sidebar {
+    width: 200px;
+    background: var(--sidebar);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    height: 100vh;
+    padding: 20px 12px;
+    gap: 2px;
+  }
+
+  .brand {
+    display: flex; align-items: center; gap: 9px;
+    font-size: 14px; font-weight: 600; color: var(--text);
+    letter-spacing: -0.3px;
+    padding: 6px 8px 20px;
+  }
+  .brand-mark {
+    width: 24px; height: 24px; border-radius: 6px;
+    background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 800; color: white; flex-shrink: 0;
+  }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 8px 10px; border-radius: 8px;
+    color: var(--text-2); cursor: pointer; transition: all 0.1s;
+    font-size: 13.5px; border: none; background: none; width: 100%; text-align: left;
+    font-family: inherit;
+  }
+  .nav-item:hover { color: var(--text); background: var(--surface); }
+  .nav-item.active { color: var(--text); background: var(--surface); font-weight: 500; }
+  .nav-badge {
+    margin-left: auto; font-size: 10.5px; font-weight: 600;
+    background: var(--accent); color: white;
+    padding: 1px 6px; border-radius: 10px; min-width: 18px; text-align: center;
+  }
+
+  .sidebar-spacer { flex: 1; }
+  .user-row {
+    display: flex; align-items: center; gap: 9px;
+    padding: 8px 10px; border-radius: 8px;
+    border-top: 1px solid var(--border); padding-top: 16px; margin-top: 8px;
+  }
+  .user-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: #1e1438;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: var(--purple); flex-shrink: 0;
+  }
+  .user-name { font-size: 12.5px; font-weight: 500; color: var(--text); }
+  .user-sub { font-size: 11px; color: var(--text-2); }
+  .live-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--green);
+    margin-left: auto; flex-shrink: 0;
+    box-shadow: 0 0 5px var(--green);
+    animation: blink 2.5s infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 60%{opacity:0.3} }
+
+  /* ─── MAIN ─── */
+  .main {
+    flex: 1; display: flex; flex-direction: column;
+    height: 100vh; overflow: hidden;
+  }
+
+  /* ─── TOPBAR ─── */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 32px; height: 56px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .topbar-title { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+  .topbar-date { font-size: 12px; color: var(--text-2); }
+  .btn-primary {
+    padding: 8px 18px; border-radius: 9px;
+    background: var(--accent); border: none;
+    color: white; font-size: 13px; font-weight: 500;
+    cursor: pointer; font-family: inherit;
+    transition: opacity 0.12s;
+  }
+  .btn-primary:hover { opacity: 0.82; }
+
+  /* ─── CONTENT AREA ─── */
+  .content {
+    flex: 1; overflow-y: auto; padding: 32px;
+  }
+  .content::-webkit-scrollbar { width: 4px; }
+  .content::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  /* ─── STATS ─── */
+  .stats {
+    display: flex; gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden;
+    margin-bottom: 28px;
+  }
+  .stat {
+    flex: 1; padding: 20px 24px;
+    border-right: 1px solid var(--border);
+    cursor: default;
+  }
+  .stat:last-child { border-right: none; }
+  .stat-label { font-size: 11.5px; color: var(--text-2); margin-bottom: 9px; }
+  .stat-num {
+    font-size: 30px; font-weight: 700; letter-spacing: -1px;
+    line-height: 1; margin-bottom: 4px;
+  }
+  .stat-sub { font-size: 11.5px; color: var(--text-2); }
+  .up { color: var(--green); }
+
+  /* ─── TABLE PANEL ─── */
+  .panel {
+    border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden;
+  }
+  .panel-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px; border-bottom: 1px solid var(--border);
+  }
+  .panel-title { font-size: 13.5px; font-weight: 600; }
+
+  /* filter tabs */
+  .tabs { display: flex; gap: 2px; }
+  .tab {
+    padding: 5px 11px; border-radius: 6px; font-size: 12px;
+    color: var(--text-2); cursor: pointer; border: none; background: none;
+    font-family: inherit; transition: all 0.1s;
+  }
+  .tab:hover { background: var(--surface); color: var(--text); }
+  .tab.on { background: var(--surface); color: var(--text); font-weight: 500; }
+
+  /* table */
+  .tbl { width: 100%; border-collapse: collapse; }
+  .tbl thead tr { border-bottom: 1px solid var(--border); }
+  .tbl th {
+    padding: 10px 20px; text-align: left;
+    font-size: 10.5px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.6px; color: var(--text-3);
+  }
+  .tbl tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s; cursor: pointer;
+  }
+  .tbl tbody tr:last-child { border-bottom: none; }
+  .tbl tbody tr:hover { background: var(--surface); }
+  .tbl td { padding: 13px 20px; vertical-align: middle; }
+
+  .cell-title {
+    font-size: 13.5px; font-weight: 500; color: var(--text);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .cell-meta { font-size: 11.5px; color: var(--text-2); margin-top: 3px; padding-left: 26px; }
+
+  .flag { font-size: 16px; flex-shrink: 0; }
+
+  .type-tag {
+    font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px;
+    text-transform: uppercase; letter-spacing: 0.2px; flex-shrink: 0;
+  }
+  .type-tag.bofu { background: rgba(155,112,255,0.1); color: var(--purple); }
+  .type-tag.mofu { background: rgba(232,160,0,0.1); color: var(--yellow); }
+  .type-tag.tofu { background: rgba(34,197,94,0.1); color: var(--green); }
+
+  .sdot {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12.5px; color: var(--text-2); white-space: nowrap;
+  }
+  .d { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .d.g { background: var(--green); }
+  .d.y { background: var(--yellow); }
+  .d.b { background: var(--blue); }
+  .d.p { background: var(--purple); }
+  .d.x { background: var(--text-3); }
+
+  .actions { display: flex; gap: 6px; justify-content: flex-end; white-space: nowrap; }
+  .abtn {
+    padding: 5px 11px; border-radius: 6px; font-size: 12px;
+    background: var(--surface); border: 1px solid var(--border2);
+    color: var(--text-2); cursor: pointer; font-family: inherit; transition: all 0.1s;
+  }
+  .abtn:hover { color: var(--text); border-color: var(--border); }
+  .abtn.a { color: var(--accent); border-color: rgba(124,58,237,0.25); background: rgba(124,58,237,0.06); }
+  .abtn.a:hover { background: rgba(124,58,237,0.12); }
+  .abtn.g { color: var(--green); border-color: rgba(34,197,94,0.25); background: rgba(34,197,94,0.06); }
+  .abtn.g:hover { background: rgba(34,197,94,0.12); }
+
+  /* ─── MODAL ─── */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(8px);
+    z-index: 400;
+    display: none; align-items: center; justify-content: center;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: var(--sidebar);
+    border: 1px solid var(--border2);
+    border-radius: 16px; width: 440px;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.6);
+    animation: up 0.18s cubic-bezier(0.22,1,0.36,1);
+    overflow: hidden;
+  }
+  @keyframes up { from{transform:translateY(12px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .modal-head {
+    padding: 22px 24px 18px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-head h2 { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; }
+  .mx {
+    width: 24px; height: 24px; border-radius: 6px; background: var(--surface);
+    border: none; color: var(--text-2); font-size: 13px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-family: inherit;
+    transition: background 0.1s;
+  }
+  .mx:hover { background: var(--border2); color: var(--text); }
+  .modal-body { padding: 22px 24px; }
+  .m-label { font-size: 11.5px; font-weight: 500; color: var(--text-2); margin-bottom: 8px; }
+  .m-textarea {
+    width: 100%; padding: 12px 14px;
+    border-radius: 9px; border: 1px solid var(--border2);
+    background: var(--surface); color: var(--text);
+    font-size: 14px; font-family: inherit; outline: none; resize: none;
+    line-height: 1.5; transition: border-color 0.12s;
+  }
+  .m-textarea:focus { border-color: var(--accent); }
+  .m-textarea::placeholder { color: var(--text-3); }
+  .locale-row { display: flex; gap: 8px; margin-top: 18px; }
+  .locale-btn {
+    flex: 1; padding: 10px; border-radius: 9px;
+    background: var(--surface); border: 1.5px solid var(--border2);
+    color: var(--text-2); font-size: 13.5px; font-family: inherit; cursor: pointer;
+    transition: all 0.12s; display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-weight: 500;
+  }
+  .locale-btn:hover { border-color: var(--border); color: var(--text); }
+  .locale-btn.on { border-color: var(--accent); color: var(--text); background: rgba(124,58,237,0.08); }
+  .modal-foot {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    display: flex; gap: 8px; justify-content: flex-end;
+  }
+  .btn-cancel {
+    padding: 9px 18px; border-radius: 8px;
+    background: none; border: 1px solid var(--border2);
+    color: var(--text-2); font-size: 13px; cursor: pointer; font-family: inherit;
+    transition: all 0.1s;
+  }
+  .btn-cancel:hover { color: var(--text); border-color: var(--border); }
+
+  /* ─── TOASTS ─── */
+  .toasts {
+    position: fixed; bottom: 22px; right: 22px;
+    display: flex; flex-direction: column; gap: 8px; z-index: 999;
+  }
+  .toast {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--sidebar); border: 1px solid var(--border2);
+    border-radius: 9px; padding: 11px 14px;
+    min-width: 260px;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.4);
+    animation: tin 0.2s cubic-bezier(0.22,1,0.36,1);
+    transition: opacity 0.2s, transform 0.2s;
+  }
+  @keyframes tin { from{transform:translateX(16px);opacity:0} to{transform:translateX(0);opacity:1} }
+  .t-ico { font-size: 14px; }
+  .t-title { font-size: 12.5px; font-weight: 500; color: var(--text); }
+  .t-sub { font-size: 11px; color: var(--text-2); margin-top: 1px; }
+  .toast.ok { border-left: 2px solid var(--green); }
+  .toast.wait { border-left: 2px solid var(--yellow); }
+  .toast.info { border-left: 2px solid var(--blue); }
+</style>
+</head>
+<body>
+
+<!-- ─── SIDEBAR ─── -->
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-mark">S</div>
+    SEO Suite
+  </div>
+
+  <button class="nav-item active" onclick="setNav(this)">Overview</button>
+  <button class="nav-item" onclick="setNav(this); toast('info','For Review','2 pages need your approval')">
+    For Review
+    <span class="nav-badge">2</span>
+  </button>
+  <button class="nav-item" onclick="setNav(this); toast('info','Settings','Webhook &amp; Airtable config')">Settings</button>
+
+  <div class="sidebar-spacer"></div>
+
+  <div class="user-row">
+    <div class="user-avatar">K</div>
+    <div>
+      <div class="user-name">Kaj</div>
+      <div class="user-sub">Turn.One</div>
+    </div>
+    <div class="live-dot" title="N8N connected"></div>
+  </div>
+</aside>
+
+<!-- ─── MAIN ─── -->
+<div class="main">
+
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Overview</div>
+      <div class="topbar-date">Monday, 13 April 2026</div>
+    </div>
+    <button class="btn-primary" onclick="openModal()">+ Create Content</button>
+  </div>
+
+  <div class="content">
+
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">Published</div>
+        <div class="stat-num" style="color:var(--green)">5</div>
+        <div class="stat-sub"><span class="up">↑ 2</span> this week</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">For Review</div>
+        <div class="stat-num" style="color:var(--purple)">2</div>
+        <div class="stat-sub">Needs approval</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">In Progress</div>
+        <div class="stat-num" style="color:var(--yellow)">1</div>
+        <div class="stat-sub">AI writing now</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Total Pages</div>
+        <div class="stat-num">16</div>
+        <div class="stat-sub">2 projects</div>
+      </div>
+    </div>
+
+    <!-- Pages table -->
+    <div class="panel">
+      <div class="panel-head">
+        <span class="panel-title">Pages</span>
+        <div class="tabs">
+          <button class="tab on" onclick="filterTab(this,'all')">All</button>
+          <button class="tab" onclick="filterTab(this,'review')">Review</button>
+          <button class="tab" onclick="filterTab(this,'published')">Published</button>
+          <button class="tab" onclick="filterTab(this,'new')">New</button>
+        </div>
+      </div>
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+
+          <tr data-s="review">
+            <td>
+              <div class="cell-title"><span class="flag">🇬🇧</span> Top 10 Use Cases for AI in B2B Sales</div>
+              <div class="cell-meta">Turn.One · 1,847 words</div>
+            </td>
+            <td><span class="type-tag bofu">BOFU</span></td>
+            <td><span class="sdot"><span class="d p"></span>For Review</span></td>
+            <td><div class="actions">
+              <button class="abtn g" onclick="doApprove(this,'Top 10 Use Cases for AI in B2B Sales')">Approve</button>
+              <button class="abtn" onclick="toast('info','Editor','Opening…')">Edit</button>
+            </div></td>
+          </tr>
+
+          <tr data-s="review">
+            <td>
+              <div class="cell-title"><span class="flag">🇳🇱</span> Hoe kies je de juiste AI tool voor sales?</div>
+              <div class="cell-meta">Roelof Digital · 2,102 words</div>
+            </td>
+            <td><span class="type-tag mofu">MOFU</span></td>
+            <td><span class="sdot"><span class="d p"></span>For Review</span></td>
+            <td><div class="actions">
+              <button class="abtn g" onclick="doApprove(this,'Hoe kies je de juiste AI tool')">Approve</button>
+              <button class="abtn" onclick="toast('info','Editor','Opening…')">Edit</button>
+            </div></td>
+          </tr>
+
+          <tr data-s="ready">
+            <td>
+              <div class="cell-title"><span class="flag">🇬🇧</span> ROI of AI: How to Measure Real Results</div>
+              <div class="cell-meta">Turn.One · ★ 91/100</div>
+            </td>
+            <td><span class="type-tag bofu">BOFU</span></td>
+            <td><span class="sdot"><span class="d b"></span>Ready</span></td>
+            <td><div class="actions">
+              <button class="abtn a" onclick="doPublish(this,'ROI of AI')">Publish</button>
+            </div></td>
+          </tr>
+
+          <tr data-s="ready">
+            <td>
+              <div class="cell-title"><span class="flag">🇳🇱</span> AI voor Accountancy: Praktische Gids 2025</div>
+              <div class="cell-meta">Roelof Digital · ★ 88/100</div>
+            </td>
+            <td><span class="type-tag bofu">BOFU</span></td>
+            <td><span class="sdot"><span class="d b"></span>Ready</span></td>
+            <td><div class="actions">
+              <button class="abtn a" onclick="doPublish(this,'AI voor Accountancy')">Publish</button>
+            </div></td>
+          </tr>
+
+          <tr data-s="progress">
+            <td>
+              <div class="cell-title"><span class="flag">🇬🇧</span> N8N Workflow Automation for Marketing Teams</div>
+              <div class="cell-meta">Turn.One · AI writing… 65%</div>
+            </td>
+            <td><span class="type-tag bofu">BOFU</span></td>
+            <td><span class="sdot"><span class="d y"></span>Writing</span></td>
+            <td><div class="actions">
+              <button class="abtn" onclick="toast('wait','In progress','AI is currently writing this page')">View</button>
+            </div></td>
+          </tr>
+
+          <tr data-s="published">
+            <td>
+              <div class="cell-title"><span class="flag">🇬🇧</span> AI Tools Comparison: GPT-4 vs Claude</div>
+              <div class="cell-meta">Turn.One · 👁 1.2k views</div>
+            </td>
+            <td><span class="type-tag bofu">BOFU</span></td>
+            <td><span class="sdot"><span class="d g"></span>Published</span></td>
+            <td><div class="actions">
+              <button class="abtn" onclick="toast('ok','Live','Opened in new tab')">↗ View</button>
+              <button class="abtn" onclick="doLocalise('AI Tools Comparison')">🇳🇱</button>
+            </div></td>
+          </tr>
+
+          <tr data-s="published">
+            <td>
+              <div class="cell-title"><span class="flag">🇳🇱</span> Wat is Kunstmatige Intelligentie? (2025)</div>
+              <div class="cell-meta">Roelof Digital · 👁 834 views</div>
+            </td>
+            <td><span class="type-tag tofu">TOFU</span></td>
+            <td><span class="sdot"><span class="d g"></span>Published</span></td>
+            <td><div class="actions">
+              <button class="abtn" onclick="toast('ok','Live','Opened in new tab')">↗ View</button>
+            </div></td>
+          </tr>
+
+          <tr data-s="published">
+            <td>
+              <div class="cell-title"><span class="flag">🇬🇧</span> Case Study: 3x Growth with AI Content</div>
+              <div class="cell-meta">Turn.One · 👁 2.1k views</div>
+            </td>
+            <td><span class="type-tag mofu">MOFU</span></td>
+            <td><span class="sdot"><span class="d g"></span>Published</span></td>
+            <td><div class="actions">
+              <button class="abtn" onclick="toast('ok','Live','Opened in new tab')">↗ View</button>
+            </div></td>
+          </tr>
+
+          <tr data-s="new">
+            <td>
+              <div class="cell-title"><span class="flag">🇬🇧</span> Best AI Automation Tools for SMEs 2025</div>
+              <div class="cell-meta">Turn.One · Not started</div>
+            </td>
+            <td><span class="type-tag bofu">BOFU</span></td>
+            <td><span class="sdot"><span class="d x"></span>New</span></td>
+            <td><div class="actions">
+              <button class="abtn a" onclick="doGenerate(this,'Best AI Automation Tools for SMEs 2025')">Generate</button>
+            </div></td>
+          </tr>
+
+          <tr data-s="new">
+            <td>
+              <div class="cell-title"><span class="flag">🇳🇱</span> Wat is Marketing Automatisering?</div>
+              <div class="cell-meta">Roelof Digital · Not started</div>
+            </td>
+            <td><span class="type-tag tofu">TOFU</span></td>
+            <td><span class="sdot"><span class="d x"></span>New</span></td>
+            <td><div class="actions">
+              <button class="abtn a" onclick="doGenerate(this,'Wat is Marketing Automatisering?')">Generate</button>
+            </div></td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<!-- ─── MODAL ─── -->
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Create Content</h2>
+      <button class="mx" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="m-label">What do you want to write about?</div>
+      <textarea class="m-textarea" id="mDesc" rows="4" placeholder="e.g. A guide explaining how AI can save SMEs 10 hours a week on admin tasks"></textarea>
+      <div class="locale-row">
+        <button class="locale-btn on" id="len" onclick="selLocale('en')">🇬🇧 English</button>
+        <button class="locale-btn" id="lnl" onclick="selLocale('nl')">🇳🇱 Dutch</button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="submitModal()">Generate with AI</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toasts -->
+<div class="toasts" id="toasts"></div>
+
+<script>
+  /* NAV */
+  function setNav(el) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  /* TOAST */
+  let tid = 0;
+  function toast(type, title, sub, ms = 3600) {
+    const rack = document.getElementById('toasts');
+    const id = ++tid;
+    const icons = { ok:'✅', wait:'⏳', info:'ℹ️' };
+    const el = document.createElement('div');
+    el.className = `toast ${type}`; el.id = `t${id}`;
+    el.innerHTML = `<div class="t-ico">${icons[type]||'ℹ️'}</div>
+      <div><div class="t-title">${title}</div>${sub ? `<div class="t-sub">${sub}</div>` : ''}</div>`;
+    rack.appendChild(el);
+    if (ms > 0) setTimeout(() => {
+      const t = document.getElementById(`t${id}`);
+      if (t) { t.style.opacity = '0'; t.style.transform = 'translateX(12px)'; setTimeout(() => t.remove(), 200); }
+    }, ms);
+    return id;
+  }
+  function rmToast(id) { document.getElementById(`t${id}`)?.remove(); }
+
+  /* MODAL */
+  let mLocale = 'en';
+  function openModal() {
+    document.getElementById('overlay').classList.add('open');
+    setTimeout(() => document.getElementById('mDesc').focus(), 60);
+  }
+  function closeModal() { document.getElementById('overlay').classList.remove('open'); }
+  function selLocale(l) {
+    mLocale = l;
+    ['en','nl'].forEach(k => document.getElementById('l'+k).classList.toggle('on', k === l));
+  }
+  function submitModal() {
+    const desc = document.getElementById('mDesc').value.trim();
+    if (!desc) { document.getElementById('mDesc').style.borderColor = 'var(--accent)'; document.getElementById('mDesc').focus(); return; }
+    closeModal();
+    document.getElementById('mDesc').value = '';
+    document.getElementById('mDesc').style.borderColor = '';
+    const flag = mLocale === 'nl' ? '🇳🇱' : '🇬🇧';
+    const wid = toast('wait', 'Sending to N8N…', desc.slice(0, 55) + (desc.length > 55 ? '…' : ''), 0);
+    setTimeout(() => {
+      rmToast(wid);
+      toast('ok', 'Queued for AI writing', 'Added to your pipeline');
+      addRow(flag, desc, mLocale === 'nl' ? 'Roelof Digital' : 'Turn.One');
+    }, 1600);
+  }
+
+  /* TABLE ACTIONS */
+  function doApprove(btn, title) {
+    const tr = btn.closest('tr');
+    tr.querySelector('.sdot').innerHTML = `<span class="d b"></span>Ready`;
+    tr.dataset.s = 'ready';
+    tr.querySelector('.actions').innerHTML = `<button class="abtn a" onclick="doPublish(this,'${title}')">Publish</button>`;
+    toast('ok', 'Approved', `"${title}" is ready to publish`);
+  }
+  function doPublish(btn, title) {
+    const tr = btn.closest('tr');
+    tr.querySelector('.sdot').innerHTML = `<span class="d g"></span>Published`;
+    tr.dataset.s = 'published';
+    tr.querySelector('.actions').innerHTML = `<button class="abtn" onclick="toast('ok','Live','Opened in new tab')">↗ View</button>`;
+    toast('ok', 'Published', `"${title}" is live`);
+  }
+  function doGenerate(btn, title) {
+    const tr = btn.closest('tr');
+    tr.querySelector('.sdot').innerHTML = `<span class="d y"></span>Writing`;
+    tr.dataset.s = 'progress';
+    btn.textContent = 'Writing…'; btn.disabled = true;
+    const wid = toast('wait', 'AI writing started…', title.slice(0, 45), 0);
+    setTimeout(() => {
+      rmToast(wid);
+      tr.querySelector('.sdot').innerHTML = `<span class="d p"></span>For Review`;
+      tr.dataset.s = 'review';
+      tr.querySelector('.actions').innerHTML = `<button class="abtn g" onclick="doApprove(this,'${title}')">Approve</button><button class="abtn" onclick="toast('info','Editor','Opening…')">Edit</button>`;
+      toast('ok', 'Done — ready for review', `"${title}"`);
+    }, 4500);
+  }
+  function doLocalise(title) {
+    const wid = toast('wait', 'Creating Dutch version…', '', 0);
+    setTimeout(() => { rmToast(wid); toast('ok', 'Dutch version added to queue', ''); }, 2000);
+  }
+
+  /* FILTER */
+  function filterTab(el, f) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+    el.classList.add('on');
+    document.querySelectorAll('#tbody tr').forEach(tr => {
+      const s = tr.dataset.s;
+      const show = f === 'all' || s === f || (f === 'new' && (s === 'new' || s === 'progress')) || (f === 'review' && (s === 'review' || s === 'ready'));
+      tr.style.display = show ? '' : 'none';
+    });
+  }
+
+  /* ADD ROW */
+  function addRow(flag, title, project) {
+    const tbody = document.getElementById('tbody');
+    const tr = document.createElement('tr');
+    tr.dataset.s = 'new';
+    const shortTitle = title.slice(0, 60) + (title.length > 60 ? '…' : '');
+    tr.innerHTML = `
+      <td><div class="cell-title"><span class="flag">${flag}</span> ${shortTitle}</div>
+          <div class="cell-meta">${project} · Just added</div></td>
+      <td><span class="type-tag bofu">BOFU</span></td>
+      <td><span class="sdot"><span class="d x"></span>New</span></td>
+      <td><div class="actions"><button class="abtn a" onclick="doGenerate(this,'${shortTitle}')">Generate</button></div></td>`;
+    tbody.insertBefore(tr, tbody.firstChild);
+  }
+
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+</script>
+</body>
+</html>
