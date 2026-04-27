@@ -1,0 +1,1404 @@
+<html lang="nl" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ContentFlow</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root{--font:-apple-system,'SF Pro Display',BlinkMacSystemFont,'Segoe UI',sans-serif;--accent:#00C67A;--accent-dark:#00A866;--accent-glow:rgba(0,198,122,.15);--accent-subtle:rgba(0,198,122,.08);--radius-sm:10px;--radius:16px;--radius-lg:22px;--duration:.2s}
+[data-theme="light"]{--bg:#F2F2F7;--surface:#FFFFFF;--surface2:#F9F9FB;--surface3:#F2F2F7;--border:rgba(0,0,0,.07);--border-strong:rgba(0,0,0,.12);--text:#1C1C1E;--text2:#3C3C43;--muted:#8E8E93;--sidebar-bg:#FFFFFF;--sidebar-text:#3C3C43;--sidebar-active:var(--accent);--sidebar-active-bg:var(--accent-subtle);--topbar-bg:rgba(255,255,255,.85);--shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);--shadow-lg:0 8px 32px rgba(0,0,0,.1);--input-bg:#F9F9FB;--tag-draft-bg:#FFF4E0;--tag-draft:#C07000;--tag-review-bg:#E5EEFF;--tag-review:#2457C5;--tag-live-bg:#E5F9EE;--tag-live:#1A7A48;--tag-grey-bg:#F2F2F7;--tag-grey:#636366}
+[data-theme="dark"]{--bg:#111113;--surface:#1C1C1E;--surface2:#252527;--surface3:#2C2C2E;--border:rgba(255,255,255,.07);--border-strong:rgba(255,255,255,.13);--text:#F2F2F7;--text2:#EBEBF0;--muted:#8E8E93;--sidebar-bg:#1C1C1E;--sidebar-text:#EBEBF0;--sidebar-active:var(--accent);--sidebar-active-bg:rgba(0,198,122,.12);--topbar-bg:rgba(28,28,30,.85);--shadow:0 1px 2px rgba(0,0,0,.4),0 4px 16px rgba(0,0,0,.3);--shadow-lg:0 8px 32px rgba(0,0,0,.5);--input-bg:#2C2C2E;--tag-draft-bg:rgba(192,112,0,.15);--tag-draft:#FFB340;--tag-review-bg:rgba(36,87,197,.15);--tag-review:#6EA8FE;--tag-live-bg:rgba(0,198,122,.12);--tag-live:#30D158;--tag-grey-bg:rgba(255,255,255,.07);--tag-grey:#8E8E93}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{height:100%}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;height:100%;-webkit-font-smoothing:antialiased;transition:background var(--duration),color var(--duration)}
+.app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:220px;background:var(--sidebar-bg);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;transition:width .2s ease,background var(--duration),border-color var(--duration);position:relative;overflow:hidden}
+.sidebar-logo{padding:20px 16px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+.logo-mark{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),#00A8FF);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 8px rgba(0,198,122,.35);flex-shrink:0}
+.logo-text{font-size:16px;font-weight:700;letter-spacing:-.3px;color:var(--text)}
+.logo-text span{color:var(--accent)}
+.nav-group{padding:10px 8px 0}
+.nav-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding:6px 10px 4px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:var(--radius-sm);cursor:pointer;font-size:13.5px;color:var(--sidebar-text);transition:all var(--duration);margin-bottom:1px;font-weight:400}
+.nav-item:hover{background:var(--surface3)}
+.nav-item.active{background:var(--sidebar-active-bg);color:var(--sidebar-active);font-weight:600}
+.nav-icon{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+.nav-badge{margin-left:auto;background:var(--accent);color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 5px}
+.trust-section{margin:auto 10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px}
+.trust-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:8px}
+.trust-track{background:var(--surface3);border-radius:8px;padding:2px;display:flex;gap:2px}
+.trust-btn{flex:1;padding:5px 2px;border-radius:6px;font-size:10px;font-weight:500;text-align:center;cursor:pointer;color:var(--muted);transition:all var(--duration);line-height:1.3}
+.trust-btn.active{background:var(--accent);color:#fff;font-weight:600}
+.trust-desc{font-size:10.5px;color:var(--muted);margin-top:7px;line-height:1.45}
+/* ── ShadCN Sidebar: collapsed icon state ── */
+.sidebar[data-state="collapsed"]{width:52px}
+.sidebar[data-state="collapsed"] .nav-text,
+.sidebar[data-state="collapsed"] .nav-badge,
+.sidebar[data-state="collapsed"] .logo-text,
+.sidebar[data-state="collapsed"] .nav-label,
+.sidebar[data-state="collapsed"] .trust-section{display:none}
+.sidebar[data-state="collapsed"] .nav-item{justify-content:center;padding:8px 0}
+.sidebar[data-state="collapsed"] .sidebar-logo{justify-content:center;padding:20px 0 14px}
+.sidebar[data-state="collapsed"] .nav-icon{font-size:17px;width:auto}
+.sidebar[data-state="collapsed"] .nav-item{position:relative}
+.sidebar[data-state="collapsed"] .nav-item[data-tip]::after{content:attr(data-tip);position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%);background:var(--text);color:var(--bg);font-size:12px;font-weight:500;padding:5px 12px;border-radius:8px;white-space:nowrap;z-index:200;opacity:0;pointer-events:none;transition:opacity .15s;box-shadow:var(--shadow-lg)}
+.sidebar[data-state="collapsed"] .nav-item[data-tip]:hover::after{opacity:1}
+.nav-text{white-space:nowrap;overflow:hidden}
+/* SidebarRail */
+.sidebar-rail{position:absolute;top:0;right:-3px;width:6px;height:100%;cursor:col-resize;z-index:20}
+.sidebar-rail::after{content:'';position:absolute;inset-y:0;left:50%;width:2px;background:transparent;transition:background .15s;border-radius:2px}
+.sidebar-rail:hover::after{background:var(--accent)}
+/* SidebarTrigger */
+.sidebar-trigger{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;background:transparent;border:none;color:var(--muted);font-size:15px;transition:all var(--duration);font-family:var(--font);flex-shrink:0}
+.sidebar-trigger:hover{background:var(--surface3);color:var(--text)}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{background:var(--topbar-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 22px;height:52px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;transition:background var(--duration)}
+.topbar-title{font-size:15px;font-weight:700;letter-spacing:-.2px}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.dm-toggle{width:40px;height:24px;background:var(--surface3);border:1px solid var(--border);border-radius:12px;cursor:pointer;position:relative;transition:background var(--duration);flex-shrink:0}
+.dm-toggle.on{background:var(--accent);border-color:transparent}
+.dm-toggle::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;background:var(--surface);border-radius:50%;transition:left var(--duration),background var(--duration);box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.dm-toggle.on::after{left:18px}
+.dm-label{font-size:12px;color:var(--muted)}
+.avatar{width:30px;height:30px;background:linear-gradient(135deg,#6C63FF,#9B59B6);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;cursor:pointer}
+.page{flex:1;overflow-y:auto;padding:22px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:50px;font-size:13.5px;font-weight:600;cursor:pointer;border:none;transition:all var(--duration);white-space:nowrap;font-family:var(--font);letter-spacing:-.1px}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-dark);transform:translateY(-1px);box-shadow:0 4px 16px var(--accent-glow)}
+.btn-secondary{background:var(--surface3);color:var(--text2);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--surface2)}
+.btn-ghost{background:transparent;color:var(--muted)}
+.btn-ghost:hover{background:var(--surface3);color:var(--text)}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn-lg{padding:11px 24px;font-size:15px}
+.btn-icon{padding:7px;border-radius:10px}
+.btn-w{width:100%;justify-content:center}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);transition:background var(--duration),border-color var(--duration),box-shadow var(--duration)}
+.card-hover{cursor:pointer;transition:all var(--duration)}
+.card-hover:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);border-color:var(--border-strong)}
+.tag{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600}
+.tag-draft{background:var(--tag-draft-bg);color:var(--tag-draft)}
+.tag-review{background:var(--tag-review-bg);color:var(--tag-review)}
+.tag-live{background:var(--tag-live-bg);color:var(--tag-live)}
+.tag-grey{background:var(--tag-grey-bg);color:var(--tag-grey)}
+.form-group{margin-bottom:14px}
+.form-label{display:block;font-size:12.5px;font-weight:600;color:var(--text2);margin-bottom:5px}
+.form-hint{font-size:11.5px;color:var(--muted);margin-top:3px}
+.form-control{width:100%;padding:10px 13px;background:var(--input-bg);border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13.5px;color:var(--text);outline:none;font-family:var(--font);transition:border var(--duration),background var(--duration)}
+.form-control:focus{border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 4px var(--accent-subtle)}
+textarea.form-control{resize:vertical;min-height:75px}
+select.form-control{appearance:none;cursor:pointer}
+.switch{position:relative;width:36px;height:20px;background:var(--border-strong);border-radius:10px;cursor:pointer;transition:background var(--duration);flex-shrink:0}
+.switch.on{background:var(--accent)}
+.switch::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:left var(--duration);box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.switch.on::after{left:18px}
+.progress{background:var(--surface3);border-radius:4px;height:5px;overflow:hidden}
+.progress-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .5s}
+.chip{display:inline-flex;align-items:center;gap:4px;background:var(--surface3);border:1px solid var(--border);border-radius:20px;padding:2px 9px;font-size:12px;color:var(--muted)}
+.sec-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:10px}
+.divider{border:none;border-top:1px solid var(--border);margin:16px 0}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:20px}
+.page-header h2{font-size:22px;font-weight:800;letter-spacing:-.5px}
+.page-header p{font-size:13px;color:var(--muted);margin-top:3px}
+.login-wrap{min-height:100vh;background:radial-gradient(ellipse at 30% 30%,rgba(0,198,122,.15) 0%,transparent 60%),radial-gradient(ellipse at 70% 70%,rgba(0,168,255,.1) 0%,transparent 60%),var(--bg);display:flex;align-items:center;justify-content:center}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:40px 36px;width:400px;box-shadow:var(--shadow-lg)}
+.login-logo-wrap{display:flex;align-items:center;gap:12px;margin-bottom:30px}
+.login-logo-icon{width:48px;height:48px;background:linear-gradient(135deg,var(--accent),#00A8FF);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 4px 16px rgba(0,198,122,.35)}
+.login-logo-text{font-size:24px;font-weight:800;letter-spacing:-.5px}
+.login-logo-text span{color:var(--accent)}
+.login-card h2{font-size:20px;font-weight:800;letter-spacing:-.3px;margin-bottom:5px}
+.login-card p{font-size:13.5px;color:var(--muted);margin-bottom:22px;line-height:1.5}
+.login-btn{width:100%;justify-content:center;border-radius:var(--radius-sm);padding:13px;font-size:14.5px}
+.magic-sent{background:var(--tag-live-bg);border:1px solid var(--tag-live);border-radius:var(--radius-sm);padding:14px;text-align:center;font-size:13px;color:var(--tag-live);margin-top:12px;line-height:1.6}
+.login-footer{text-align:center;font-size:12px;color:var(--muted);margin-top:18px}
+.dash-layout{display:grid;grid-template-columns:1fr 290px;gap:18px;align-items:start}
+.feed{display:flex;flex-direction:column;gap:8px}
+.feed-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 15px;display:flex;gap:11px;cursor:pointer;transition:all var(--duration);box-shadow:var(--shadow)}
+.feed-item:hover{transform:translateY(-1px);box-shadow:var(--shadow-lg);border-color:var(--border-strong)}
+.feed-icon{width:38px;height:38px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.feed-body{flex:1;min-width:0}
+.feed-title{font-size:13.5px;font-weight:500;color:var(--text);line-height:1.4}
+.feed-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.feed-time{font-size:11px;color:var(--muted);margin-top:5px}
+.feed-cta{font-size:12px;font-weight:600;color:var(--accent);margin-top:5px}
+.stat-list{display:flex;flex-direction:column}
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)}
+.stat-row:last-child{border-bottom:none}
+.stat-k{font-size:13px;color:var(--muted)}
+.stat-v{font-size:15px;font-weight:800;color:var(--text)}
+.stat-v.green{color:var(--accent)}
+.action-card{background:var(--accent-subtle);border:1px solid rgba(0,198,122,.2);border-radius:var(--radius-sm);padding:12px 14px;cursor:pointer;transition:all var(--duration);margin-bottom:8px}
+.action-card:hover{background:var(--accent-glow)}
+.action-card:last-child{margin-bottom:0}
+.action-card-title{font-size:12.5px;font-weight:700;color:var(--text)}
+.action-card-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.view-toggle{background:var(--surface3);border-radius:10px;padding:3px;display:flex;gap:2px}
+.view-btn{padding:5px 13px;border-radius:8px;font-size:12.5px;font-weight:500;cursor:pointer;color:var(--muted);transition:all var(--duration);display:flex;align-items:center;gap:4px}
+.view-btn.active{background:var(--surface);color:var(--text);font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.content-tbl{width:100%;border-collapse:collapse}
+.content-tbl th{text-align:left;padding:9px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface2)}
+.content-tbl td{padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+.content-tbl tr:last-child td{border-bottom:none}
+.content-tbl tr:hover td{background:var(--surface2)}
+.ct-title{font-weight:500;color:var(--text);cursor:pointer}
+.ct-title:hover{color:var(--accent)}
+.ct-url{font-size:11.5px;color:var(--muted);margin-top:2px}
+.kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;align-items:start}
+.kan-col{background:var(--surface2);border-radius:var(--radius);padding:12px}
+.kan-col-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.kan-col-lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.kan-count{background:var(--surface);border:1px solid var(--border);color:var(--muted);font-size:10px;padding:1px 7px;border-radius:10px}
+.kan-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:7px;cursor:pointer;transition:all var(--duration);box-shadow:var(--shadow)}
+.kan-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+.kan-card-title{font-size:12.5px;font-weight:500;margin-bottom:8px}
+.wizard{max-width:680px}
+.steps-bar{display:flex;align-items:center;margin-bottom:28px}
+.step-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;background:var(--surface3);color:var(--muted);border:2px solid var(--border);transition:all var(--duration)}
+.step-dot.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.step-dot.done{background:var(--accent);color:#fff;border-color:var(--accent)}
+.step-line{flex:1;height:2px;background:var(--border);margin:0 6px;transition:background var(--duration)}
+.step-line.done{background:var(--accent)}
+.dropzone{border:2px dashed var(--border-strong);border-radius:var(--radius);padding:36px 20px;text-align:center;cursor:pointer;transition:all var(--duration);background:var(--surface2)}
+.dropzone:hover,.dropzone.over{border-color:var(--accent);background:var(--accent-subtle)}
+.dz-icon{font-size:32px;margin-bottom:8px}
+.dz-text{font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px}
+.dz-sub{font-size:12.5px;color:var(--muted)}
+.url-row{display:flex;gap:8px;margin-top:14px}
+.url-row input{flex:1}
+.file-preview{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-top:12px;font-size:12.5px;white-space:pre-wrap;max-height:200px;overflow-y:auto}
+.premise-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.premise-card{background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;cursor:pointer;transition:all var(--duration)}
+.premise-card:hover{border-color:var(--accent);background:var(--accent-subtle)}
+.premise-card.sel{border-color:var(--accent);background:var(--accent-subtle)}
+.premise-card h4{font-size:13px;font-weight:600;margin-bottom:3px}
+.premise-card p{font-size:12px;color:var(--muted)}
+.review-layout{display:flex;flex:1;overflow:hidden}
+.review-editor{flex:1;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)}
+.review-sidebar{width:320px;display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.editor-toolbar{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;background:var(--surface);flex-shrink:0}
+.tb-btn{padding:5px 10px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;background:var(--surface3);color:var(--text);border:1px solid var(--border);transition:all var(--duration)}
+.tb-btn:hover{background:var(--surface2);border-color:var(--border-strong)}
+.editor-body{flex:1;overflow-y:auto;padding:24px;font-size:14.5px;line-height:1.75;color:var(--text);outline:none;background:var(--surface)}
+.editor-body h2{font-size:18px;font-weight:700;margin:1.2em 0 .4em}
+.editor-body h3{font-size:15px;font-weight:700;margin:1em 0 .3em}
+.editor-body p{margin-bottom:.8em}
+.editor-body ul,.editor-body ol{padding-left:1.6em;margin-bottom:.8em}
+.chat{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px;background:var(--surface2)}
+.chat-hdr{padding:12px 14px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700;background:var(--surface);flex-shrink:0;display:flex;justify-content:space-between;align-items:center}
+.chat-msg{padding:10px 13px;border-radius:var(--radius-sm);font-size:13px;line-height:1.55;max-width:88%}
+.chat-msg.ai{background:var(--surface);border:1px solid var(--border);align-self:flex-start}
+.chat-msg.user{background:var(--accent);color:#fff;align-self:flex-end}
+.chat-input-row{padding:10px;border-top:1px solid var(--border);display:flex;gap:7px;background:var(--surface);flex-shrink:0}
+.chat-input{flex:1;padding:9px 12px;background:var(--input-bg);border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;color:var(--text);outline:none;font-family:var(--font)}
+.chat-input:focus{border-color:var(--accent)}
+.knowledge-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-top:4px}
+.kb-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;cursor:pointer;transition:all var(--duration);box-shadow:var(--shadow)}
+.kb-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);border-color:var(--border-strong)}
+.kb-card-icon{font-size:26px;margin-bottom:10px}
+.kb-card-title{font-size:13.5px;font-weight:700;margin-bottom:4px}
+.kb-card-sub{font-size:12px;color:var(--muted)}
+.kb-add{background:var(--surface2);border:2px dashed var(--border-strong)}
+.kb-add:hover{border-color:var(--accent)}
+.settings-layout{display:grid;grid-template-columns:200px 1fr;gap:16px;align-items:start}
+.settings-nav-item{padding:9px 12px;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;color:var(--sidebar-text);transition:all var(--duration);margin-bottom:1px}
+.settings-nav-item:hover{background:var(--surface3)}
+.settings-nav-item.active{background:var(--sidebar-active-bg);color:var(--sidebar-active);font-weight:600}
+.settings-tabs{display:flex;gap:4px;margin-bottom:20px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:5px}
+.settings-tab{padding:7px 18px;border-radius:10px;font-size:13px;font-weight:500;cursor:pointer;color:var(--muted);background:transparent;border:none;font-family:var(--font);transition:all var(--duration);letter-spacing:-.1px}
+.settings-tab:hover{color:var(--text);background:var(--surface3)}
+.settings-tab.active{background:var(--surface);color:var(--text);font-weight:600;box-shadow:0 1px 6px rgba(0,0,0,.12);border:1px solid var(--border)}
+.settings-block{margin-bottom:24px}
+.settings-block:last-child{margin-bottom:0}
+.settings-block h3{font-size:15px;font-weight:700;margin-bottom:4px}
+.settings-block p{font-size:13px;color:var(--muted);margin-bottom:14px}
+.toggle-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)}
+.toggle-row:last-child{border-bottom:none}
+.toggle-info{flex:1}
+.toggle-info strong{display:block;font-size:13px;font-weight:600}
+.toggle-info span{font-size:12px;color:var(--muted)}
+.fab-wrap{position:fixed;bottom:24px;right:24px;z-index:1000;display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.fab-btn{background:var(--accent);color:#fff;border:none;padding:11px 18px;border-radius:50px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px var(--accent-glow);transition:all var(--duration);font-family:var(--font)}
+.fab-btn:hover{background:var(--accent-dark);transform:translateY(-2px)}
+.fab-popup{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;width:300px;box-shadow:var(--shadow-lg);display:none;animation:popIn .2s ease}
+.fab-popup.open{display:block}
+.fab-popup h4{font-size:14px;font-weight:700;margin-bottom:12px}
+.fb-types{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.fb-type{padding:5px 11px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;background:var(--surface3);color:var(--muted);border:1px solid var(--border);transition:all var(--duration)}
+.fb-type.active{background:var(--accent-subtle);color:var(--accent);border-color:var(--accent)}
+.fab-row{display:flex;gap:8px;margin-top:10px}
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--text);color:var(--bg);padding:10px 22px;border-radius:50px;font-size:13px;font-weight:600;opacity:0;transition:all .3s ease;z-index:9999;white-space:nowrap;pointer-events:none;box-shadow:0 4px 20px rgba(0,0,0,.25)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@keyframes popIn{from{opacity:0;transform:scale(.95) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+.hidden{display:none!important}
+.mt-4{margin-top:16px}
+.flex{display:flex}
+.items-center{align-items:center}
+.gap-3{gap:12px}
+.text-sm{font-size:12.5px}
+.text-xs{font-size:11.5px}
+.text-muted{color:var(--muted)}
+.text-accent{color:var(--accent)}
+.font-600{font-weight:600}
+.font-700{font-weight:700}
+.w-full{width:100%}
+.score-bar{width:50px}
+.topbar-cta{padding:9px 20px;font-size:13.5px;border-radius:50px;font-weight:700;letter-spacing:-.01em}
+.content-table{width:100%;border-collapse:collapse;font-size:13.5px}
+.content-table thead tr{border-bottom:1px solid var(--border)}
+.content-table th{padding:11px 16px;text-align:left;font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.content-table td{padding:13px 16px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text)}
+.content-table tbody tr:last-child td{border-bottom:none}
+.content-table tbody tr:hover{background:var(--hover)}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-top:8px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 24px;display:flex;flex-direction:column;gap:6px}
+.stat-label{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.stat-value{font-size:32px;font-weight:700;color:var(--text);line-height:1.1}
+.stat-delta{font-size:12px;font-weight:500}
+.stat-delta.positive{color:#22c55e}
+.stat-delta.neutral{color:var(--muted)}
+/* ── Floating Toolbar ── */
+#ft{position:fixed;z-index:9999;display:none;align-items:center;gap:2px;padding:5px 6px;background:var(--surface);border:1px solid var(--border-strong);border-radius:10px;box-shadow:var(--shadow-lg);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);transform:translateX(-50%);transition:opacity .12s}
+#ft.visible{display:flex}
+.ft-btn{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:6px;border:none;background:transparent;color:var(--text2);font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);transition:all .1s;flex-shrink:0}
+.ft-btn:hover{background:var(--surface3);color:var(--text)}
+.ft-btn.active{background:var(--accent-subtle);color:var(--accent)}
+.ft-sep{width:1px;height:18px;background:var(--border);margin:0 3px;flex-shrink:0}
+.ft-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ft-ai-wrap{display:flex;align-items:center;gap:4px;margin-left:2px}
+.ft-ai-input{height:28px;padding:0 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;font-family:var(--font);outline:none;width:160px;transition:border-color .15s}
+.ft-ai-input:focus{border-color:var(--accent)}
+.ft-ai-input::placeholder{color:var(--muted)}
+.ft-ai-btn{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:6px;border:none;background:var(--accent);color:#fff;cursor:pointer;flex-shrink:0;transition:opacity .15s}
+.ft-ai-btn:hover{opacity:.85}
+.ft-ai-btn:disabled{opacity:.45;cursor:not-allowed}
+/* Article editor */
+#article-editor{outline:none;caret-color:var(--accent)}
+#article-editor h1,#article-editor h2,#article-editor h3{margin:1em 0 .4em;line-height:1.25}
+#article-editor h1{font-size:1.5em;font-weight:700}
+#article-editor h2{font-size:1.25em;font-weight:700}
+#article-editor h3{font-size:1.1em;font-weight:600}
+#article-editor p{margin:.5em 0}
+#article-editor a{color:var(--accent);text-decoration:underline}
+.stat-delta.negative{color:#ef4444}
+</style>
+</head><body>
+<div id="loginWrap" class="login-wrap">
+  <div class="login-card">
+    <div class="login-logo-wrap">
+      <div class="login-logo-icon">✦</div>
+      <div class="login-logo-text">Content<span>Flow</span></div>
+    </div>
+    <h2>Welkom terug</h2>
+    <p>Voer je e-mailadres in. We sturen je een magische link om in te loggen — geen wachtwoord nodig.</p>
+    <div class="form-group">
+      <label class="form-label">E-mailadres</label>
+      <input id="loginEmail" class="form-control" type="email" placeholder="jij@bedrijf.nl">
+    </div>
+    <button id="sendLinkBtn" class="btn btn-primary login-btn" onclick="sendLink()">✉️ &nbsp;Stuur magische link</button>
+    <div id="magicSent" class="magic-sent hidden">
+      ✅ Link verstuurd! Controleer je inbox.<br>
+      <small style="opacity:.8">Klik de link in de mail om in te loggen.</small>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin:12px 0 4px;">
+      <div style="flex:1;height:1px;background:var(--border,#e5e7eb);"></div>
+      <span style="font-size:12px;color:#9ca3af;white-space:nowrap;">of probeer eerst</span>
+      <div style="flex:1;height:1px;background:var(--border,#e5e7eb);"></div>
+    </div>
+    <button class="btn login-btn" onclick="demoLogin()" style="background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;font-weight:600;">▶ &nbsp;Demo bekijken</button>
+    <div class="login-footer">🔒 Geen wachtwoord · Beveiligde magic link</div>
+  </div>
+</div>
+
+<div id="appWrap" class="app hidden">
+  <nav class="sidebar" id="appSidebar" data-state="expanded">
+    <div class="sidebar-logo">
+      <div class="logo-mark">✦</div>
+      <div class="logo-text">Content<span>Flow</span></div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">Menu</div>
+      <div class="nav-item active" id="ni-dashboard" onclick="nav('dashboard',this)" data-tip="Dashboard">
+        <span class="nav-icon">🏠</span><span class="nav-text"> Dashboard</span>
+      </div>
+      <div class="nav-item" id="ni-content" onclick="nav('content',this)" data-tip="Content">
+        <span class="nav-icon">📄</span><span class="nav-text"> Content</span>
+        <span class="nav-badge">3</span>
+      </div>
+      <div class="nav-item" id="ni-create" onclick="nav('create',this)" data-tip="Nieuw maken">
+        <span class="nav-icon">✨</span><span class="nav-text"> Nieuw maken</span>
+      </div>
+      <div class="nav-item" id="ni-review" onclick="nav('review',this)" data-tip="Review editor">
+        <span class="nav-icon">✏️</span><span class="nav-text"> Review editor</span>
+      </div>
+      <div class="nav-item" id="ni-knowledge" onclick="nav('knowledge',this)" data-tip="Kennisbank">
+        <span class="nav-icon">🧠</span><span class="nav-text"> Kennisbank</span>
+      </div>
+      <div class="nav-item" id="ni-settings" onclick="nav('settings',this)" data-tip="Instellingen">
+        <span class="nav-icon">⚙️</span><span class="nav-text"> Instellingen</span>
+      </div>
+    </div>
+    <div class="trust-section">
+      <div class="trust-label">AI Vertrouwensniveau</div>
+      <div class="trust-track">
+        <div class="trust-btn active" onclick="setTrust(0,this)">🎓<br>Beginner</div>
+        <div class="trust-btn" onclick="setTrust(1,this)">💼<br>Advisor</div>
+        <div class="trust-btn" onclick="setTrust(2,this)">🚀<br>YOLO</div>
+      </div>
+      <div class="trust-desc" id="trustDesc">Elke actie vraagt om jouw goedkeuring. Veilig en vertrouwd.</div>
+    </div>
+    <div class="sidebar-rail" onclick="toggleSidebar()" title="Sidebar inklappen"></div>
+  </nav>
+
+  <div class="main">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button class="sidebar-trigger" onclick="toggleSidebar()" title="Sidebar aan/uit">&#9776;</button>
+        <div id="pageTitle" class="topbar-title">Dashboard</div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-primary topbar-cta" onclick="nav('create',document.getElementById('ni-create'))">✦ Nieuw artikel</button>
+        <span class="dm-label" id="dmLabel">☀️</span>
+        <div class="dm-toggle" id="dmToggle" onclick="toggleDark()"></div>
+        <div class="avatar" id="userAvatar" title="Gebruiker" onclick="doLogout()" style="cursor:pointer;">KS</div>
+      </div>
+    </div>
+    <div id="pg-dashboard" class="page"></div>
+    <div id="pg-content" class="page hidden"></div>
+    <div id="pg-create" class="page hidden"></div>
+    <div id="pg-review" class="hidden" style="flex:1;display:none;overflow:hidden;"></div>
+    <div id="pg-knowledge" class="page hidden"></div>
+    <div id="pg-settings" class="page hidden"></div>
+  </div>
+</div>
+
+<div class="fab-wrap" id="fabWrap" style="display:none;">
+  <div class="fab-popup" id="fabPopup">
+    <h4>💬 Feedback geven</h4>
+    <div class="fb-types">
+      <div class="fb-type active" onclick="selFbType(this)">🐛 Bug</div>
+      <div class="fb-type" onclick="selFbType(this)">💡 Idee</div>
+      <div class="fb-type" onclick="selFbType(this)">🌟 Compliment</div>
+      <div class="fb-type" onclick="selFbType(this)">❓ Vraag</div>
+    </div>
+    <textarea class="form-control" placeholder="Beschrijf je feedback..." rows="3"></textarea>
+    <div class="fab-row">
+      <button class="btn btn-ghost btn-sm" onclick="toggleFab()">Annuleren</button>
+      <button class="btn btn-primary btn-sm" style="flex:1;justify-content:center;" onclick="submitFb()">Verstuur</button>
+    </div>
+  </div>
+  <button class="fab-btn" onclick="toggleFab()">💬 Feedback</button>
+</div>
+<script>
+const SUPA_URL='https://bnwvxjwykzjelclqzbvt.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJud3Z4and5a3pqZWxjbHF6YnZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0MTk0ODEsImV4cCI6MjA5MTk5NTQ4MX0.LxGbca43nOJIDKD0yEQTkI-EAje15OB0hbSwEGO2mw8';
+if(typeof pdfjsLib!=='undefined'){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}
+function getOAIKey(){return localStorage.getItem('cf_oai_key')||'';}
+function setOAIKey(k){localStorage.setItem('cf_oai_key',k);}
+
+// ── Webhook config ──
+const PROCESSOR_URL='https://production.turnone.cloud/webhook/contentflow-generate';
+const QUEUE_BASE_URL='https://production.turnone.cloud/webhook/1985462a-48f9-4269-8ab3-f1dc1c0f46a6/1985462a-48f9-4269-8ab3-f1dc1c0f46a6';
+function getWHToken(){return localStorage.getItem('cf_wh_token')||'tok_userT1_qPz7yWnd45gw4g';}
+function setWHToken(t){localStorage.setItem('cf_wh_token',t);}
+function getSourceContent(){var el=document.getElementById('dzPreview');return el?(el.innerText||el.textContent||'').substring(0,3000):'';}
+function getXmlTemplate(){return localStorage.getItem('cf_xml_template')||'';}
+function getXmlTemplateName(){return localStorage.getItem('cf_xml_template_name')||'';}
+function setXmlTemplate(name,content){localStorage.setItem('cf_xml_template_name',name);localStorage.setItem('cf_xml_template',content);}
+function clearXmlTemplate(){localStorage.removeItem('cf_xml_template');localStorage.removeItem('cf_xml_template_name');}
+function handleXmlUpload(input){
+  const file=input.files[0];
+  if(!file)return;
+  if(!file.name.endsWith('.xml')){showToast('Alleen .xml bestanden toegestaan');return;}
+  const reader=new FileReader();
+  reader.onload=function(e){
+    setXmlTemplate(file.name,e.target.result);
+    buildSettings(document.getElementById('pg-settings'));
+    showToast('XML-sjabloon geladen: '+file.name);
+  };
+  reader.readAsText(file);
+}
+
+
+let supa=null;
+try{supa=supabase.createClient(SUPA_URL,SUPA_KEY);}catch(e){console.warn('Supabase CDN niet geladen:',e.message);}
+let currentUser=null,profile={};
+
+const ITEMS=[
+  {id:1,title:'Tankinspectie voor vloeibare lading',url:'/diensten/tankinspectie',kw:'tankinspectie',status:'live',words:1840,score:91,date:'21 apr'},
+  {id:2,title:'Containerinspectie voedsel en agri',url:'/diensten/containerinspectie-voedsel',kw:'containerinspectie voedsel',status:'live',words:2150,score:88,date:'18 apr'},
+  {id:3,title:'Graanopslag inspectie en kwaliteitsborging',url:'/diensten/graanopslag-inspectie',kw:'graanopslag inspectie',status:'live',words:1920,score:84,date:'15 apr'},
+  {id:4,title:'Fumigatie certificering internationaal transport',url:'/diensten/fumigatie-certificering',kw:'fumigatie certificering',status:'review',words:1640,score:76,date:'23 apr'},
+  {id:5,title:'Maritieme survey voor bulklading',url:'/diensten/maritieme-survey',kw:'maritieme survey bulklading',status:'review',words:1380,score:69,date:'24 apr'},
+  {id:6,title:'ISO 17020 gecertificeerde inspectiediensten',url:'/diensten/iso-17020-inspectie',kw:'iso 17020 inspectie',status:'concept',words:720,score:42,date:'25 apr'},
+  {id:7,title:'Kwaliteitscontrole agrarische importstromen',url:'/diensten/kwaliteitscontrole-agrarisch',kw:'kwaliteitscontrole agrarisch import',status:'concept',words:540,score:35,date:'26 apr'},
+];
+const FEED_DATA=[
+  {icon:'🤖',title:'2 nieuwe concepten klaar voor review',sub:'ISO 17020 inspectie · Agrarische kwaliteitscontrole',time:'1 uur geleden',cta:'Bekijk concepten',page:'content'},
+  {icon:'📈',title:'Tankinspectie pagina presteert uitstekend',sub:'Positie 3 → 1 · +180% organisch verkeer deze maand',time:'3 uur geleden',cta:'Bekijk artikel',page:'content'},
+  {icon:'✅',title:'Review afgerond: Containerinspectie voedsel',sub:'2 opmerkingen verwerkt · Klaar voor publicatie',time:'Gisteren',cta:'Naar editor',page:'review'},
+  {icon:'💡',title:'Tip: publiceer ISO 17020 pagina op dinsdag',sub:'Optimaal bereik op basis van zoekvolume data',time:'Gisteren',cta:null,page:null},
+  {icon:'🗓️',title:'Volgende week: 2 paginas gepland',sub:'Droge bulk survey · Kwaliteitsinspectie zaden',time:'Gisteren',cta:null,page:null},
+];
+
+let dark=true;
+function toggleDark(){
+  dark=!dark;
+  document.documentElement.setAttribute('data-theme',dark?'dark':'light');
+  document.getElementById('dmToggle').classList.toggle('on',dark);
+  document.getElementById('dmLabel').textContent=dark?'🌙':'☀️';
+}
+
+let curPage='dashboard',cvView='table',stab='bedrijf',wStep=1,selPremises=new Set(),savedGoal='convince';
+
+function nav(page,el){
+  ['dashboard','content','create','review','knowledge','settings'].forEach(p=>{
+    const e=document.getElementById('pg-'+p);
+    e.classList.add('hidden');e.style.display='';e.style.flex='';
+  });
+  const target=document.getElementById('pg-'+page);
+  if(page==='review'){target.style.display='flex';target.style.flex='1';target.style.overflow='hidden';target.classList.remove('hidden');}
+  else{target.classList.remove('hidden');}
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const ni=document.getElementById('ni-'+page);
+  if(ni)ni.classList.add('active');else if(el)el.classList.add('active');
+  const titles={dashboard:'Dashboard',content:'Content overzicht',create:'Nieuwe content maken',review:'Review editor',knowledge:'Kennisbank',settings:'Instellingen'};
+  document.getElementById('pageTitle').textContent=titles[page]||page;
+  curPage=page;renderPage(page);
+}
+
+// Detect local file:// — Supabase auth can't work without a real HTTP origin
+const IS_LOCAL = window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+function demoLogin(){
+  doLogin({email:'demo@contentflow.nl',id:'demo-guest',name:'Demo gebruiker',is_demo:true});
+}
+async function doLogout(){
+  if(!confirm('Uitloggen?'))return;
+  if(supa){try{await supa.auth.signOut();}catch(e){}}
+  currentUser=null;profile={};
+  document.getElementById('appWrap').classList.add('hidden');
+  document.getElementById('fabWrap').style.display='none';
+  document.getElementById('loginWrap').style.display='';
+}
+async function sendLink(){
+  const v=document.getElementById('loginEmail').value.trim();
+  if(!v){alert('Vul een e-mailadres in.');return;}
+  const btn=document.getElementById('sendLinkBtn');
+  if(btn){btn.textContent='Bezig...';btn.disabled=true;}
+  try{
+    const{error}=await supa.auth.signInWithOtp({email:v,options:{emailRedirectTo:window.location.href}});
+    if(btn){btn.textContent='Stuur magische link';btn.disabled=false;}
+    if(error)throw new Error(error.message);
+    document.getElementById('magicSent').classList.remove('hidden');
+  }catch(e){
+    if(btn){btn.textContent='Stuur magische link';btn.disabled=false;}
+    console.warn('Supabase auth fout (demo modus):', e.message);
+    doLogin({email:v,id:'demo-'+v,is_demo:true});
+  }
+}
+function doLogin(user){
+  currentUser=user;
+  const email=user?.email||'demo@contentflow.nl';
+  const parts=email.split('@')[0].split('.');
+  const initials=((parts[0]||'')[0]||'')+((parts[1]||'')[0]||(parts[0]||'')[1]||'');
+  document.getElementById('userAvatar').textContent=initials.toUpperCase()||'CF';
+  document.getElementById('userAvatar').title=(user.email||'Demo')+(user.is_demo?' (demo)':'');
+  document.getElementById('loginWrap').style.display='none';
+  document.getElementById('appWrap').classList.remove('hidden');
+  document.getElementById('fabWrap').style.display='block';
+  if(user.is_demo){
+    renderPage('dashboard');
+  } else {
+    loadProfile().then(()=>loadContentItems()).catch(()=>{}).then(()=>renderPage('dashboard'));
+  }
+}
+window.addEventListener('DOMContentLoaded',async()=>{
+  document.getElementById('dmToggle').classList.add('on');
+  document.getElementById('dmLabel').textContent='🌙';
+  document.getElementById('loginEmail').value='kajslier@gmail.com';
+  try{
+    supa.auth.onAuthStateChange((event,session)=>{
+      // Only auto-login when a magic link is actually being processed (token in URL)
+      if(event==='SIGNED_IN'&&session&&!currentUser&&window.location.hash.includes('access_token'))doLogin(session.user);
+    });
+    // Always show login screen — user chooses Demo or magic link
+    // Magic link clicks still auto-login via onAuthStateChange above
+  }catch(e){console.warn('Supabase sessie niet beschikbaar:',e.message);}
+});
+
+let curKw='';
+function renderPage(p){
+  const el=document.getElementById('pg-'+p);if(!el)return;
+  if(p==='dashboard')buildDashboard(el);
+  else if(p==='content')buildContent(el);
+  else if(p==='create')buildCreate(el);
+  else if(p==='review')buildReview(el);
+  else if(p==='knowledge')buildKnowledge(el);
+  else if(p==='settings')buildSettings(el);
+}
+
+let genStatus='idle',genMessage='',genJobId=null,genResult=null,genPollTimer=null;
+let savedKw='';
+
+function buildCreate(el){
+  el.innerHTML='<div class="page-header"><div><h2>Nieuwe content maken</h2><p>In 3 stappen naar een volledig SEO-artikel.</p></div></div>'
+    +'<div class="wizard">'+stepsBarHtml()
+    +(wStep===1?step1Html():wStep===2?step2Html():step3Html())
+    +'</div>';
+}
+function stepsBarHtml(){
+  const steps=['Zoekwoord','Instellingen','Genereer'];
+  let h='<div class="steps-bar">';
+  steps.forEach((s,i)=>{
+    const n=i+1;
+    const cls=n<wStep?'done':n===wStep?'active':'';
+    h+='<div class="step-dot '+cls+'">'+(n<wStep?'✓':n)+'</div>';
+    if(i<steps.length-1)h+='<div class="step-line'+(n<wStep?' done':'')+'"></div>';
+  });
+  return h+'</div>';
+}
+function step1Html(){
+  return '<div class="card">'
+    +'<div class="form-group"><label class="form-label">Hoofd zoekwoord</label>'
+    +'<input id="kwInput" class="form-control" placeholder="bijv. technische seo checklist 2025" value="'+savedKw+'"></div>'
+    +'<div class="form-group" style="margin-bottom:0;">'
+    +'<label class="form-label">Bronnen toevoegen <span style="font-weight:400;color:var(--muted)">(optioneel)</span></label>'
+    +'<div id="dz" class="dropzone" ondragover="dzOver(event)" ondragleave="dzLeave(event)" ondrop="dzDrop(event)" onclick="document.getElementById(\'dzFile\').click()">'
+    +'<input id="dzFile" type="file" multiple style="display:none" onchange="dzFiles(this.files)">'
+    +'<div class="dz-icon">📎</div>'
+    +'<div class="dz-text">Sleep bestanden hierheen of klik om te uploaden</div>'
+    +'<div class="dz-sub">PDF, MP3, afbeelding, tekst of URL</div>'
+    +'</div>'
+    +'<div id="dzPreview"></div>'
+    +'<div style="display:flex;gap:8px;margin-top:10px;">'
+    +'<input id="urlInput" class="form-control" placeholder="Of plak een URL..." style="flex:1;">'
+    +'<button class="btn btn-secondary btn-sm" onclick="processUrl()">Laad URL</button>'
+    +'</div>'
+    +'</div>'
+    +(getXmlTemplateName()
+      ? '<div style="display:flex;align-items:center;gap:8px;margin-top:14px;padding:9px 13px;background:var(--accent-subtle);border:1px solid rgba(0,198,122,.2);border-radius:var(--radius-sm);">'
+        +'<span style="font-size:15px;">📄</span>'
+        +'<span style="font-size:12.5px;color:var(--accent);font-weight:600;">Actief sjabloon:</span>'
+        +'<span style="font-size:12.5px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+getXmlTemplateName()+'</span>'
+        +'<span style="font-size:11px;color:var(--muted);">Structuur wordt toegepast bij generatie</span>'
+        +'</div>'
+      : '')
+    +'<div style="margin-top:18px;display:flex;justify-content:flex-end;">'
+    +'<button class="btn btn-primary" onclick="goStep2()">Volgende →</button>'
+    +'</div></div>';
+}
+function step2Html(){
+  const goals=[
+    {
+      id:'inform',
+      icon:'📣',
+      label:'Informeren',
+      sub:'Uitlegpagina of blog',
+      desc:'Beantwoord een vraag die potentiële klanten stellen. Ideaal voor bezoekers die zich nog oriënteren op het onderwerp.',
+      example:'bijv. "Wat is tankinspectie?" of "Hoe werkt graanopslag certificering?"'
+    },
+    {
+      id:'convince',
+      icon:'🎯',
+      label:'Overtuigen',
+      sub:'Dienst- of vergelijkingspagina',
+      desc:'Laat zien waarom klanten specifiek voor jullie kiezen. Vergelijkt voordelen, toont expertise en bouwt vertrouwen op bij prospects die al nadenken over een keuze.',
+      example:'bijv. "Tankinspectie door Control Union" of "Professionele containerinspectie"'
+    },
+    {
+      id:'convert',
+      icon:'✅',
+      label:'Aanvragen',
+      sub:'Conversiepagina',
+      desc:'Zet bezoekers om naar aanvragen of klanten. Focust op social proof, garanties en een duidelijke volgende stap voor wie klaar is om te beslissen.',
+      example:'bijv. "Vraag een inspectie aan" of "Offerte tankinspectie"'
+    }
+  ];
+  return '<div class="card">'
+    +'<div class="form-group" style="margin-bottom:20px;"><label class="form-label">Zoekwoord</label>'
+    +'<input id="kwInput2" class="form-control" value="'+savedKw+'"></div>'
+    +'<div class="form-group" style="margin-bottom:24px;">'
+    +'<label class="form-label">Wat is het doel van deze pagina?</label>'
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:8px;">'
+    +goals.map(g=>{
+      const sel=savedGoal===g.id;
+      return '<div onclick="savedGoal=\''+g.id+'\';buildCreate(document.getElementById(\'pg-create\'))" style="border:2px solid '+(sel?'var(--accent)':'var(--border)')+';border-radius:var(--radius);padding:18px 16px;cursor:pointer;background:'+(sel?'var(--accent-subtle)':'var(--surface2)')+';transition:all .15s;position:relative;" onmouseover="if(\''+g.id+'\'!==savedGoal)this.style.borderColor=\'var(--text2)\'" onmouseout="if(\''+g.id+'\'!==savedGoal)this.style.borderColor=\'var(--border)\'">'
+        +(sel?'<div style="position:absolute;top:10px;right:10px;width:18px;height:18px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:700;">✓</div>':'')
+        +'<div style="font-size:24px;margin-bottom:10px;">'+g.icon+'</div>'
+        +'<div style="font-weight:700;font-size:14px;margin-bottom:2px;color:'+(sel?'var(--accent)':'var(--text)')+'">'+g.label+'</div>'
+        +'<div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em;">'+g.sub+'</div>'
+        +'<div style="font-size:12.5px;color:var(--text2);line-height:1.55;margin-bottom:10px;">'+g.desc+'</div>'
+        +'<div style="font-size:11px;color:var(--muted);font-style:italic;">'+g.example+'</div>'
+        +'</div>';
+    }).join('')
+    +'</div></div>'
+    +'<div style="margin-top:4px;display:flex;justify-content:space-between;">'
+    +'<button class="btn btn-ghost" onclick="goStep1()">← Terug</button>'
+    +'<button class="btn btn-primary" onclick="goStep3()">Genereer →</button></div>'
+    +'</div>';
+}
+function step3Html(){
+  if(genStatus==='loading'||genStatus==='polling'){
+    if(!genJobId){
+      return '<div class="card" style="padding:28px 24px;">'
+        +'<div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">'
+        +'<div style="width:36px;height:36px;border-radius:50%;border:3px solid var(--accent);border-top-color:transparent;animation:spin 1s linear infinite;flex-shrink:0;"></div>'
+        +'<div><div style="font-weight:700;">Verzoek verstuurd naar n8n!</div>'
+        +'<div style="font-size:13px;color:var(--muted);">Zoekwoord: <strong>'+savedKw+'</strong></div></div></div>'
+        +'<div style="border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;">'
+        +'<p style="font-weight:600;font-size:13px;margin-bottom:8px;">Resultaat ontvangen? Doe dit eenmalig:</p>'
+        +'<p style="font-size:13px;color:var(--muted);line-height:1.8;margin:0;">'
+        +'1. Maak tabel <strong>content_jobs</strong> aan in Supabase (SQL Editor)<br>'
+        +'2. Voeg HTTP Request node toe aan n8n SEO-Processor-dev<br>'
+        +'3. Die schrijft het resultaat terug naar Supabase</p></div>'
+        +'<button class="btn btn-secondary btn-sm" onclick="goStep1()">Terug</button>'
+        +'</div>';
+    }
+    const msgs=['AI schrijft je artikel...','Zoekwoorden worden verwerkt...','Structuur wordt opgebouwd...','Bijna klaar...'];
+    const msg=msgs[Math.floor(Date.now()/4000)%msgs.length];
+    return '<div class="card" style="text-align:center;padding:56px 24px;">'
+      +'<div style="width:56px;height:56px;border-radius:50%;border:3px solid var(--accent);border-top-color:transparent;animation:spin 1s linear infinite;margin:0 auto 24px;"></div>'
+      +'<h3 style="font-size:18px;font-weight:700;margin-bottom:8px;">Artikel wordt gegenereerd...</h3>'
+      +'<p style="color:var(--muted);margin-bottom:24px;font-size:14px;">'+msg+'</p>'
+      +'<div class="progress" style="max-width:260px;margin:0 auto 8px;"><div class="progress-fill" style="width:70%"></div></div>'
+      +'<p style="font-size:12px;color:var(--muted);">Dit duurt 30-60 seconden</p>'
+      +'</div>';
+  }
+  if(genStatus==='done'&&genResult){
+    const r=genResult;
+    const res=r.result||{};
+    const title=res.title||r.result_title||'';
+    const meta=res.meta_description||r.result_meta||'';
+    const content=res.content||r.result_content||'';
+    const score=r.seo_score||84;
+    const wc=r.word_count||(content?content.replace(/<[^>]*>/g,'').trim().split(/\s+/).length:0);
+    return '<div style="display:flex;flex-direction:column;gap:16px;">'
+      +'<div class="card" style="display:flex;align-items:center;gap:16px;padding:20px 24px;">'
+      +'<div style="width:48px;height:48px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">✅</div>'
+      +'<div style="flex:1;"><div style="font-weight:700;font-size:16px;margin-bottom:2px;">Artikel gegenereerd!</div>'
+      +'<div style="font-size:13px;color:var(--muted);">'+wc+' woorden · SEO score: <span style="color:'+(score>=80?'var(--accent)':score>=60?'#f59e0b':'#ef4444')+'">'+score+'</span></div></div>'
+      +'<div style="display:flex;gap:8px;">'
+      +'<button class="btn btn-secondary btn-sm" onclick="copyResult()">Kopieer</button>'
+      +'<button class="btn btn-primary btn-sm" onclick="genStatus=\'idle\';genResult=null;goStep1()">+ Nieuw</button>'
+      +'</div></div>'
+      +(title?'<div class="card" style="padding:20px 24px;"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Titel</div><div style="font-size:18px;font-weight:700;">'+escHtml(title)+'</div></div>':'')
+      +(meta?'<div class="card" style="padding:16px 24px;"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Meta omschrijving</div><div style="font-size:14px;color:var(--muted);line-height:1.5;">'+escHtml(meta)+'</div></div>':'')
+      +(content?'<div class="card" style="padding:20px 24px;"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Artikel inhoud</div><div id="article-editor" contenteditable="true" spellcheck="false" style="font-size:14px;line-height:1.8;max-height:520px;overflow-y:auto;color:var(--text);">'+content+'</div></div>':'')
+      +'</div>';
+  }
+  if(genStatus==='error'){
+    return '<div class="card" style="text-align:center;padding:48px 24px;">'
+      +'<div style="font-size:36px;margin-bottom:16px;">❌</div>'
+      +'<h3 style="font-size:18px;font-weight:700;margin-bottom:8px;">Fout</h3>'
+      +'<p style="color:var(--muted);margin-bottom:24px;">'+escHtml(genMessage)+'</p>'
+      +'<div style="display:flex;gap:8px;justify-content:center;">'
+      +'<button class="btn btn-ghost" onclick="goStep2()">Terug</button>'
+      +'<button class="btn btn-primary" onclick="goStep3()">Opnieuw</button>'
+      +'</div></div>';
+  }
+  return '<div class="card" style="text-align:center;padding:48px 24px;"><p style="color:var(--muted);">Klik op Genereer...</p></div>';
+}
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function copyResult(){
+  if(!genResult)return;
+  const r=genResult;
+  const res=r.result||{};
+  // Gebruik bewerkte inhoud als die beschikbaar is
+  const editor=document.getElementById('article-editor');
+  const content=editor?editor.innerHTML:(res.content||r.result_content||'');
+  const txt=[(res.title||r.result_title),(res.meta_description||r.result_meta),'',content.replace(/<[^>]*>/g,'')].filter(Boolean).join('\n\n');
+  navigator.clipboard.writeText(txt).then(()=>showToast('Gekopieerd!')).catch(()=>showToast('Kopiëren mislukt'));
+}
+function togglePremise(i){
+  if(selPremises.has(i))selPremises.delete(i);else selPremises.add(i);
+  buildCreate(document.getElementById('pg-create'));
+}
+function goStep1(){wStep=1;buildCreate(document.getElementById('pg-create'));}
+function goStep2(){
+  const kw=document.getElementById('kwInput');
+  if(!kw||!kw.value.trim()){alert('Vul een zoekwoord in.');return;}
+  savedKw=kw.value.trim();
+  wStep=2;buildCreate(document.getElementById('pg-create'));
+}
+function goStep3(){
+  savedKw=savedKw||(document.getElementById('kwInput2')||{}).value||'';
+  genStatus='loading';genMessage='';genJobId=null;genResult=null;
+  if(genPollTimer){clearInterval(genPollTimer);genPollTimer=null;}
+  wStep=3;buildCreate(document.getElementById('pg-create'));
+  triggerGeneration();
+}
+async function triggerGeneration(){
+  const kw=savedKw;
+  let jobId=null;
+  if(supa&&currentUser&&!currentUser.is_demo){
+    try{
+      const{data}=await supa.from('content_jobs').insert({
+        user_id:currentUser.id,keyword:kw,status:'pending'
+      }).select('id').single();
+      if(data)jobId=data.id;
+    }catch(e){console.warn('content_jobs insert failed:',e.message);}
+  }
+  genJobId=jobId;
+  console.log('[triggerGeneration] jobId:', jobId);
+  const payload={
+    action:'Create New Page',keyword:kw,
+    locale:'Dutch (Netherlands)',
+    source_content:getSourceContent(),
+    company_name:profile.company_name||'',
+    tone_nl:profile.tone_nl||'',
+    services:profile.services||'',
+    userToken:getWHToken(),
+    job_id:jobId||'',
+    user_id:currentUser?.id||'',
+    xml_template:getXmlTemplate()||'',
+    xml_template_name:getXmlTemplateName()||'',
+    content_goal:savedGoal||'convince'
+  };
+  genStatus='polling';
+  buildCreate(document.getElementById('pg-create'));
+  genPollTimer=setInterval(()=>{
+    const el=document.getElementById('pg-create');
+    if(el&&(genStatus==='loading'||genStatus==='polling'))buildCreate(el);
+  },600);
+  const webhookUrl=PROCESSOR_URL+(jobId?'?job_id='+encodeURIComponent(jobId):'');
+  // Primaire methode: lees de n8n response direct (n8n antwoordt met artikel JSON)
+  // Fallback: poll Supabase als CORS niet werkt
+  (async()=>{
+    try{
+      console.log('[fetch] Versturen naar n8n, wacht op antwoord...');
+      const resp=await fetch(webhookUrl,{
+        method:'POST',
+        headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify(payload)
+      });
+      console.log('[fetch] Response status:', resp.status);
+      if(resp.ok&&(genStatus==='loading'||genStatus==='polling')){
+        let data=null;
+        try{data=await resp.json();}catch(e){console.warn('[fetch] JSON parse fout:',e.message);}
+        console.log('[fetch] Response data:', data);
+        if(data&&(data.title||data.content)){
+          clearInterval(genPollTimer);genPollTimer=null;
+          genStatus='done';
+          genResult={status:'done',result:{
+            title:data.title||'',
+            content:data.content||'',
+            meta_description:data.meta_description||''
+          }};
+          const el=document.getElementById('pg-create');
+          if(el)buildCreate(el);
+          return;
+        }
+      }
+    }catch(e){
+      console.log('[fetch] Direct response niet beschikbaar (CORS?), val terug op polling:', e.message);
+    }
+    // Fallback: Supabase polling
+    if(jobId&&supa){startResultPolling(jobId);}
+  })();
+}
+function getSourceContent(){const el=document.getElementById('dzPreview');return el?(el.innerText||el.textContent||'').substring(0,3000):'';}
+function startResultPolling(jobId){
+  let attempts=0;
+  const poll=async()=>{
+    attempts++;
+    if(attempts>40){
+      clearInterval(genPollTimer);genPollTimer=null;
+      genStatus='error';genMessage='Tijdlimiet overschreden. Probeer opnieuw.';
+      buildCreate(document.getElementById('pg-create'));return;
+    }
+    try{
+      const{data,error}=await supa.from('content_jobs').select('*').eq('id',jobId).single();
+      console.log('[poll]',attempts,'status:',data?.status,'error:',error?.message);
+      if(error){console.error('[poll] Supabase error:',error);return;}
+      if(data&&(data.status==='done'||data.result)){
+        clearInterval(genPollTimer);genPollTimer=null;
+        genStatus='done';genResult=data;
+        buildCreate(document.getElementById('pg-create'));
+      }else if(data&&data.status==='error'){
+        clearInterval(genPollTimer);genPollTimer=null;
+        genStatus='error';genMessage=data.error_message||'Processor fout.';
+        buildCreate(document.getElementById('pg-create'));
+      }
+    }catch(e){console.error('[poll] exception:',e);}
+  };
+  setTimeout(poll,3000);
+  setInterval(poll,5000);
+}
+function dzOver(e){e.preventDefault();document.getElementById('dz').classList.add('over');}
+function dzLeave(e){document.getElementById('dz').classList.remove('over');}
+function dzDrop(e){e.preventDefault();document.getElementById('dz').classList.remove('over');if(e.dataTransfer.files.length)dzFiles(e.dataTransfer.files);}
+function dzFiles(files){Array.from(files).forEach(f=>processFile(f,document.getElementById('dzPreview')));}
+function fileIcon(name){const e=name.split('.').pop().toLowerCase();return e==='pdf'?'📄':['jpg','jpeg','png','webp'].includes(e)?'🖼':['mp3','wav','m4a','ogg'].includes(e)?'🎵':['txt','md','html','csv'].includes(e)?'📝':'📎';}
+function formatSize(b){return b<1024?b+'B':b<1048576?(b/1024).toFixed(1)+'KB':(b/1048576).toFixed(1)+'MB';}
+function showFilePreview(container,fname,ext,text,type){
+  if(type==='loading'){container.innerHTML='<div class="file-preview"><div class="spinner" style="margin-bottom:8px;"></div><div style="font-size:12px;color:var(--muted);">'+text+'</div></div>';return;}
+  container.innerHTML='<div class="file-preview"><div style="font-size:13px;white-space:pre-wrap;line-height:1.5;max-height:200px;overflow-y:auto;">'+text+'</div><div style="margin-top:8px;font-size:12px;color:var(--muted);">'+fileIcon(fname)+' '+fname+'</div></div>';
+}
+function processFile(file,container){
+  const ext=file.name.split('.').pop().toLowerCase();
+  const fname=file.name;
+  if(['txt','md','html','csv'].includes(ext)){
+    const reader=new FileReader();
+    reader.onload=function(e){showFilePreview(container,fname,ext,'Bestand gelezen:\n\n'+e.target.result.substring(0,800),'text');};
+    reader.readAsText(file);
+  }else if(['jpg','jpeg','png','webp'].includes(ext)){
+    const reader=new FileReader();
+    reader.onload=function(e){container.innerHTML='<div class="file-preview"><img src="'+e.target.result+'" style="max-width:100%;border-radius:8px;margin-bottom:8px;"><div style="font-size:12px;color:var(--muted);">'+fname+'</div></div>';};
+    reader.readAsDataURL(file);
+  }else if(ext==='pdf'){
+    processPDF(file,container);
+  }else if(['mp3','wav','m4a','ogg','webm'].includes(ext)){
+    processAudio(file,container);
+  }else{
+    showFilePreview(container,fname,ext,'Bestand: '+fname+' ('+formatSize(file.size)+')','generic');
+  }
+}
+async function processPDF(file,container){
+  showFilePreview(container,file.name,'pdf','PDF wordt gelezen...','loading');
+  try{
+    if(typeof pdfjsLib==='undefined')throw new Error('PDF.js niet geladen.');
+    const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
+    let text='';
+    for(let i=1;i<=Math.min(pdf.numPages,20);i++){
+      const page=await pdf.getPage(i);
+      const content=await page.getTextContent();
+      text+=content.items.map(s=>s.str).join(' ')+'\n';
+    }
+    const wc=text.trim().split(/\s+/).length;
+    showFilePreview(container,file.name,'pdf','PDF: '+pdf.numPages+' paginas, ~'+wc+' woorden\n\n'+text.substring(0,800),'pdf');
+  }catch(e){showFilePreview(container,file.name,'pdf','Fout: '+e.message,'generic');}
+}
+function getOAIKey(){return localStorage.getItem('cf_oai_key')||'';}
+function setOAIKey(k){localStorage.setItem('cf_oai_key',k);}
+async function processAudio(file,container){
+  const key=getOAIKey();
+  if(!key){showFilePreview(container,file.name,'audio','Geen OpenAI API key. Ga naar Instellingen > API sleutels.','generic');return;}
+  showFilePreview(container,file.name,'audio','Audio wordt getranscribeerd...','loading');
+  try{
+    const boundary='----CFBoundary'+Math.random().toString(36).substring(2);
+    const audioBytes=new Uint8Array(await file.arrayBuffer());
+    const enc=new TextEncoder();
+    const head=enc.encode('--'+boundary+'\r\nContent-Disposition: form-data; name="model"\r\n\r\nwhisper-1\r\n'
+      +'--'+boundary+'\r\nContent-Disposition: form-data; name="language"\r\n\r\nnl\r\n'
+      +'--'+boundary+'\r\nContent-Disposition: form-data; name="file"; filename="'+file.name+'"\r\nContent-Type: '+(file.type||'audio/mpeg')+'\r\n\r\n');
+    const tail=enc.encode('\r\n--'+boundary+'--\r\n');
+    const body=new Uint8Array(head.length+audioBytes.length+tail.length);
+    body.set(head,0);body.set(audioBytes,head.length);body.set(tail,head.length+audioBytes.length);
+    const resp=await fetch('https://api.openai.com/v1/audio/transcriptions',{
+      method:'POST',headers:{'Authorization':'Bearer '+key,'Content-Type':'multipart/form-data; boundary='+boundary},body:body.buffer});
+    const data=await resp.json();
+    if(data.error)throw new Error(data.error.message);
+    const wc=data.text.trim().split(/\s+/).length;
+    showFilePreview(container,file.name,'audio','Transcriptie (~'+wc+' woorden):\n\n"'+data.text+'"','audio');
+  }catch(e){showFilePreview(container,file.name,'audio','Transcriptie mislukt: '+e.message,'generic');}
+}
+async function processUrl(){
+  const url=document.getElementById('urlInput').value.trim();
+  if(!url){alert('Vul een URL in.');return;}
+  const isYT=/youtube\.com\/watch|youtu\.be\//.test(url);
+  const container=document.getElementById('dzPreview');
+  if(isYT)await processYouTube(url,container);else await processWebPage(url,container);
+}
+async function processYouTube(url,container){
+  showFilePreview(container,url,'url','YouTube video wordt geladen...','loading');
+  const m=url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if(!m){showFilePreview(container,url,'url','Geen geldig video-ID.','generic');return;}
+  const vid=m[1];
+  try{
+    const oe=await fetch('https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v='+vid+'&format=json');
+    const oData=await oe.json();
+    const title=oData.title||url;
+    let transcript='';
+    for(const lang of['nl','en','a.nl','a.en']){
+      try{
+        const td=await (await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent('https://www.youtube.com/api/timedtext?v='+vid+'&lang='+lang+'&fmt=json3'))).json();
+        if(td.events&&td.events.length){
+          transcript=td.events.filter(ev=>ev.segs).map(ev=>ev.segs.map(s=>s.utf8).join('')).join(' ').replace(/\n/g,' ').trim();
+        }
+        if(transcript)break;
+      }catch(e){}
+    }
+    const wc=transcript?transcript.split(/\s+/).length:0;
+    const preview=transcript?'Transcript ('+wc+' woorden):\n\n"'+transcript.substring(0,900)+(transcript.length>900?'...[ingekort]':'')+'"':'Geen transcript beschikbaar.';
+    showFilePreview(container,title,'url','YouTube: '+title+'\nID: '+vid+'\n\n'+preview,'text');
+  }catch(e){showFilePreview(container,url,'url','Fout: '+e.message,'generic');}
+}
+async function processWebPage(url,container){
+  showFilePreview(container,url,'url','Pagina wordt geladen...','loading');
+  try{
+    const data=await (await fetch('https://api.allorigins.win/get?url='+encodeURIComponent(url))).json();
+    const doc=new DOMParser().parseFromString(data.contents,'text/html');
+    doc.querySelectorAll('script,style,nav,footer,header,aside').forEach(el=>el.remove());
+    const title=(doc.querySelector('title')||{}).textContent||url;
+    const bodyEl=doc.querySelector('main,article,[role="main"]')||doc.body;
+    const text=(bodyEl?bodyEl.innerText||bodyEl.textContent:'').replace(/\s+/g,' ').trim();
+    const wc=text.split(/\s+/).length;
+    showFilePreview(container,title,'url','Pagina: '+title+'\n'+url+'\n~'+wc+' woorden\n\n'+text.substring(0,800)+(text.length>800?'...[meer]':''),'text');
+  }catch(e){showFilePreview(container,url,'url','Fout: '+e.message,'generic');}
+}
+
+
+
+function buildDashboard(el){
+  const live=ITEMS.filter(c=>c.status==='live').length;
+  const review=ITEMS.filter(c=>c.status==='review').length;
+  const concept=ITEMS.filter(c=>c.status==='concept'||c.status==='draft').length;
+  const avgScore=Math.round(ITEMS.filter(c=>c.score>0).reduce((a,c)=>a+c.score,0)/ITEMS.filter(c=>c.score>0).length);
+  const co=profile.company_name||'ContentFlow';
+  el.innerHTML='<div class="page-header"><div><h2>Dashboard</h2><p>Welkom terug'+( co&&co!=='ContentFlow'?' — '+co:'')+'.</p></div></div>'
+    +'<div class="stats-grid">'
+    +'<div class="stat-card" style="cursor:pointer;" onclick="cvView=\'table\';nav(\'content\',document.getElementById(\'ni-content\'))"><div class="stat-label">Live pagina\'s</div><div class="stat-value">'+live+'</div><div class="stat-delta positive">+1 deze week</div></div>'
+    +'<div class="stat-card" style="cursor:pointer;" onclick="cvView=\'table\';nav(\'content\',document.getElementById(\'ni-content\'))"><div class="stat-label">In review</div><div class="stat-value">'+review+'</div><div class="stat-delta neutral">'+review+' wachten op goedkeuring</div></div>'
+    +'<div class="stat-card" style="cursor:pointer;" onclick="cvView=\'kanban\';nav(\'content\',document.getElementById(\'ni-content\'))"><div class="stat-label">Concepten</div><div class="stat-value">'+concept+'</div><div class="stat-delta neutral">AI gegenereerd</div></div>'
+    +'<div class="stat-card"><div class="stat-label">Gem. SEO score</div><div class="stat-value">'+avgScore+'</div><div class="stat-delta positive">↑ Bovengemiddeld</div></div>'
+    +'</div>';
+}
+function buildContent(el){
+  if(cvView==='kanban'){buildKanban(el);return;}
+  el.innerHTML='<div class="page-header"><div><div style="display:flex;align-items:center;gap:12px;"><h2>Content overzicht</h2><span class="tag tag-grey">'+ITEMS.length+' artikelen</span></div></div>'
+    +'<div style="display:flex;gap:8px;">'
+    +'<button class="btn btn-ghost btn-sm'+(cvView==='table'?' active':'')+'" onclick="cvView=\'table\';buildContent(document.getElementById(\'pg-content\'))">Tabel</button>'
+    +'<button class="btn btn-ghost btn-sm'+(cvView==='kanban'?' active':'')+'" onclick="cvView=\'kanban\';buildContent(document.getElementById(\'pg-content\'))">Kanban</button>'
+    +'<button class="btn btn-primary btn-sm" onclick="nav(\'create\',document.getElementById(\'ni-create\'))">+ Nieuw</button>'
+    +'</div></div>'
+    +'<div class="card" style="padding:0;overflow:hidden;">'
+    +'<table class="content-table"><thead><tr><th>Titel</th><th>Zoekwoord</th><th>Status</th><th>Woorden</th><th>Score</th><th>Datum</th></tr></thead><tbody>'
+    +ITEMS.map(i=>'<tr>'
+      +'<td><div class="font-600">'+i.title+'</div><div class="text-xs text-muted">'+(i.url||i.slug||'')+'</div></td>'
+      +'<td><span class="tag tag-grey">'+i.kw+'</span></td>'
+      +'<td><span class="tag tag-'+(i.status==='live'?'live':i.status==='review'?'review':'grey')+'">'+(i.status==='concept'?'Concept':i.status.charAt(0).toUpperCase()+i.status.slice(1))+'</span></td>'
+      +'<td>'+i.words.toLocaleString()+'</td>'
+      +'<td style="font-weight:700;color:'+(i.score>=80?'var(--accent)':i.score>=60?'#f59e0b':'#ef4444')+'">'+i.score+'</td>'
+      +'<td>'+i.date+'</td>'
+      +'</tr>').join('')
+    +'</tbody></table></div>';
+}
+function buildKanban(el){
+  const cols=[
+    {s:'concept',l:'Concept',cls:'tag-grey',dot:'#6b7280'},
+    {s:'review',l:'Review',cls:'tag-review',dot:'#f59e0b'},
+    {s:'live',l:'Live',cls:'tag-live',dot:'#00c67a'}
+  ];
+  function colItems(s){return ITEMS.filter(i=>i.status===s||(s==='concept'&&i.status==='draft'));}
+  el.innerHTML='<div class="page-header"><div><div style="display:flex;align-items:center;gap:12px;"><h2>Content overzicht</h2><span class="tag tag-grey">'+ITEMS.length+' artikelen</span></div></div>'
+    +'<div style="display:flex;gap:8px;">'
+    +'<button class="btn btn-ghost btn-sm" onclick="cvView=\'table\';buildContent(document.getElementById(\'pg-content\'))">Tabel</button>'
+    +'<button class="btn btn-ghost btn-sm active">Kanban</button>'
+    +'<button class="btn btn-primary btn-sm" onclick="nav(\'create\',document.getElementById(\'ni-create\'))">+ Nieuw</button>'
+    +'</div></div>'
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;overflow-x:auto;padding-bottom:8px;">'
+    +cols.map(col=>{
+      const items=colItems(col.s);
+      return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;">'
+        +'<div style="font-weight:600;font-size:13px;margin-bottom:14px;display:flex;align-items:center;gap:8px;">'
+        +'<span style="width:8px;height:8px;border-radius:50%;background:'+col.dot+';flex-shrink:0;"></span>'
+        +'<span>'+col.l+'</span>'
+        +'<span style="margin-left:auto;background:var(--surface3);color:var(--muted);font-size:11px;font-weight:600;padding:1px 7px;border-radius:20px;">'+items.length+'</span>'
+        +'</div>'
+        +items.map(i=>'<div class="card kanban-card" style="margin-bottom:10px;padding:14px 16px;cursor:pointer;border-left:3px solid '+(i.score>=80?'var(--accent)':i.score>=60?'#f59e0b':'var(--border)')+';transition:transform .15s,box-shadow .15s;" onmouseover="this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'var(--shadow-lg)\'" onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">'
+          +'<div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">'+i.kw+'</div>'
+          +'<div class="font-600 text-sm" style="margin-bottom:10px;line-height:1.4;">'+i.title+'</div>'
+          +'<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:9px;margin-top:2px;">'
+          +'<span style="font-size:11px;color:var(--muted);">'+i.words.toLocaleString()+' woorden</span>'
+          +'<span style="font-size:12px;font-weight:700;color:'+(i.score>=80?'var(--accent)':i.score>=60?'#f59e0b':'#ef4444')+'">SEO '+i.score+'</span>'
+          +'</div></div>').join('')
+        +'<button onclick="nav(\'create\',document.getElementById(\'ni-create\'))" style="width:100%;padding:8px;background:transparent;border:1px dashed var(--border);border-radius:var(--radius-sm);color:var(--muted);font-size:12px;cursor:pointer;font-family:var(--font);transition:border-color .15s,color .15s;" onmouseover="this.style.borderColor=\'var(--accent)\';this.style.color=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.color=\'var(--muted)\'">+ Toevoegen</button>'
+        +'</div>';
+    }).join('')
+    +'</div>';
+}
+function buildReview(el){
+  el.innerHTML='<div style="display:flex;height:100%;overflow:hidden;">'
+    +'<div style="width:220px;border-right:1px solid var(--border);overflow-y:auto;padding:16px;">'
+    +'<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px;">Te reviewen</div>'
+    +ITEMS.filter(i=>i.status!=='live').map(i=>'<div class="card" style="padding:10px 12px;margin-bottom:8px;cursor:pointer;">'
+      +'<div class="font-600 text-sm">'+i.title+'</div>'
+      +'<div class="text-xs text-muted">'+i.kw+'</div></div>').join('')
+    +'</div>'
+    +'<div style="flex:1;overflow-y:auto;padding:24px;">'
+    +'<div class="page-header"><div><h2>Review editor</h2><p>Selecteer een artikel links.</p></div></div>'
+    +'<div class="card"><p style="color:var(--muted);">Klik op een artikel om het te openen.</p></div>'
+    +'</div></div>';
+}
+function buildKnowledge(el){
+  el.innerHTML='<div class="page-header"><div><h2>Kennisbank</h2><p>Bronnen en bedrijfsinformatie.</p></div></div>'
+    +'<div class="card"><p style="color:var(--muted);">Kennisbank is nog in ontwikkeling.</p></div>';
+}
+function buildSettings(el){
+  const tabs=[{id:'bedrijf',l:'Bedrijf'},{id:'algo',l:'Algoritme'},{id:'users',l:'Gebruikers'},{id:'integraties',l:'Integraties'},{id:'vertrouwen',l:'Vertrouwen'}];
+  el.innerHTML='<div class="page-header"><div><h2>Instellingen</h2></div></div>'
+    +'<div class="settings-tabs">'+tabs.map(t=>'<button class="settings-tab'+(stab===t.id?' active':'')+'" onclick="stab=\''+t.id+'\';buildSettings(document.getElementById(\'pg-settings\'))">'+t.l+'</button>').join('')+'</div>'
+    +'<div id="stab-content">'+settingsHtml()+'</div>';
+}
+function settingsHtml(){
+  if(stab==='bedrijf'){
+    return '<div class="card"><div class="settings-block"><h3>Bedrijfsprofiel</h3>'
+      +'<div class="form-group"><label class="form-label">Bedrijfsnaam</label><input id="companyName" class="form-control" value="'+(profile.company_name||'')+'"></div>'
+      +'<div class="form-group"><label class="form-label">Website</label><input id="companyWebsite" class="form-control" value="'+(profile.website||'')+'"></div>'
+      +'<div class="form-group"><label class="form-label">KVK-nummer</label><input id="companyKvk" class="form-control" value="'+(profile.kvk||'')+'"></div>'
+      +'<div class="form-group"><label class="form-label">Tone of voice</label><textarea id="companyTone" class="form-control">'+(profile.tone_nl||'')+'</textarea></div>'
+      +'<div class="form-group" style="margin-bottom:0;"><label class="form-label">Diensten / producten</label><textarea id="companyServices" class="form-control">'+(profile.services||'')+'</textarea></div>'
+      +'<div class="mt-4" style="display:flex;gap:10px;align-items:center;">'
+      +'<button class="btn btn-primary" onclick="saveCompany()">Opslaan</button>'
+      +'<button class="btn btn-ghost btn-sm" onclick="loadDemoProfile()" title="Laad Control Union demoprofiel" style="color:var(--muted);border:1px dashed var(--border);">🎯 Demo: Control Union</button>'
+      +'</div>'
+      +'</div></div>'
+      +'<div class="card" style="margin-top:16px;"><div class="settings-block"><h3>Content sjabloon (XML)</h3>'
+      +'<p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Upload een XML-bestand om de structuur van gegenereerde paginas vast te leggen — denk aan koppen, bullets en secties.</p>'
+      +(getXmlTemplateName()
+        ? '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--accent-subtle);border:1px solid rgba(0,198,122,.25);border-radius:var(--radius-sm);margin-bottom:12px;">'
+          +'<span style="font-size:18px;">📄</span>'
+          +'<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+getXmlTemplateName()+'</div>'
+          +'<div style="font-size:11.5px;color:var(--accent);">Actief sjabloon</div></div>'
+          +'<button class="btn btn-ghost btn-sm" onclick="clearXmlTemplate();buildSettings(document.getElementById(\'pg-settings\'));showToast(\'Sjabloon verwijderd\');" style="color:var(--muted);">Verwijderen</button>'
+          +'</div>'
+        : '')
+      +'<label style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:28px 20px;border:2px dashed var(--border-strong);border-radius:var(--radius-sm);cursor:pointer;transition:border-color var(--duration);text-align:center;" onmouseover="this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border-strong)\'">'
+      +'<span style="font-size:28px;">⬆️</span>'
+      +'<span style="font-size:13.5px;font-weight:600;color:var(--text);">'+(getXmlTemplateName()?'Vervang XML-sjabloon':'Upload XML-sjabloon')+'</span>'
+      +'<span style="font-size:12px;color:var(--muted);">Klik om een .xml bestand te kiezen</span>'
+      +'<input type="file" accept=".xml" style="display:none;" onchange="handleXmlUpload(this)">'
+      +'</label>'
+      +'</div></div>';
+  }
+  if(stab==='algo'){
+    const opts=[
+      {l:'Automatisch interne links toevoegen',d:'ContentFlow linkt naar bestaande paginas.',on:true},
+      {l:'Competitor gap analyse',d:'Analyseer wat concurrenten rangschikken.',on:true},
+      {l:'Schema markup genereren',d:'Voeg structured data toe aan artikelen.',on:false},
+    ];
+    let rows=opts.map(o=>'<div class="toggle-row"><div class="toggle-info"><strong>'+o.l+'</strong><span>'+o.d+'</span></div>'
+      +'<div class="switch'+(o.on?' on':'')+'" onclick="this.classList.toggle(\'on\')"></div></div>'
+    ).join('');
+    return '<div class="card"><div class="settings-block"><h3>Algoritme-instellingen</h3><p>Pas aan hoe ContentFlow content genereert.</p>'+rows
+      +'<div class="mt-4"><button class="btn btn-primary" onclick="saveAlgo()">Opslaan</button></div>'
+      +'</div></div>';
+  }
+  if(stab==='users'){
+    const us=[
+      {n:'Kaj Slier',e:'kajslier@gmail.com',r:'Admin',av:'KS',tag:'tag-live'},
+      {n:'Roelof Stoelwinder',e:'roelof@contentflow.nl',r:'Marketing manager',av:'RS',tag:'tag-review'},
+      {n:'Externe reviewer',e:'expert@klant.nl',r:'Reviewer (alleen lezen)',av:'ER',tag:'tag-grey'},
+    ];
+    let rows=us.map(u=>'<div class="toggle-row">'
+      +'<div class="flex items-center gap-3" style="flex:1;">'
+      +'<div class="avatar" style="width:34px;height:34px;font-size:10px;">'+u.av+'</div>'
+      +'<div><div class="font-600 text-sm">'+u.n+'</div><div class="text-xs text-muted">'+u.e+'</div></div>'
+      +'</div><span class="tag '+u.tag+'">'+u.r+'</span></div>'
+    ).join('');
+    return '<div class="card"><div class="settings-block"><h3>Gebruikers & rollen</h3>'
+      +'<p>Externe reviewers kunnen alleen commentaar geven.</p>'+rows
+      +'<div class="mt-4"><button class="btn btn-secondary" onclick="alert(\'Voer een e-mailadres in.\')">+ Gebruiker uitnodigen</button></div>'
+      +'</div></div>';
+  }
+  if(stab==='integraties'){
+    const ints=[
+      {n:'Google Search Console',icon:'🔍',s:'Verbonden',on:true},
+      {n:'Supabase (database)',icon:'🗄️',s:'Verbonden',on:true},
+      {n:'n8n (automation)',icon:'⚙️',s:'Verbonden',on:true},
+      {n:'Vercel (hosting)',icon:'▲',s:'Verbonden',on:true},
+      {n:'Firecrawl',icon:'🔥',s:'Niet verbonden',on:false},
+    ];
+    let rows=ints.map(i=>'<div class="toggle-row">'
+      +'<div class="flex items-center gap-3" style="flex:1;">'
+      +'<span style="font-size:20px;">'+i.icon+'</span>'
+      +'<div><div class="font-600 text-sm">'+i.n+'</div>'
+      +'<div class="text-xs" style="color:'+(i.on?'var(--accent)':'var(--muted)')+';">'+i.s+'</div></div>'
+      +'</div><div class="switch'+(i.on?' on':'')+'" onclick="this.classList.toggle(\'on\')"></div></div>'
+    ).join('');
+    const oaiKey=getOAIKey();
+    return '<div class="card">'
+      +'<div class="settings-block"><h3>Integraties</h3>'
+      +'<p>Verbind ContentFlow met je bestaande tools.</p>'+rows+'</div>'
+      +'<div class="settings-block"><h3>API sleutels</h3>'
+      +'<p>Benodigde sleutels voor AI-functionaliteit.</p>'
+      +'<div class="form-group"><label class="form-label">OpenAI API key</label>'
+      +'<div style="display:flex;gap:8px;">'
+      +'<input id="oaiKeyInput" class="form-control" type="password" placeholder="sk-..." value="'+oaiKey+'" style="flex:1;">'
+      +'<button class="btn btn-secondary btn-sm" onclick="setOAIKey(document.getElementById(\'oaiKeyInput\').value);showToast(\'Opgeslagen!\')">Opslaan</button>'
+      +'</div><div class="form-hint">Voor MP3/WAV transcriptie via Whisper.</div></div>'
+      +'<div class="form-group"><label class="form-label">n8n Webhook token</label>'
+      +'<div style="display:flex;gap:8px;">'
+      +'<input id="whTokenInput" class="form-control" type="password" placeholder="tok_user..." value="'+getWHToken()+'" style="flex:1;">'
+      +'<button class="btn btn-secondary btn-sm" onclick="setWHToken(document.getElementById(\'whTokenInput\').value);showToast(\'Opgeslagen!\')">Opslaan</button>'
+      +'</div><div class="form-hint">Persoonlijke token voor de n8n content pipeline.</div></div>'
+      +'</div></div>';
+  }
+  if(stab==='vertrouwen'){
+    return '<div class="card"><div class="settings-block"><h3>AI Vertrouwensniveau</h3>'
+      +'<p>Bepaal hoeveel autonomie ContentFlow heeft.</p>'
+      +'<div style="display:flex;gap:8px;margin:16px 0;">'
+      +'<button class="btn btn-secondary trust-btn active" onclick="setTrust(0,this)">Beginner</button>'
+      +'<button class="btn btn-secondary trust-btn" onclick="setTrust(1,this)">Advisor</button>'
+      +'<button class="btn btn-secondary trust-btn" onclick="setTrust(2,this)">YOLO</button>'
+      +'</div>'
+      +'<p id="trustDesc" style="font-size:13px;color:var(--muted);">Elke actie vraagt om jouw goedkeuring.</p>'
+      +'</div></div>';
+  }
+  return '<div class="card"><p class="text-muted">Selecteer een categorie.</p></div>';
+}
+
+const TRUST_MSGS={0:'Elke actie vraagt om jouw goedkeuring.',1:'ContentFlow adviseert — jij beslist.',2:'Volledig autonoom! ContentFlow draait op YOLO-modus.'};
+function setTrust(idx,el){
+  document.querySelectorAll('.trust-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('trustDesc').textContent=TRUST_MSGS[idx];
+  if(idx===2)setTimeout(()=>alert('YOLO-modus actief!'),100);
+}
+
+async function loadProfile(){
+  if(!supa||!currentUser||currentUser.is_demo)return;
+  try{const{data}=await supa.from('profiles').select('*').eq('id',currentUser.id).single();if(data)profile=data;}catch(e){}
+}
+async function loadContentItems(){
+  // Placeholder — ITEMS array serves as content store for now
+  // When Supabase content table exists, load from there
+  return Promise.resolve();
+}
+async function saveProfile(updates){
+  if(!supa||!currentUser||currentUser.is_demo){showToast('Opgeslagen (demo modus)');return;}
+  try{
+    const payload=Object.assign({id:currentUser.id,updated_at:new Date().toISOString()},updates);
+    const r=await supa.from('profiles').upsert(payload);
+    if(r.error)throw r.error;
+    Object.assign(profile,updates);showToast('Opgeslagen!');
+  }catch(e){alert('Fout bij opslaan: '+e.message);}
+}
+function saveCompany(){
+  saveProfile({
+    company_name:(document.getElementById('companyName')||{}).value||'',
+    website:(document.getElementById('companyWebsite')||{}).value||'',
+    kvk:(document.getElementById('companyKvk')||{}).value||'',
+    tone_nl:(document.getElementById('companyTone')||{}).value||'',
+    services:(document.getElementById('companyServices')||{}).value||''
+  });
+}
+function saveAlgo(){showToast('Instellingen opgeslagen!');}
+
+function loadDemoProfile(){
+  const cu={
+    company_name:'Control Union',
+    website:'https://www.controlunion.com',
+    tone_nl:'Professioneel, betrouwbaar en technisch onderbouwd. Directe schrijfstijl gericht op beslissers in agrifood, maritiem en industrie. Geen jargon, wel precisie.',
+    services:'Tankinspectie, containerinspectie (voedsel & agri), graanopslag inspectie, maritieme survey, fumigatie certificering, ISO 17020 gecertificeerde inspecties, kwaliteitscontrole agrarische import, droge bulk inspectie'
+  };
+  Object.assign(profile,cu);
+  // Fill fields if settings tab is open
+  const fields={companyName:cu.company_name,companyWebsite:cu.website,companyTone:cu.tone_nl,companyServices:cu.services};
+  Object.entries(fields).forEach(([id,val])=>{const el=document.getElementById(id);if(el)el.value=val;});
+  showToast('Control Union demoprofiel geladen!');
+}
+
+function showToast(msg){
+  let t=document.getElementById('toast');
+  if(!t){t=document.createElement('div');t.id='toast';document.body.appendChild(t);}
+  t.textContent=msg;t.className='toast show';
+  clearTimeout(t._to);clearTimeout(t._to2);
+  t._to=setTimeout(function(){t.style.opacity='0';},2500);
+  t._to2=setTimeout(function(){t.className='toast';t.style.opacity='';},3000);
+}
+</script>
+
+<!-- Floating Toolbar -->
+<div id="ft" role="toolbar" aria-label="Tekst opmaken">
+  <button class="ft-btn" data-cmd="bold" title="Vet (Ctrl+B)"><b>B</b></button>
+  <button class="ft-btn" data-cmd="italic" title="Cursief (Ctrl+I)"><i style="font-style:italic">I</i></button>
+  <button class="ft-btn" data-cmd="underline" title="Onderstrepen (Ctrl+U)"><u>U</u></button>
+  <button class="ft-btn" data-cmd="strikeThrough" title="Doorstrepen"><s>S</s></button>
+  <div class="ft-sep"></div>
+  <button class="ft-btn" data-heading="h1" title="Kop 1">H1</button>
+  <button class="ft-btn" data-heading="h2" title="Kop 2">H2</button>
+  <button class="ft-btn" data-heading="h3" title="Kop 3">H3</button>
+  <div class="ft-sep"></div>
+  <button class="ft-btn" data-cmd="insertUnorderedList" title="Lijst">
+    <svg viewBox="0 0 24 24"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1" fill="currentColor" stroke="none"/></svg>
+  </button>
+  <button class="ft-btn" id="ft-link" title="Link invoegen">
+    <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+  </button>
+  <div class="ft-sep"></div>
+  <button class="ft-btn" data-cmd="removeFormat" title="Opmaak verwijderen" style="font-size:11px;width:auto;padding:0 6px;">Wis</button>
+  <div class="ft-sep"></div>
+  <div class="ft-ai-wrap">
+    <input id="ft-ai-input" class="ft-ai-input" type="text" placeholder="Herschrijf instructie…" autocomplete="off"/>
+    <button id="ft-ai-btn" class="ft-ai-btn" title="AI herschrijven">
+      <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+    </button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const ft      = document.getElementById('ft');
+  const aiInput = document.getElementById('ft-ai-input');
+  const aiBtn   = document.getElementById('ft-ai-btn');
+  let savedRange = null;
+
+  function positionToolbar(rect) {
+    const scrollY = window.scrollY || document.documentElement.scrollTop;
+    ft.style.left = (rect.left + rect.width / 2) + 'px';
+    ft.style.top  = (rect.top + scrollY - ft.offsetHeight - 10) + 'px';
+  }
+
+  function updateActiveStates() {
+    ft.querySelectorAll('.ft-btn[data-cmd]').forEach(btn => {
+      try { btn.classList.toggle('active', document.queryCommandState(btn.dataset.cmd)); } catch(e){}
+    });
+    // Check heading
+    const sel = window.getSelection();
+    if (sel && sel.anchorNode) {
+      let el = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
+      const tag = el.closest('h1,h2,h3')?.tagName?.toLowerCase() || '';
+      ft.querySelectorAll('.ft-btn[data-heading]').forEach(b => b.classList.toggle('active', b.dataset.heading === tag));
+    }
+  }
+
+  function showToolbar() {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.toString().trim()) { hideToolbar(); return; }
+    const editor = document.getElementById('article-editor');
+    if (!editor) { hideToolbar(); return; }
+    // Check if selection is inside editor
+    const range = sel.getRangeAt(0);
+    if (!editor.contains(range.commonAncestorContainer)) { hideToolbar(); return; }
+    savedRange = range.cloneRange();
+    ft.classList.add('visible');
+    const rect = range.getBoundingClientRect();
+    // Use rAF so offsetHeight is available
+    requestAnimationFrame(() => { positionToolbar(rect); updateActiveStates(); });
+  }
+
+  function hideToolbar() {
+    ft.classList.remove('visible');
+  }
+
+  document.addEventListener('selectionchange', () => {
+    // Don't react while user is typing in the AI field
+    if (document.activeElement === aiInput) return;
+    clearTimeout(ft._selTimer);
+    ft._selTimer = setTimeout(showToolbar, 80);
+  });
+
+  document.addEventListener('mousedown', e => {
+    if (!ft.contains(e.target)) return;
+    // Allow the AI input and send button to receive normal focus/clicks
+    if (e.target === aiInput || e.target === aiBtn) return;
+    e.preventDefault(); // prevent losing selection
+  });
+
+  // Format commands
+  ft.querySelectorAll('.ft-btn[data-cmd]').forEach(btn => {
+    btn.addEventListener('mousedown', e => {
+      e.preventDefault();
+      document.execCommand(btn.dataset.cmd, false, null);
+      updateActiveStates();
+    });
+  });
+
+  // Heading buttons
+  ft.querySelectorAll('.ft-btn[data-heading]').forEach(btn => {
+    btn.addEventListener('mousedown', e => {
+      e.preventDefault();
+      const sel = window.getSelection();
+      if (!sel || !sel.rangeCount) return;
+      const range = sel.getRangeAt(0);
+      const editor = document.getElementById('article-editor');
+      if (!editor || !editor.contains(range.commonAncestorContainer)) return;
+
+      // Find the block element containing the selection
+      let node = range.startContainer;
+      if (node.nodeType === 3) node = node.parentElement;
+      let block = node.closest('h1,h2,h3,p,div');
+      if (!block || block === editor) {
+        // wrap selection in new heading
+        document.execCommand('formatBlock', false, btn.dataset.heading);
+      } else {
+        const tag = block.tagName.toLowerCase();
+        if (tag === btn.dataset.heading) {
+          document.execCommand('formatBlock', false, 'p');
+        } else {
+          document.execCommand('formatBlock', false, btn.dataset.heading);
+        }
+      }
+      updateActiveStates();
+    });
+  });
+
+  // Link button
+  document.getElementById('ft-link').addEventListener('mousedown', e => {
+    e.preventDefault();
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed) return;
+    const existing = sel.anchorNode?.parentElement?.closest('a');
+    if (existing) { document.execCommand('unlink'); return; }
+    const url = prompt('URL invoeren:', 'https://');
+    if (url && url !== 'https://') document.execCommand('createLink', false, url);
+    updateActiveStates();
+  });
+
+  // Hide on scroll/click outside
+  document.addEventListener('scroll', hideToolbar, true);
+  document.addEventListener('mousedown', e => {
+    if (!ft.contains(e.target) && document.getElementById('article-editor') &&
+        !document.getElementById('article-editor').contains(e.target)) {
+      hideToolbar();
+    }
+  });
+
+  // AI rewrite
+  const aiArrow = aiBtn.innerHTML;
+
+  async function rewriteWithAI() {
+    if (!savedRange) return;
+    const selectedText = savedRange.toString().trim();
+    const instruction  = aiInput.value.trim();
+    if (!selectedText || !instruction) return;
+    const key = (typeof getOAIKey === 'function') ? getOAIKey() : localStorage.getItem('cf_oai_key');
+    if (!key) { alert('Voer eerst een OpenAI API-sleutel in via Instellingen.'); return; }
+
+    aiBtn.disabled = true;
+    aiBtn.textContent = '…';
+
+    try {
+      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: 'Je bent een professionele copywriter. Herschrijf de gegeven tekst op basis van de instructie. Geef alleen de herschreven tekst terug, zonder uitleg, aanhalingstekens of extra opmaak.' },
+            { role: 'user',   content: 'Instructie: ' + instruction + '\n\nTekst:\n' + selectedText }
+          ]
+        })
+      });
+      const data = await resp.json();
+      const newText = data.choices?.[0]?.message?.content?.trim();
+      if (newText) {
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(savedRange);
+        document.execCommand('insertText', false, newText);
+        aiInput.value = '';
+        hideToolbar();
+      } else {
+        alert('AI gaf geen resultaat terug.');
+      }
+    } catch(err) {
+      alert('AI herschrijven mislukt: ' + err.message);
+    } finally {
+      aiBtn.disabled = false;
+      aiBtn.innerHTML = aiArrow;
+    }
+  }
+
+  aiBtn.addEventListener('mousedown', e => { e.preventDefault(); rewriteWithAI(); });
+  aiInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); rewriteWithAI(); } });
+  // Prevent toolbar hiding while user types in the AI field
+  aiInput.addEventListener('mousedown', e => e.stopPropagation());
+})();
+</script>
+</body>
+</html>
