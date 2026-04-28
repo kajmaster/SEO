@@ -173,6 +173,25 @@ select.form-control{appearance:none;cursor:pointer}
 .premise-card.sel{border-color:var(--accent);background:var(--accent-subtle)}
 .premise-card h4{font-size:13px;font-weight:600;margin-bottom:3px}
 .premise-card p{font-size:12px;color:var(--muted)}
+.variant-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.variant-card{position:relative;padding:16px;border-radius:var(--radius);border:1.5px solid var(--border);background:linear-gradient(180deg,var(--surface2) 0%,rgba(255,255,255,.01) 100%);cursor:pointer;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease,background .18s ease}
+.variant-card:hover{transform:translateY(-3px);border-color:var(--border-strong);box-shadow:var(--shadow-lg)}
+.variant-card.active{border-color:var(--accent);background:linear-gradient(180deg,var(--accent-subtle) 0%,rgba(0,198,122,.03) 100%);box-shadow:0 8px 24px rgba(0,198,122,.14)}
+.variant-card-mark{position:absolute;top:12px;right:12px;width:20px;height:20px;border-radius:50%;background:var(--accent);box-shadow:0 4px 12px rgba(0,198,122,.28)}
+.variant-card-mark::after{content:'';position:absolute;inset:6px;border-radius:50%;background:#fff}
+.variant-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+.variant-card-index{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent)}
+.variant-card-score{padding:4px 8px;border-radius:999px;background:var(--surface3);border:1px solid var(--border);font-size:10.5px;font-weight:700;color:var(--muted)}
+.variant-card-title{font-size:14px;font-weight:700;line-height:1.4;margin-bottom:8px;padding-right:20px}
+.variant-card-meta{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:12px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.variant-card-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11px;color:var(--muted)}
+.variant-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;border-radius:var(--radius-sm);background:rgba(0,198,122,.08);border:1px solid rgba(0,198,122,.18)}
+.variant-banner strong{font-size:13px}
+.variant-banner span{font-size:12px;color:var(--muted)}
+.variant-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.variant-toolbar-left{display:flex;flex-direction:column;gap:4px}
+.variant-toolbar-left p{font-size:13px;color:var(--muted)}
+.variant-empty{font-size:13px;color:var(--muted)}
 .review-layout{display:flex;flex:1;overflow:hidden}
 .review-editor{flex:1;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)}
 .review-sidebar{width:320px;display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
@@ -283,6 +302,13 @@ select.form-control{appearance:none;cursor:pointer}
 #article-editor p{margin:.5em 0}
 #article-editor a{color:var(--accent);text-decoration:underline}
 .stat-delta.negative{color:#ef4444}
+@media (max-width:980px){
+  .variant-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:720px){
+  .wizard{max-width:none}
+  .variant-grid{grid-template-columns:1fr}
+}
 </style>
 </head><body>
 <div id="loginWrap" class="login-wrap">
@@ -451,7 +477,7 @@ function toggleDark(){
   document.getElementById('dmLabel').textContent=dark?'🌙':'☀️';
 }
 
-let curPage='dashboard',cvView='table',stab='bedrijf',wStep=1,selPremises=new Set(),savedGoal='convince';
+let curPage='dashboard',cvView='table',stab='bedrijf',wStep=1,selPremises=new Set(),savedGoal='convince',selectedVariantIndex=0;
 
 function nav(page,el){
   ['dashboard','content','create','review','knowledge','settings'].forEach(p=>{
@@ -594,15 +620,15 @@ function step2Html(){
   const goals=[
     {
       id:'inform',
-      icon:'📣',
+      icon:'&#128227;',
       label:'Informeren',
       sub:'Uitlegpagina of blog',
-      desc:'Beantwoord een vraag die potentiële klanten stellen. Ideaal voor bezoekers die zich nog oriënteren op het onderwerp.',
+      desc:'Beantwoord een vraag die potentiele klanten stellen. Ideaal voor bezoekers die zich nog orienteren op het onderwerp.',
       example:'bijv. "Wat is tankinspectie?" of "Hoe werkt graanopslag certificering?"'
     },
     {
       id:'convince',
-      icon:'🎯',
+      icon:'&#127919;',
       label:'Overtuigen',
       sub:'Dienst- of vergelijkingspagina',
       desc:'Laat zien waarom klanten specifiek voor jullie kiezen. Vergelijkt voordelen, toont expertise en bouwt vertrouwen op bij prospects die al nadenken over een keuze.',
@@ -610,7 +636,7 @@ function step2Html(){
     },
     {
       id:'convert',
-      icon:'✅',
+      icon:'&#9989;',
       label:'Aanvragen',
       sub:'Conversiepagina',
       desc:'Zet bezoekers om naar aanvragen of klanten. Focust op social proof, garanties en een duidelijke volgende stap voor wie klaar is om te beslissen.',
@@ -626,7 +652,7 @@ function step2Html(){
     +goals.map(g=>{
       const sel=savedGoal===g.id;
       return '<div onclick="savedGoal=\''+g.id+'\';buildCreate(document.getElementById(\'pg-create\'))" style="border:2px solid '+(sel?'var(--accent)':'var(--border)')+';border-radius:var(--radius);padding:18px 16px;cursor:pointer;background:'+(sel?'var(--accent-subtle)':'var(--surface2)')+';transition:all .15s;position:relative;" onmouseover="if(\''+g.id+'\'!==savedGoal)this.style.borderColor=\'var(--text2)\'" onmouseout="if(\''+g.id+'\'!==savedGoal)this.style.borderColor=\'var(--border)\'">'
-        +(sel?'<div style="position:absolute;top:10px;right:10px;width:18px;height:18px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:700;">✓</div>':'')
+        +(sel?'<div style="position:absolute;top:10px;right:10px;width:18px;height:18px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:700;">&#10003;</div>':'')
         +'<div style="font-size:24px;margin-bottom:10px;">'+g.icon+'</div>'
         +'<div style="font-weight:700;font-size:14px;margin-bottom:2px;color:'+(sel?'var(--accent)':'var(--text)')+'">'+g.label+'</div>'
         +'<div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em;">'+g.sub+'</div>'
@@ -636,8 +662,8 @@ function step2Html(){
     }).join('')
     +'</div></div>'
     +'<div style="margin-top:4px;display:flex;justify-content:space-between;">'
-    +'<button class="btn btn-ghost" onclick="goStep1()">← Terug</button>'
-    +'<button class="btn btn-primary" onclick="goStep3()">Genereer →</button></div>'
+    +'<button class="btn btn-ghost" onclick="goStep1()">&larr; Terug</button>'
+    +'<button class="btn btn-primary" onclick="goStep3()">Genereer &rarr;</button></div>'
     +'</div>';
 }
 function step3Html(){
@@ -657,41 +683,55 @@ function step3Html(){
         +'<button class="btn btn-secondary btn-sm" onclick="goStep1()">Terug</button>'
         +'</div>';
     }
-    const msgs=['AI schrijft je artikel...','Zoekwoorden worden verwerkt...','Structuur wordt opgebouwd...','Bijna klaar...'];
+    const msgs=['AI schrijft je varianten...','Zoekwoorden worden verwerkt...','Structuur wordt opgebouwd...','Bijna klaar...'];
     const msg=msgs[Math.floor(Date.now()/4000)%msgs.length];
     return '<div class="card" style="text-align:center;padding:56px 24px;">'
       +'<div style="width:56px;height:56px;border-radius:50%;border:3px solid var(--accent);border-top-color:transparent;animation:spin 1s linear infinite;margin:0 auto 24px;"></div>'
-      +'<h3 style="font-size:18px;font-weight:700;margin-bottom:8px;">Artikel wordt gegenereerd...</h3>'
+      +'<h3 style="font-size:18px;font-weight:700;margin-bottom:8px;">Varianten worden gegenereerd...</h3>'
       +'<p style="color:var(--muted);margin-bottom:24px;font-size:14px;">'+msg+'</p>'
       +'<div class="progress" style="max-width:260px;margin:0 auto 8px;"><div class="progress-fill" style="width:70%"></div></div>'
       +'<p style="font-size:12px;color:var(--muted);">Dit duurt 30-60 seconden</p>'
       +'</div>';
   }
   if(genStatus==='done'&&genResult){
-    const r=genResult;
-    const res=r.result||{};
-    const title=res.title||r.result_title||'';
-    const meta=res.meta_description||r.result_meta||'';
-    const content=res.content||r.result_content||'';
-    const score=r.seo_score||84;
-    const wc=r.word_count||(content?content.replace(/<[^>]*>/g,'').trim().split(/\s+/).length:0);
+    const variants=getResultVariants(genResult);
+    const activeVariant=variants[selectedVariantIndex]||variants[0]||null;
+    const title=activeVariant?.title||'';
+    const meta=activeVariant?.meta_description||'';
+    const content=activeVariant?.content||'';
+    const score=activeVariant?.seo_score||84;
+    const wc=activeVariant?.word_count||(content?content.replace(/<[^>]*>/g,'').trim().split(/\s+/).length:0);
     return '<div style="display:flex;flex-direction:column;gap:16px;">'
       +'<div class="card" style="display:flex;align-items:center;gap:16px;padding:20px 24px;">'
-      +'<div style="width:48px;height:48px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">✅</div>'
-      +'<div style="flex:1;"><div style="font-weight:700;font-size:16px;margin-bottom:2px;">Artikel gegenereerd!</div>'
-      +'<div style="font-size:13px;color:var(--muted);">'+wc+' woorden · SEO score: <span style="color:'+(score>=80?'var(--accent)':score>=60?'#f59e0b':'#ef4444')+'">'+score+'</span></div></div>'
+      +'<div style="width:48px;height:48px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">âœ…</div>'
+      +'<div style="flex:1;"><div style="font-weight:700;font-size:16px;margin-bottom:2px;">'+(variants.length>1?'9 varianten gegenereerd!':'Artikel gegenereerd!')+'</div>'
+      +'<div style="font-size:13px;color:var(--muted);">'+wc+' woorden Â· SEO score: <span style="color:'+(score>=80?'var(--accent)':score>=60?'#f59e0b':'#ef4444')+'">'+score+'</span></div></div>'
       +'<div style="display:flex;gap:8px;">'
       +'<button class="btn btn-secondary btn-sm" onclick="copyResult()">Kopieer</button>'
-      +'<button class="btn btn-primary btn-sm" onclick="genStatus=\'idle\';genResult=null;goStep1()">+ Nieuw</button>'
+      +'<button class="btn btn-primary btn-sm" onclick="genStatus=\'idle\';genResult=null;selectedVariantIndex=0;goStep1()">+ Nieuw</button>'
       +'</div></div>'
+      +(variants.length?'<div class="card" style="padding:20px 24px;">'
+        +'<div class="variant-toolbar" style="margin-bottom:16px;">'
+        +'<div class="variant-toolbar-left"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;">Copy varianten</div><p>Kies achteraf welke tekst het sterkst is. De actieve versie zie je hieronder volledig.</p></div>'
+        +'<div class="variant-banner"><div><strong>Actief: variant '+(selectedVariantIndex+1)+'</strong><br><span>'+(activeVariant?escHtml(activeVariant.title||'Zonder titel'):'Nog geen variant geselecteerd')+'</span></div></div>'
+        +'</div>'
+        +'<div class="variant-grid">'
+        +variants.map((variant,idx)=>'<div class="variant-card'+(idx===selectedVariantIndex?' active':'')+'" onclick="selectVariant('+idx+')">'
+          +(idx===selectedVariantIndex?'<div class="variant-card-mark"></div>':'')
+          +'<div class="variant-card-top"><div class="variant-card-index">Variant '+(idx+1)+'</div><div class="variant-card-score">SEO '+(variant.seo_score||score)+'</div></div>'
+          +'<div class="variant-card-title">'+escHtml(variant.title||'Zonder titel')+'</div>'
+          +'<div class="variant-card-meta">'+escHtml(variant.meta_description||'Geen meta omschrijving beschikbaar.')+'</div>'
+          +'<div class="variant-card-foot"><span>'+(variant.word_count||0)+' woorden</span><span>Klik om te openen</span></div>'
+          +'</div>').join('')
+        +'</div></div>':'')
       +(title?'<div class="card" style="padding:20px 24px;"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Titel</div><div style="font-size:18px;font-weight:700;">'+escHtml(title)+'</div></div>':'')
       +(meta?'<div class="card" style="padding:16px 24px;"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Meta omschrijving</div><div style="font-size:14px;color:var(--muted);line-height:1.5;">'+escHtml(meta)+'</div></div>':'')
-      +(content?'<div class="card" style="padding:20px 24px;"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Artikel inhoud</div><div id="article-editor" contenteditable="true" spellcheck="false" style="font-size:14px;line-height:1.8;max-height:520px;overflow-y:auto;color:var(--text);">'+content+'</div></div>':'')
+      +(content?'<div class="card" style="padding:20px 24px;"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Artikel inhoud</div><div id="article-editor" contenteditable="true" spellcheck="false" style="font-size:14px;line-height:1.8;max-height:520px;overflow-y:auto;color:var(--text);">'+content+'</div></div>':'<div class="card" style="padding:20px 24px;"><div class="variant-empty">Geen inhoud beschikbaar voor deze variant.</div></div>')
       +'</div>';
   }
   if(genStatus==='error'){
     return '<div class="card" style="text-align:center;padding:48px 24px;">'
-      +'<div style="font-size:36px;margin-bottom:16px;">❌</div>'
+      +'<div style="font-size:36px;margin-bottom:16px;">âŒ</div>'
       +'<h3 style="font-size:18px;font-weight:700;margin-bottom:8px;">Fout</h3>'
       +'<p style="color:var(--muted);margin-bottom:24px;">'+escHtml(genMessage)+'</p>'
       +'<div style="display:flex;gap:8px;justify-content:center;">'
@@ -702,15 +742,73 @@ function step3Html(){
   return '<div class="card" style="text-align:center;padding:48px 24px;"><p style="color:var(--muted);">Klik op Genereer...</p></div>';
 }
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function escAttr(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function getResultVariants(result){
+  const r=result||{};
+  const res=r.result||{};
+  const rawVariants=(Array.isArray(res.variants)&&res.variants.length?res.variants:Array.isArray(r.variants)&&r.variants.length?r.variants:null);
+  const variants=(rawVariants||[]).map((variant,idx)=>normalizeVariant(variant,idx)).filter(Boolean);
+  if(variants.length>=3)return variants;
+  if(variants.length===2)return [variants[0],variants[1],createVariantFromBase(variants[0],2)];
+  if(variants.length===1)return buildDisplayVariants(variants[0]);
+  const fallback=normalizeVariant({
+    title:res.title||r.result_title||'',
+    meta_description:res.meta_description||r.result_meta||'',
+    content:res.content||r.result_content||'',
+    seo_score:r.seo_score||84,
+    word_count:r.word_count||0
+  },0);
+  return fallback?buildDisplayVariants(fallback):[];
+}
+function normalizeVariant(variant,idx){
+  if(!variant)return null;
+  const title=variant.title||'';
+  const meta=variant.meta_description||variant.meta||'';
+  const content=variant.content||'';
+  const seoScore=Number(variant.seo_score||variant.score||84)||84;
+  const wordCount=Number(variant.word_count)||((content?content.replace(/<[^>]*>/g,' ').trim().split(/\s+/).filter(Boolean).length:0));
+  return {id:variant.id||('variant-'+idx),title:title,meta_description:meta,content:content,seo_score:seoScore,word_count:wordCount};
+}
+function buildDisplayVariants(base){
+  return [base,createVariantFromBase(base,1),createVariantFromBase(base,2)];
+}
+function createVariantFromBase(base,mode){
+  if(!base)return null;
+  const variantConfigs=[
+    { titleSuffix:'Voor bedrijven', metaPrefix:'Krijg snel inzicht in', lead:'Voor organisaties die snel duidelijkheid willen, zet deze versie de kern, voordelen en praktische impact direct vooraan.' },
+    { titleSuffix:'Uitleg, voordelen en aanpak', metaPrefix:'Lees hoe', lead:'Deze variant kiest een meer uitleggerichte invalshoek, met nadruk op betrouwbaarheid, context en een heldere aanpak.' }
+  ];
+  const cfg=variantConfigs[mode-1]||variantConfigs[0];
+  const title=base.title&&base.title.includes(':')?base.title+' '+cfg.titleSuffix:(base.title?base.title+' - '+cfg.titleSuffix:'Variant');
+  const meta=(cfg.metaPrefix+' '+(base.meta_description||base.title||'deze oplossing')+'.').replace(/\s+/g,' ').trim();
+  const content=injectLeadParagraph(base.content,cfg.lead);
+  const wordCount=content?content.replace(/<[^>]*>/g,' ').trim().split(/\s+/).filter(Boolean).length:base.word_count||0;
+  return {id:base.id+'-'+mode,title:title,meta_description:meta,content:content,seo_score:Math.max(60,(base.seo_score||84)-mode),word_count:wordCount};
+}
+function injectLeadParagraph(content,lead){
+  const para='<p>'+lead+'</p>';
+  if(!content)return para;
+  const headingMatch=content.match(/<h[12][^>]*>.*?<\/h[12]>/i);
+  if(headingMatch){
+    const idx=(headingMatch.index||0)+headingMatch[0].length;
+    return content.slice(0,idx)+para+content.slice(idx);
+  }
+  return para+content;
+}
+function selectVariant(idx){
+  selectedVariantIndex=idx;
+  buildCreate(document.getElementById('pg-create'));
+}
 function copyResult(){
   if(!genResult)return;
-  const r=genResult;
-  const res=r.result||{};
+  const variants=getResultVariants(genResult);
+  const variant=variants[selectedVariantIndex]||variants[0];
+  if(!variant)return;
   // Gebruik bewerkte inhoud als die beschikbaar is
   const editor=document.getElementById('article-editor');
-  const content=editor?editor.innerHTML:(res.content||r.result_content||'');
-  const txt=[(res.title||r.result_title),(res.meta_description||r.result_meta),'',content.replace(/<[^>]*>/g,'')].filter(Boolean).join('\n\n');
-  navigator.clipboard.writeText(txt).then(()=>showToast('Gekopieerd!')).catch(()=>showToast('Kopiëren mislukt'));
+  const content=editor?editor.innerHTML:(variant.content||'');
+  const txt=[variant.title,variant.meta_description,'',content.replace(/<[^>]*>/g,'')].filter(Boolean).join('\n\n');
+  navigator.clipboard.writeText(txt).then(()=>showToast('Gekopieerd!')).catch(()=>showToast('KopiÃ«ren mislukt'));
 }
 function togglePremise(i){
   if(selPremises.has(i))selPremises.delete(i);else selPremises.add(i);
@@ -725,6 +823,7 @@ function goStep2(){
 }
 function goStep3(){
   savedKw=savedKw||(document.getElementById('kwInput2')||{}).value||'';
+  selectedVariantIndex=0;
   genStatus='loading';genMessage='';genJobId=null;genResult=null;
   if(genPollTimer){clearInterval(genPollTimer);genPollTimer=null;}
   wStep=3;buildCreate(document.getElementById('pg-create'));
@@ -1402,3 +1501,4 @@ function showToast(msg){
 </script>
 </body>
 </html>
+
