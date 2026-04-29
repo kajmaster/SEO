@@ -697,11 +697,12 @@ function waitForVoiceDataChannel(channel,pc){
 async function requestVoiceAnswerSdp(sdp){
   const endpoint=(getVoiceEndpoint()||'').trim();
   const sessionConfig=buildVoiceSessionConfig();
+  const allowDirectFallback=IS_LOCAL;
   if(endpoint){
+    const formData=new FormData();
+    formData.set('sdp',sdp);
+    formData.set('session',JSON.stringify(sessionConfig));
     try{
-      const formData=new FormData();
-      formData.set('sdp',sdp);
-      formData.set('session',JSON.stringify(sessionConfig));
       const resp=await fetch(endpoint,{method:'POST',body:formData});
       if(!resp.ok){
         const bodyText=await resp.text();
@@ -717,13 +718,14 @@ async function requestVoiceAnswerSdp(sdp){
       voiceState.usingDirect=false;
       return await resp.text();
     }catch(err){
-      if(!getOAIKey())throw err;
+      const isNetworkError=!String(err?.message||'').includes('Session endpoint gaf status');
+      if(!allowDirectFallback||!isNetworkError||!getOAIKey())throw err;
       pushVoiceLog('system','Session endpoint niet bereikbaar, fallback naar directe OpenAI verbinding voor lokale tests.');
     }
   }
   const key=getOAIKey();
   if(!key)throw new Error('Geen OpenAI API key gevonden voor de directe fallback.');
-  const resp=await fetch('https://api.openai.com/v1/realtime/calls',{
+  const resp=await fetch('https://api.openai.com/v1/realtime/calls?model='+encodeURIComponent(getVoiceModel()),{
     method:'POST',
     headers:{Authorization:'Bearer '+key,'Content-Type':'application/sdp'},
     body:sdp
