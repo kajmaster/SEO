@@ -65,7 +65,30 @@ export default async function handler(request) {
     body: upstreamFormData,
   });
 
-  return new Response(await realtimeResponse.text(), {
+  const responseText = await realtimeResponse.text();
+
+  if (!realtimeResponse.ok) {
+    let parsed = null;
+    try {
+      parsed = JSON.parse(responseText);
+    } catch {
+      parsed = null;
+    }
+
+    return jsonResponse(
+      {
+        error:
+          parsed?.error?.message ||
+          responseText ||
+          `OpenAI Realtime request failed with status ${realtimeResponse.status}.`,
+        upstream_status: realtimeResponse.status,
+        upstream_type: realtimeResponse.headers.get("content-type") || null,
+      },
+      realtimeResponse.status,
+    );
+  }
+
+  return new Response(responseText, {
     status: realtimeResponse.status,
     headers: {
       ...CORS_HEADERS,
