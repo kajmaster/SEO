@@ -10,9 +10,14 @@ Deze repository bevat de huidige ContentFlow MVP als hoofdentrypoint, plus onder
 - `assets/`: mockups en beeldmateriaal
 - `db/`: database- en schema-bestanden
 - `docs/`: PRD's, samenvattingen en overige projectdocumentatie
+- `netlify/functions/`: serverless functies voor deploys, waaronder de realtime voice session proxy
 - `prototypes/`: losse UI-prototypes en experimenten
 - `scripts/`: hulpscripts voor lokaal testen
 
 ## Opmerking
 
 `contentflow-mvp.html` is bewust de hoofdversie. De eerdere dubbele `index.html` is verwijderd om de repo eenduidig te houden.
+
+## Realtime voice beta
+
+De MVP bevat nu ook een voice beta, gebaseerd op [OpenAI's realtime-voice-component](https://github.com/openai/realtime-voice-component/), maar aangepast naar deze statische ContentFlow-opzet. Installatie- en deploynotities staan in [docs/realtime-voice-beta.md](docs/realtime-voice-beta.md).

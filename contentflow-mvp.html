@@ -246,10 +246,40 @@ select.form-control{appearance:none;cursor:pointer}
 .fb-type{padding:5px 11px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;background:var(--surface3);color:var(--muted);border:1px solid var(--border);transition:all var(--duration)}
 .fb-type.active{background:var(--accent-subtle);color:var(--accent);border-color:var(--accent)}
 .fab-row{display:flex;gap:8px;margin-top:10px}
+.voice-launch-btn{padding:7px 12px;border-radius:999px}
+.voice-dock{position:fixed;right:24px;bottom:96px;z-index:1001;display:none}
+.voice-panel{width:360px;max-width:calc(100vw - 32px);background:linear-gradient(180deg,rgba(0,198,122,.08) 0%,var(--surface) 28%);border:1px solid rgba(0,198,122,.18);border-radius:20px;box-shadow:var(--shadow-lg);padding:16px;display:none;flex-direction:column;gap:14px}
+.voice-panel.open{display:flex}
+.voice-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.voice-panel-head h4{font-size:15px;font-weight:800;letter-spacing:-.2px}
+.voice-panel-head p{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.45}
+.voice-status{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;background:var(--surface2);border:1px solid var(--border);font-size:11.5px;font-weight:700;color:var(--muted)}
+.voice-status::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--muted);box-shadow:0 0 0 0 rgba(142,142,147,.2)}
+.voice-status.connecting::before{background:#f59e0b;box-shadow:0 0 0 6px rgba(245,158,11,.14)}
+.voice-status.ready::before{background:var(--accent);box-shadow:0 0 0 6px rgba(0,198,122,.14)}
+.voice-status.listening::before{background:var(--accent);box-shadow:0 0 0 0 rgba(0,198,122,.3);animation:voicePulse 1.1s infinite}
+.voice-status.error::before{background:#ef4444;box-shadow:0 0 0 6px rgba(239,68,68,.12)}
+.voice-log{max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:4px}
+.voice-line{padding:10px 12px;border-radius:14px;font-size:12.5px;line-height:1.5;border:1px solid var(--border);background:var(--surface2)}
+.voice-line.user{background:rgba(0,198,122,.08);border-color:rgba(0,198,122,.18)}
+.voice-line.assistant{background:rgba(255,255,255,.03)}
+.voice-line.system{background:transparent;border-style:dashed;color:var(--muted)}
+.voice-line strong{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;color:var(--muted)}
+.voice-tool-list{display:flex;flex-wrap:wrap;gap:8px}
+.voice-tool-pill{padding:6px 9px;border-radius:999px;border:1px solid var(--border);background:var(--surface2);font-size:11px;color:var(--muted)}
+.voice-control-row{display:flex;gap:8px;flex-wrap:wrap}
+.voice-tip{font-size:11.5px;color:var(--muted);line-height:1.5}
+.voice-card{margin-top:14px;padding:16px 18px;border-radius:var(--radius);background:linear-gradient(135deg,rgba(0,198,122,.1),rgba(0,168,255,.06));border:1px solid rgba(0,198,122,.16)}
+.voice-card h3{font-size:15px;font-weight:800;margin-bottom:4px}
+.voice-card p{font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.6}
+.voice-mini-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.voice-mini{padding:9px 10px;border-radius:12px;background:rgba(28,28,30,.32);border:1px solid rgba(255,255,255,.06);font-size:11.5px;color:var(--muted)}
+.voice-mini strong{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);margin-bottom:3px}
 .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--text);color:var(--bg);padding:10px 22px;border-radius:50px;font-size:13px;font-weight:600;opacity:0;transition:all .3s ease;z-index:9999;white-space:nowrap;pointer-events:none;box-shadow:0 4px 20px rgba(0,0,0,.25)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @keyframes popIn{from{opacity:0;transform:scale(.95) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes voicePulse{0%{box-shadow:0 0 0 0 rgba(0,198,122,.3)}70%{box-shadow:0 0 0 12px rgba(0,198,122,0)}100%{box-shadow:0 0 0 0 rgba(0,198,122,0)}}
 .spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
 .hidden{display:none!important}
 .mt-4{margin-top:16px}
@@ -308,6 +338,9 @@ select.form-control{appearance:none;cursor:pointer}
 @media (max-width:720px){
   .wizard{max-width:none}
   .variant-grid{grid-template-columns:1fr}
+  .voice-dock{left:12px;right:12px;bottom:88px}
+  .voice-panel{width:auto;max-width:none}
+  .voice-mini-list{grid-template-columns:1fr}
 }
 </style>
 </head><body>
@@ -385,6 +418,7 @@ select.form-control{appearance:none;cursor:pointer}
         <div id="pageTitle" class="topbar-title">Dashboard</div>
       </div>
       <div class="topbar-right">
+        <button class="btn btn-secondary btn-sm voice-launch-btn" onclick="toggleVoicePanel()" title="Open realtime voice beta">Voice beta</button>
         <button class="btn btn-primary topbar-cta" onclick="nav('create',document.getElementById('ni-create'))">✦ Nieuw artikel</button>
         <span class="dm-label" id="dmLabel">☀️</span>
         <div class="dm-toggle" id="dmToggle" onclick="toggleDark()"></div>
@@ -417,12 +451,384 @@ select.form-control{appearance:none;cursor:pointer}
   </div>
   <button class="fab-btn" onclick="toggleFab()">💬 Feedback</button>
 </div>
+<div class="voice-dock" id="voiceDock">
+  <div class="voice-panel" id="voicePanel">
+    <div class="voice-panel-head">
+      <div>
+        <h4>Realtime voice beta</h4>
+        <p>Gebaseerd op OpenAI's realtime voice component, aangepast naar jullie ContentFlow-MVP.</p>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="toggleVoicePanel(false)">Sluit</button>
+    </div>
+    <div id="voiceStatus" class="voice-status">Niet verbonden</div>
+    <div class="voice-tip">Zeg bijvoorbeeld: "zet het zoekwoord op tankinspectie", "kies overtuigen" of "genereer content".</div>
+    <div class="voice-tool-list">
+      <span class="voice-tool-pill">keyword</span>
+      <span class="voice-tool-pill">doel kiezen</span>
+      <span class="voice-tool-pill">stap wisselen</span>
+      <span class="voice-tool-pill">genereren</span>
+      <span class="voice-tool-pill">variant kiezen</span>
+      <span class="voice-tool-pill">kopieren</span>
+    </div>
+    <div class="voice-control-row">
+      <button id="voicePrimaryBtn" class="btn btn-primary btn-sm" onclick="toggleVoiceConnection()">Start voice</button>
+      <button class="btn btn-secondary btn-sm" onclick="voicePushState()">Sync schermstatus</button>
+      <button class="btn btn-ghost btn-sm" onclick="clearVoiceLog()">Wis log</button>
+    </div>
+    <div class="voice-log" id="voiceLog">
+      <div class="voice-line system"><strong>System</strong>Voice beta staat klaar. Open deze panel en start daarna je microfoonverbinding.</div>
+    </div>
+  </div>
+</div>
 <script>
 const SUPA_URL='https://bnwvxjwykzjelclqzbvt.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJud3Z4and5a3pqZWxjbHF6YnZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0MTk0ODEsImV4cCI6MjA5MTk5NTQ4MX0.LxGbca43nOJIDKD0yEQTkI-EAje15OB0hbSwEGO2mw8';
 if(typeof pdfjsLib!=='undefined'){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}
 function getOAIKey(){return localStorage.getItem('cf_oai_key')||'';}
 function setOAIKey(k){localStorage.setItem('cf_oai_key',k);}
+const DEFAULT_VOICE_ENDPOINT='/.netlify/functions/realtime-session';
+const DEFAULT_VOICE_MODEL='gpt-realtime';
+function getVoiceEndpoint(){return localStorage.getItem('cf_voice_endpoint')||DEFAULT_VOICE_ENDPOINT;}
+function setVoiceEndpoint(v){localStorage.setItem('cf_voice_endpoint',(v||DEFAULT_VOICE_ENDPOINT).trim()||DEFAULT_VOICE_ENDPOINT);}
+function getVoiceModel(){return localStorage.getItem('cf_voice_model')||DEFAULT_VOICE_MODEL;}
+function setVoiceModel(v){localStorage.setItem('cf_voice_model',(v||DEFAULT_VOICE_MODEL).trim()||DEFAULT_VOICE_MODEL);}
+const voiceState={
+  open:false,status:'idle',statusLabel:'Niet verbonden',connected:false,listening:false,usingDirect:false,
+  log:[{role:'system',text:'Voice beta staat klaar. Open deze panel en start daarna je microfoonverbinding.'}],
+  handledCallIds:new Set(),peerConnection:null,dataChannel:null,localStream:null,remoteAudio:null
+};
+function voiceSafe(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function voiceStatusClass(){
+  if(voiceState.status==='error')return 'error';
+  if(voiceState.status==='connecting')return 'connecting';
+  if(voiceState.connected&&voiceState.listening)return 'listening';
+  if(voiceState.connected)return 'ready';
+  return '';
+}
+function renderVoicePanel(){
+  const dock=document.getElementById('voiceDock');
+  const panel=document.getElementById('voicePanel');
+  const statusEl=document.getElementById('voiceStatus');
+  const logEl=document.getElementById('voiceLog');
+  const primaryBtn=document.getElementById('voicePrimaryBtn');
+  if(!dock||!panel||!statusEl||!logEl||!primaryBtn)return;
+  dock.style.display=currentUser?'block':'none';
+  panel.classList.toggle('open',!!voiceState.open);
+  statusEl.className='voice-status '+voiceStatusClass();
+  statusEl.textContent=voiceState.statusLabel;
+  primaryBtn.textContent=voiceState.connected?'Stop voice':voiceState.status==='connecting'?'Verbinden...':'Start voice';
+  primaryBtn.disabled=voiceState.status==='connecting';
+  logEl.innerHTML=voiceState.log.map(item=>'<div class="voice-line '+item.role+'"><strong>'+(item.role==='user'?'Jij':item.role==='assistant'?'Assistant':'System')+'</strong>'+voiceSafe(item.text)+'</div>').join('');
+  logEl.scrollTop=logEl.scrollHeight;
+}
+function setVoiceStatus(status,label){
+  voiceState.status=status;
+  voiceState.statusLabel=label||(
+    status==='connecting'?'Verbinden met realtime session...':
+    status==='error'?'Voice fout':
+    voiceState.connected&&voiceState.listening?'Luistert mee...':
+    voiceState.connected?'Verbonden':
+    'Niet verbonden'
+  );
+  renderVoicePanel();
+}
+function pushVoiceLog(role,text){
+  if(!text)return;
+  voiceState.log.push({role:role,text:text});
+  if(voiceState.log.length>16)voiceState.log=voiceState.log.slice(-16);
+  renderVoicePanel();
+}
+function clearVoiceLog(){
+  voiceState.log=[{role:'system',text:'Voice log gewist. Start opnieuw of sync eerst de huidige schermstatus.'}];
+  renderVoicePanel();
+}
+function toggleVoicePanel(force){
+  voiceState.open=typeof force==='boolean'?force:!voiceState.open;
+  renderVoicePanel();
+}
+function buildVoiceTools(){
+  return [
+    {type:'function',name:'get_screen_state',description:'Lees de huidige staat van de ContentFlow interface voordat je iets verandert.',parameters:{type:'object',properties:{},additionalProperties:false}},
+    {type:'function',name:'set_keyword',description:'Zet of vervang het hoofdzoekwoord in de create-flow.',parameters:{type:'object',properties:{keyword:{type:'string',description:'Het nieuwe hoofdzoekwoord voor de pagina.'}},required:['keyword'],additionalProperties:false}},
+    {type:'function',name:'set_page_goal',description:'Kies het doel van de pagina: informeren, overtuigen of aanvragen.',parameters:{type:'object',properties:{goal:{type:'string',enum:['informeren','overtuigen','aanvragen']}},required:['goal'],additionalProperties:false}},
+    {type:'function',name:'go_to_step',description:'Ga naar stap 1, 2 of 3 in de create wizard.',parameters:{type:'object',properties:{step:{type:'integer',minimum:1,maximum:3}},required:['step'],additionalProperties:false}},
+    {type:'function',name:'generate_content',description:'Start het genereren van content op basis van het huidige zoekwoord en doel.',parameters:{type:'object',properties:{},additionalProperties:false}},
+    {type:'function',name:'select_variant',description:'Selecteer een bestaande copy-variant nadat varianten zijn gegenereerd.',parameters:{type:'object',properties:{variant_number:{type:'integer',minimum:1,maximum:9}},required:['variant_number'],additionalProperties:false}},
+    {type:'function',name:'copy_active_variant',description:'Kopieer de actieve variant naar het klembord.',parameters:{type:'object',properties:{},additionalProperties:false}},
+    {type:'function',name:'show_message',description:'Toon een korte melding aan de operator in de interface.',parameters:{type:'object',properties:{message:{type:'string'}},required:['message'],additionalProperties:false}}
+  ];
+}
+function buildVoiceSessionConfig(){
+  return {
+    type:'realtime',
+    model:getVoiceModel(),
+    instructions:'Je bent een Nederlandse voice control agent voor ContentFlow, een SEO-app voor B2B content. Gebruik alleen de beschikbare tools om de interface te bedienen. Werk kort, helder en taakgericht. Verzin geen acties of resultaten. Vraag alleen een korte verduidelijking als een toolargument echt ontbreekt. Na elke zichtbare wijziging houd je rekening met de laatst gesynchroniseerde schermstatus.',
+    tool_choice:'auto',
+    tools:buildVoiceTools(),
+    output_modalities:['audio'],
+    audio:{
+      input:{
+        transcription:{model:'gpt-4o-mini-transcribe',language:'nl'},
+        turn_detection:{type:'server_vad',threshold:0.5,prefix_padding_ms:300,silence_duration_ms:200,create_response:true,interrupt_response:false}
+      },
+      output:{voice:'verse'}
+    }
+  };
+}
+function getVoiceAppState(){
+  const variants=genResult?getResultVariants(genResult):[];
+  return {
+    page:curPage,
+    wizard_step:wStep,
+    keyword:(savedKw||(document.getElementById('kwInput2')||{}).value||(document.getElementById('kwInput')||{}).value||'').trim(),
+    goal:savedGoal,
+    generation_status:genStatus,
+    variant_count:variants.length,
+    active_variant:variants.length?selectedVariantIndex+1:null,
+    title:variants[selectedVariantIndex]?.title||variants[0]?.title||''
+  };
+}
+function voiceNormalizeGoal(goal){
+  const raw=String(goal||'').toLowerCase().trim();
+  if(raw==='inform'||raw==='informeren')return 'inform';
+  if(raw==='overtuigen'||raw==='convince')return 'convince';
+  if(raw==='aanvragen'||raw==='convert')return 'convert';
+  return null;
+}
+async function executeVoiceTool(name,args){
+  if(name==='get_screen_state')return {ok:true,state:getVoiceAppState()};
+  if(name==='set_keyword'){
+    const keyword=String(args.keyword||'').trim();
+    if(!keyword)return {ok:false,error:'Geen keyword meegegeven.'};
+    savedKw=keyword;
+    nav('create',document.getElementById('ni-create'));
+    ['kwInput','kwInput2'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=keyword;});
+    buildCreate(document.getElementById('pg-create'));
+    return {ok:true,keyword:keyword};
+  }
+  if(name==='set_page_goal'){
+    const normalized=voiceNormalizeGoal(args.goal);
+    if(!normalized)return {ok:false,error:'Onbekend paginadoel.'};
+    savedGoal=normalized;
+    nav('create',document.getElementById('ni-create'));
+    if(wStep<2)wStep=2;
+    buildCreate(document.getElementById('pg-create'));
+    return {ok:true,goal:savedGoal};
+  }
+  if(name==='go_to_step'){
+    const step=Math.max(1,Math.min(3,Number(args.step)||1));
+    nav('create',document.getElementById('ni-create'));
+    wStep=step;
+    buildCreate(document.getElementById('pg-create'));
+    return {ok:true,step:step};
+  }
+  if(name==='generate_content'){
+    nav('create',document.getElementById('ni-create'));
+    if(!(savedKw||(document.getElementById('kwInput2')||{}).value||(document.getElementById('kwInput')||{}).value||'').trim()){
+      return {ok:false,error:'Er is nog geen zoekwoord ingevuld.'};
+    }
+    if(wStep<2)wStep=2;
+    goStep3();
+    return {ok:true,status:'started'};
+  }
+  if(name==='select_variant'){
+    const variants=genResult?getResultVariants(genResult):[];
+    const idx=Math.max(0,(Number(args.variant_number)||1)-1);
+    if(!variants.length)return {ok:false,error:'Er zijn nog geen varianten beschikbaar.'};
+    if(!variants[idx])return {ok:false,error:'Deze variant bestaat niet.'};
+    nav('create',document.getElementById('ni-create'));
+    if(wStep<3)wStep=3;
+    selectVariant(idx);
+    return {ok:true,active_variant:idx+1,title:variants[idx].title||''};
+  }
+  if(name==='copy_active_variant'){
+    if(!genResult)return {ok:false,error:'Er is nog geen resultaat om te kopieren.'};
+    copyResult();
+    return {ok:true};
+  }
+  if(name==='show_message'){
+    const message=String(args.message||'').trim();
+    if(message)showToast(message);
+    return {ok:true,message:message};
+  }
+  return {ok:false,error:'Onbekende tool: '+name};
+}
+function sendVoiceEvent(payload){
+  if(!voiceState.dataChannel||voiceState.dataChannel.readyState!=='open')return false;
+  voiceState.dataChannel.send(JSON.stringify(payload));
+  return true;
+}
+function voicePushState(){
+  if(!voiceState.connected){showToast('Start eerst de voice sessie.');return;}
+  const state=getVoiceAppState();
+  sendVoiceEvent({
+    type:'conversation.item.create',
+    item:{
+      type:'message',
+      role:'system',
+      content:[{type:'input_text',text:'UI state update: '+JSON.stringify(state)}]
+    }
+  });
+  pushVoiceLog('system','Schermstatus gesynchroniseerd met de voice sessie.');
+}
+function waitForVoiceDataChannel(channel,pc){
+  return new Promise((resolve,reject)=>{
+    const timeout=setTimeout(()=>cleanup(new Error('Timeout bij openen van voice data channel.')),15000);
+    function cleanup(err){
+      clearTimeout(timeout);
+      channel.removeEventListener('open',handleOpen);
+      channel.removeEventListener('error',handleError);
+      channel.removeEventListener('close',handleClose);
+      pc.removeEventListener('connectionstatechange',handleState);
+      err?reject(err):resolve();
+    }
+    function handleOpen(){cleanup();}
+    function handleError(){cleanup(new Error('Voice data channel kon niet openen.'));}
+    function handleClose(){cleanup(new Error('Voice data channel sloot voortijdig.'));}
+    function handleState(){
+      if(['failed','closed','disconnected'].includes(pc.connectionState))cleanup(new Error('Voice verbinding viel weg tijdens opstarten.'));
+    }
+    channel.addEventListener('open',handleOpen,{once:true});
+    channel.addEventListener('error',handleError,{once:true});
+    channel.addEventListener('close',handleClose,{once:true});
+    pc.addEventListener('connectionstatechange',handleState);
+  });
+}
+async function requestVoiceAnswerSdp(sdp){
+  const endpoint=(getVoiceEndpoint()||'').trim();
+  const sessionConfig=buildVoiceSessionConfig();
+  if(endpoint){
+    try{
+      const formData=new FormData();
+      formData.set('sdp',sdp);
+      formData.set('session',JSON.stringify(sessionConfig));
+      const resp=await fetch(endpoint,{method:'POST',body:formData});
+      if(!resp.ok)throw new Error('Session endpoint gaf status '+resp.status);
+      voiceState.usingDirect=false;
+      return await resp.text();
+    }catch(err){
+      if(!getOAIKey())throw err;
+      pushVoiceLog('system','Session endpoint niet bereikbaar, fallback naar directe OpenAI verbinding voor lokale tests.');
+    }
+  }
+  const key=getOAIKey();
+  if(!key)throw new Error('Geen OpenAI API key gevonden voor de directe fallback.');
+  const resp=await fetch('https://api.openai.com/v1/realtime/calls',{
+    method:'POST',
+    headers:{Authorization:'Bearer '+key,'Content-Type':'application/sdp'},
+    body:sdp
+  });
+  if(!resp.ok)throw new Error('OpenAI Realtime call mislukt met status '+resp.status);
+  voiceState.usingDirect=true;
+  return await resp.text();
+}
+async function startVoiceSession(){
+  toggleVoicePanel(true);
+  if(voiceState.connected||voiceState.status==='connecting')return;
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||typeof RTCPeerConnection==='undefined'){
+    setVoiceStatus('error','Deze browser ondersteunt voice niet.');
+    return;
+  }
+  setVoiceStatus('connecting','Verbinden met realtime session...');
+  try{
+    const localStream=await navigator.mediaDevices.getUserMedia({audio:true});
+    const pc=new RTCPeerConnection();
+    const remoteAudio=new Audio();
+    remoteAudio.autoplay=true;
+    localStream.getTracks().forEach(track=>pc.addTrack(track,localStream));
+    pc.ontrack=(event)=>{
+      if(event.streams&&event.streams[0])remoteAudio.srcObject=event.streams[0];
+    };
+    pc.onconnectionstatechange=()=>{
+      if(pc.connectionState==='failed'||pc.connectionState==='disconnected'){
+        setVoiceStatus('error','Voice verbinding is weggevallen.');
+      }
+    };
+    const dc=pc.createDataChannel('oai-events');
+    dc.addEventListener('message',async(event)=>{
+      let payload=null;
+      try{payload=JSON.parse(event.data);}catch(e){return;}
+      await handleVoiceServerEvent(payload);
+    });
+    const offer=await pc.createOffer({offerToReceiveAudio:true});
+    await pc.setLocalDescription(offer);
+    const answerSdp=await requestVoiceAnswerSdp(offer.sdp||'');
+    await pc.setRemoteDescription({type:'answer',sdp:answerSdp});
+    await waitForVoiceDataChannel(dc,pc);
+    voiceState.peerConnection=pc;
+    voiceState.dataChannel=dc;
+    voiceState.localStream=localStream;
+    voiceState.remoteAudio=remoteAudio;
+    voiceState.connected=true;
+    voiceState.listening=false;
+    voiceState.handledCallIds=new Set();
+    setVoiceStatus('ready',voiceState.usingDirect?'Verbonden via directe OpenAI fallback':'Verbonden via Netlify session');
+    sendVoiceEvent({type:'session.update',session:buildVoiceSessionConfig()});
+    pushVoiceLog('system','Voice sessie verbonden. De agent kent nu je schermtools.');
+    voicePushState();
+  }catch(err){
+    console.error('Voice start fout',err);
+    await stopVoiceSession({silent:true});
+    setVoiceStatus('error',err.message||'Voice kon niet starten.');
+    pushVoiceLog('system','Voice fout: '+(err.message||'onbekend'));
+  }
+}
+async function stopVoiceSession(opts){
+  const options=opts||{};
+  if(voiceState.dataChannel){try{voiceState.dataChannel.close();}catch(e){}}
+  if(voiceState.peerConnection){try{voiceState.peerConnection.close();}catch(e){}}
+  if(voiceState.localStream){voiceState.localStream.getTracks().forEach(track=>track.stop());}
+  if(voiceState.remoteAudio){try{voiceState.remoteAudio.pause();}catch(e){}}
+  voiceState.peerConnection=null;
+  voiceState.dataChannel=null;
+  voiceState.localStream=null;
+  voiceState.remoteAudio=null;
+  voiceState.connected=false;
+  voiceState.listening=false;
+  voiceState.status='idle';
+  voiceState.statusLabel='Niet verbonden';
+  if(!options.silent)pushVoiceLog('system','Voice sessie gestopt.');
+  renderVoicePanel();
+}
+function toggleVoiceConnection(){
+  if(voiceState.connected||voiceState.status==='connecting'){stopVoiceSession();return;}
+  startVoiceSession();
+}
+async function handleVoiceToolCall(item){
+  const callId=item.call_id||item.id||('call-'+Date.now());
+  if(voiceState.handledCallIds.has(callId))return;
+  voiceState.handledCallIds.add(callId);
+  let args={};
+  try{args=item.arguments?JSON.parse(item.arguments):{};}catch(e){args={};}
+  const result=await executeVoiceTool(item.name||'',args);
+  pushVoiceLog('system','Tool uitgevoerd: '+(item.name||'onbekend'));
+  sendVoiceEvent({
+    type:'conversation.item.create',
+    item:{type:'function_call_output',call_id:callId,output:JSON.stringify(result)}
+  });
+  sendVoiceEvent({type:'response.create'});
+  voicePushState();
+}
+async function handleVoiceServerEvent(event){
+  if(!event||typeof event!=='object')return;
+  if(event.type==='session.created'){setVoiceStatus('ready','Realtime session aangemaakt.');return;}
+  if(event.type==='input_audio_buffer.speech_started'){voiceState.listening=true;setVoiceStatus('ready','Luistert mee...');return;}
+  if(event.type==='input_audio_buffer.speech_stopped'||event.type==='input_audio_buffer.committed'){voiceState.listening=false;setVoiceStatus('ready',voiceState.usingDirect?'Verbonden via directe OpenAI fallback':'Verbonden via Netlify session');return;}
+  if(event.type==='conversation.item.input_audio_transcription.completed'&&event.transcript){pushVoiceLog('user',event.transcript);return;}
+  if((event.type==='response.output_audio_transcript.done'&&event.transcript)||(event.type==='response.output_text.done'&&event.text)){
+    pushVoiceLog('assistant',event.transcript||event.text);
+    return;
+  }
+  if(event.type==='response.output_item.done'&&event.item&&event.item.type==='function_call'){
+    await handleVoiceToolCall(event.item);
+    return;
+  }
+  if(event.type==='error'){
+    const msg=event.error?.message||'Onbekende realtime fout';
+    setVoiceStatus('error',msg);
+    pushVoiceLog('system','Realtime fout: '+msg);
+  }
+}
 
 // ── Webhook config ──
 const PROCESSOR_URL='https://production.turnone.cloud/webhook/contentflow-generate';
@@ -503,10 +909,12 @@ function demoLogin(){
 }
 async function doLogout(){
   if(!confirm('Uitloggen?'))return;
+  await stopVoiceSession({silent:true});
   if(supa){try{await supa.auth.signOut();}catch(e){}}
   currentUser=null;profile={};
   document.getElementById('appWrap').classList.add('hidden');
   document.getElementById('fabWrap').style.display='none';
+  document.getElementById('voiceDock').style.display='none';
   document.getElementById('loginWrap').style.display='';
 }
 async function sendLink(){
@@ -535,6 +943,8 @@ function doLogin(user){
   document.getElementById('loginWrap').style.display='none';
   document.getElementById('appWrap').classList.remove('hidden');
   document.getElementById('fabWrap').style.display='block';
+  document.getElementById('voiceDock').style.display='block';
+  renderVoicePanel();
   if(user.is_demo){
     renderPage('dashboard');
   } else {
@@ -545,6 +955,7 @@ window.addEventListener('DOMContentLoaded',async()=>{
   document.getElementById('dmToggle').classList.add('on');
   document.getElementById('dmLabel').textContent='🌙';
   document.getElementById('loginEmail').value='kajslier@gmail.com';
+  renderVoicePanel();
   try{
     supa.auth.onAuthStateChange((event,session)=>{
       // Only auto-login when a magic link is actually being processed (token in URL)
@@ -661,6 +1072,15 @@ function step2Html(){
         +'</div>';
     }).join('')
     +'</div></div>'
+    +'<div class="voice-card">'
+    +'<h3>Voice beta voor deze flow</h3>'
+    +'<p>Je kunt deze stap nu ook handsfree bedienen. Open rechtsboven <strong>Voice beta</strong> en zeg bijvoorbeeld welk zoekwoord je wilt, welk paginadoel past, of dat de generator moet starten.</p>'
+    +'<div class="voice-mini-list">'
+    +'<div class="voice-mini"><strong>Voorbeeld 1</strong>Zet het zoekwoord op technische SEO audit.</div>'
+    +'<div class="voice-mini"><strong>Voorbeeld 2</strong>Kies overtuigen als doel.</div>'
+    +'<div class="voice-mini"><strong>Voorbeeld 3</strong>Ga naar stap 3 en genereer content.</div>'
+    +'<div class="voice-mini"><strong>Voorbeeld 4</strong>Selecteer variant 2 en kopieer die.</div>'
+    +'</div></div>'
     +'<div style="margin-top:4px;display:flex;justify-content:space-between;">'
     +'<button class="btn btn-ghost" onclick="goStep1()">&larr; Terug</button>'
     +'<button class="btn btn-primary" onclick="goStep3()">Genereer &rarr;</button></div>'
@@ -703,9 +1123,9 @@ function step3Html(){
     const wc=activeVariant?.word_count||(content?content.replace(/<[^>]*>/g,'').trim().split(/\s+/).length:0);
     return '<div style="display:flex;flex-direction:column;gap:16px;">'
       +'<div class="card" style="display:flex;align-items:center;gap:16px;padding:20px 24px;">'
-      +'<div style="width:48px;height:48px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">âœ…</div>'
+      +'<div style="width:48px;height:48px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">&#9989;</div>'
       +'<div style="flex:1;"><div style="font-weight:700;font-size:16px;margin-bottom:2px;">'+(variants.length>1?'9 varianten gegenereerd!':'Artikel gegenereerd!')+'</div>'
-      +'<div style="font-size:13px;color:var(--muted);">'+wc+' woorden Â· SEO score: <span style="color:'+(score>=80?'var(--accent)':score>=60?'#f59e0b':'#ef4444')+'">'+score+'</span></div></div>'
+      +'<div style="font-size:13px;color:var(--muted);">'+wc+' woorden &middot; SEO score: <span style="color:'+(score>=80?'var(--accent)':score>=60?'#f59e0b':'#ef4444')+'">'+score+'</span></div></div>'
       +'<div style="display:flex;gap:8px;">'
       +'<button class="btn btn-secondary btn-sm" onclick="copyResult()">Kopieer</button>'
       +'<button class="btn btn-primary btn-sm" onclick="genStatus=\'idle\';genResult=null;selectedVariantIndex=0;goStep1()">+ Nieuw</button>'
@@ -1198,6 +1618,7 @@ function settingsHtml(){
       {n:'Google Search Console',icon:'🔍',s:'Verbonden',on:true},
       {n:'Supabase (database)',icon:'🗄️',s:'Verbonden',on:true},
       {n:'n8n (automation)',icon:'⚙️',s:'Verbonden',on:true},
+      {n:'OpenAI Realtime Voice',icon:'🎤',s:'Klaar voor beta',on:true},
       {n:'Vercel (hosting)',icon:'▲',s:'Verbonden',on:true},
       {n:'Firecrawl',icon:'🔥',s:'Niet verbonden',on:false},
     ];
@@ -1209,6 +1630,8 @@ function settingsHtml(){
       +'</div><div class="switch'+(i.on?' on':'')+'" onclick="this.classList.toggle(\'on\')"></div></div>'
     ).join('');
     const oaiKey=getOAIKey();
+    const voiceEndpoint=getVoiceEndpoint();
+    const voiceModel=getVoiceModel();
     return '<div class="card">'
       +'<div class="settings-block"><h3>Integraties</h3>'
       +'<p>Verbind ContentFlow met je bestaande tools.</p>'+rows+'</div>'
@@ -1224,6 +1647,18 @@ function settingsHtml(){
       +'<input id="whTokenInput" class="form-control" type="password" placeholder="tok_user..." value="'+getWHToken()+'" style="flex:1;">'
       +'<button class="btn btn-secondary btn-sm" onclick="setWHToken(document.getElementById(\'whTokenInput\').value);showToast(\'Opgeslagen!\')">Opslaan</button>'
       +'</div><div class="form-hint">Persoonlijke token voor de n8n content pipeline.</div></div>'
+      +'<div class="settings-block" style="margin-top:18px;"><h3>Realtime voice beta</h3>'
+      +'<p>Voice gebruikt een session-endpoint op Netlify, volgens het patroon uit OpenAI\'s realtime voice component.</p>'
+      +'<div class="form-group"><label class="form-label">Session endpoint</label>'
+      +'<div style="display:flex;gap:8px;">'
+      +'<input id="voiceEndpointInput" class="form-control" placeholder="/.netlify/functions/realtime-session" value="'+escAttr(voiceEndpoint)+'" style="flex:1;">'
+      +'<button class="btn btn-secondary btn-sm" onclick="setVoiceEndpoint(document.getElementById(\'voiceEndpointInput\').value);showToast(\'Voice endpoint opgeslagen\')">Opslaan</button>'
+      +'</div><div class="form-hint">Standaard: <code>/.netlify/functions/realtime-session</code>. Bij lokale file:// tests valt de app terug op direct OpenAI als er een API key is ingevuld.</div></div>'
+      +'<div class="form-group" style="margin-bottom:0;"><label class="form-label">Realtime model</label>'
+      +'<div style="display:flex;gap:8px;">'
+      +'<input id="voiceModelInput" class="form-control" placeholder="gpt-realtime" value="'+escAttr(voiceModel)+'" style="flex:1;">'
+      +'<button class="btn btn-secondary btn-sm" onclick="setVoiceModel(document.getElementById(\'voiceModelInput\').value);showToast(\'Voice model opgeslagen\')">Opslaan</button>'
+      +'</div><div class="form-hint">Standaard staat dit op <code>gpt-realtime</code>, de huidige realtime modelalias volgens de OpenAI documentatie.</div></div>'
       +'</div></div>';
   }
   if(stab==='vertrouwen'){
