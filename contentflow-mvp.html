@@ -703,7 +703,17 @@ async function requestVoiceAnswerSdp(sdp){
       formData.set('sdp',sdp);
       formData.set('session',JSON.stringify(sessionConfig));
       const resp=await fetch(endpoint,{method:'POST',body:formData});
-      if(!resp.ok)throw new Error('Session endpoint gaf status '+resp.status);
+      if(!resp.ok){
+        const bodyText=await resp.text();
+        let detail='';
+        try{
+          const parsed=JSON.parse(bodyText);
+          detail=parsed?.error?.message||parsed?.error||parsed?.message||'';
+        }catch(e){
+          detail=bodyText||'';
+        }
+        throw new Error('Session endpoint gaf status '+resp.status+(detail?': '+detail:''));
+      }
       voiceState.usingDirect=false;
       return await resp.text();
     }catch(err){
@@ -718,7 +728,17 @@ async function requestVoiceAnswerSdp(sdp){
     headers:{Authorization:'Bearer '+key,'Content-Type':'application/sdp'},
     body:sdp
   });
-  if(!resp.ok)throw new Error('OpenAI Realtime call mislukt met status '+resp.status);
+  if(!resp.ok){
+    const bodyText=await resp.text();
+    let detail='';
+    try{
+      const parsed=JSON.parse(bodyText);
+      detail=parsed?.error?.message||parsed?.error||parsed?.message||'';
+    }catch(e){
+      detail=bodyText||'';
+    }
+    throw new Error('OpenAI Realtime call mislukt met status '+resp.status+(detail?': '+detail:''));
+  }
   voiceState.usingDirect=true;
   return await resp.text();
 }
