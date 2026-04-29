@@ -493,9 +493,9 @@ function setVoiceEndpoint(v){localStorage.setItem('cf_voice_endpoint',(v||DEFAUL
 function getVoiceModel(){return localStorage.getItem('cf_voice_model')||DEFAULT_VOICE_MODEL;}
 function setVoiceModel(v){localStorage.setItem('cf_voice_model',(v||DEFAULT_VOICE_MODEL).trim()||DEFAULT_VOICE_MODEL);}
 const voiceState={
-  open:false,status:'idle',statusLabel:'Niet verbonden',connected:false,listening:false,usingDirect:false,
+  open:false,status:'idle',statusLabel:'Niet verbonden',connected:false,listening:false,usingDirect:false,mode:'browser',
   log:[{role:'system',text:'Voice beta staat klaar. Open deze panel en start daarna je microfoonverbinding.'}],
-  handledCallIds:new Set(),peerConnection:null,dataChannel:null,localStream:null,remoteAudio:null
+  handledCallIds:new Set(),peerConnection:null,dataChannel:null,localStream:null,remoteAudio:null,recognition:null,restartTimer:null
 };
 function voiceSafe(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function voiceStatusClass(){
@@ -545,6 +545,133 @@ function clearVoiceLog(){
 function toggleVoicePanel(force){
   voiceState.open=typeof force==='boolean'?force:!voiceState.open;
   renderVoicePanel();
+}
+function getSpeechRecognitionCtor(){
+  return window.SpeechRecognition||window.webkitSpeechRecognition||null;
+}
+function parseVoiceNumber(text){
+  const normalized=' '+String(text||'').toLowerCase()+' ';
+  const map=[
+    [' 1 ',' 1 '],[' een ','1'],[' eerste ','1'],
+    [' 2 ',' 2 '],[' twee ','2'],[' tweede ','2'],
+    [' 3 ',' 3 '],[' drie ','3'],[' derde ','3'],
+    [' 4 ',' 4 '],[' vier ','4'],
+    [' 5 ',' 5 '],[' vijf ','5'],
+    [' 6 ',' 6 '],[' zes ','6'],
+    [' 7 ',' 7 '],[' zeven ','7'],
+    [' 8 ',' 8 '],[' acht ','8'],
+    [' 9 ',' 9 '],[' negen ','9']
+  ];
+  for(const [needle,value] of map){
+    if(normalized.includes(needle))return Number(value.trim());
+  }
+  const match=normalized.match(/\b([1-9])\b/);
+  return match?Number(match[1]):null;
+}
+async function handleBrowserVoiceTranscript(text){
+  const input=String(text||'').trim();
+  const lower=input.toLowerCase();
+  if(!input)return;
+  if(lower.includes('genereer')){
+    await executeVoiceTool('generate_content',{});
+    pushVoiceLog('assistant','Ik start de contentgeneratie.');
+    return;
+  }
+  if(lower.includes('kopieer')){
+    await executeVoiceTool('copy_active_variant',{});
+    pushVoiceLog('assistant','Ik heb de actieve variant gekopieerd.');
+    return;
+  }
+  if(lower.includes('variant')){
+    const nr=parseVoiceNumber(lower);
+    if(nr){
+      const result=await executeVoiceTool('select_variant',{variant_number:nr});
+      pushVoiceLog('assistant',result.ok?'Ik heb variant '+nr+' geselecteerd.':'Ik kon die variant niet selecteren.');
+      return;
+    }
+  }
+  if(lower.includes('stap')){
+    const nr=parseVoiceNumber(lower);
+    if(nr){
+      await executeVoiceTool('go_to_step',{step:nr});
+      pushVoiceLog('assistant','Ik ben naar stap '+nr+' gegaan.');
+      return;
+    }
+  }
+  if(lower.includes('informeer')||lower.includes('informeren')){
+    await executeVoiceTool('set_page_goal',{goal:'informeren'});
+    pushVoiceLog('assistant','Ik heb het doel op informeren gezet.');
+    return;
+  }
+  if(lower.includes('overtuig')||lower.includes('overtuigen')){
+    await executeVoiceTool('set_page_goal',{goal:'overtuigen'});
+    pushVoiceLog('assistant','Ik heb het doel op overtuigen gezet.');
+    return;
+  }
+  if(lower.includes('aanvraag')||lower.includes('aanvragen')){
+    await executeVoiceTool('set_page_goal',{goal:'aanvragen'});
+    pushVoiceLog('assistant','Ik heb het doel op aanvragen gezet.');
+    return;
+  }
+  const keywordMatch=input.match(/(?:zoekwoord(?:\s+op)?|keyword(?:\s+op)?|zet(?:\s+het)?\s+zoekwoord(?:\s+op)?)(.+)$/i);
+  if(keywordMatch&&keywordMatch[1]){
+    const keyword=keywordMatch[1].replace(/^(naar|op|is)\s+/i,'').trim();
+    if(keyword){
+      await executeVoiceTool('set_keyword',{keyword:keyword});
+      pushVoiceLog('assistant','Ik heb het zoekwoord gezet op '+keyword+'.');
+      return;
+    }
+  }
+  pushVoiceLog('assistant','Ik snapte de opdracht nog niet. Probeer bijvoorbeeld: zet het zoekwoord op tankinspectie, kies overtuigen, ga naar stap 3 of genereer content.');
+}
+function startBrowserVoice(){
+  const Ctor=getSpeechRecognitionCtor();
+  if(!Ctor){
+    setVoiceStatus('error','Deze browser ondersteunt geen spraakherkenning.');
+    pushVoiceLog('system','Browser voice is niet beschikbaar in deze browser.');
+    return;
+  }
+  if(voiceState.connected)return;
+  const recognition=new Ctor();
+  recognition.lang='nl-NL';
+  recognition.continuous=true;
+  recognition.interimResults=false;
+  recognition.maxAlternatives=1;
+  recognition.onstart=()=>{
+    voiceState.connected=true;
+    voiceState.listening=true;
+    voiceState.mode='browser';
+    setVoiceStatus('ready','Browser voice luistert mee...');
+    pushVoiceLog('system','Browser voice actief. Spreek een kort commando in het Nederlands in.');
+  };
+  recognition.onresult=async(event)=>{
+    const result=event.results[event.results.length-1];
+    const transcript=result&&result[0]?result[0].transcript.trim():'';
+    if(!transcript)return;
+    pushVoiceLog('user',transcript);
+    await handleBrowserVoiceTranscript(transcript);
+  };
+  recognition.onerror=(event)=>{
+    const code=event&&event.error?String(event.error):'onbekend';
+    if(code==='no-speech'){
+      setVoiceStatus('ready','Browser voice wacht op spraak...');
+      return;
+    }
+    setVoiceStatus('error','Browser voice fout: '+code);
+    pushVoiceLog('system','Browser voice fout: '+code);
+  };
+  recognition.onend=()=>{
+    voiceState.listening=false;
+    if(voiceState.connected&&voiceState.mode==='browser'){
+      setVoiceStatus('ready','Browser voice actief');
+      clearTimeout(voiceState.restartTimer);
+      voiceState.restartTimer=setTimeout(()=>{
+        try{voiceState.recognition&&voiceState.recognition.start();}catch(e){}
+      },300);
+    }
+  };
+  voiceState.recognition=recognition;
+  recognition.start();
 }
 function buildVoiceTools(){
   return [
@@ -747,8 +874,12 @@ async function requestVoiceAnswerSdp(sdp){
 async function startVoiceSession(){
   toggleVoicePanel(true);
   if(voiceState.connected||voiceState.status==='connecting')return;
+  startBrowserVoice();
+}
+async function startRealtimeVoiceSession(){
+  if(voiceState.connected||voiceState.status==='connecting')return;
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||typeof RTCPeerConnection==='undefined'){
-    setVoiceStatus('error','Deze browser ondersteunt voice niet.');
+    setVoiceStatus('error','Deze browser ondersteunt realtime voice niet.');
     return;
   }
   setVoiceStatus('connecting','Verbinden met realtime session...');
@@ -797,16 +928,22 @@ async function startVoiceSession(){
 }
 async function stopVoiceSession(opts){
   const options=opts||{};
+  clearTimeout(voiceState.restartTimer);
+  if(voiceState.recognition){
+    try{voiceState.recognition.onend=null;voiceState.recognition.stop();}catch(e){}
+  }
   if(voiceState.dataChannel){try{voiceState.dataChannel.close();}catch(e){}}
   if(voiceState.peerConnection){try{voiceState.peerConnection.close();}catch(e){}}
   if(voiceState.localStream){voiceState.localStream.getTracks().forEach(track=>track.stop());}
   if(voiceState.remoteAudio){try{voiceState.remoteAudio.pause();}catch(e){}}
+  voiceState.recognition=null;
   voiceState.peerConnection=null;
   voiceState.dataChannel=null;
   voiceState.localStream=null;
   voiceState.remoteAudio=null;
   voiceState.connected=false;
   voiceState.listening=false;
+  voiceState.mode='browser';
   voiceState.status='idle';
   voiceState.statusLabel='Niet verbonden';
   if(!options.silent)pushVoiceLog('system','Voice sessie gestopt.');
