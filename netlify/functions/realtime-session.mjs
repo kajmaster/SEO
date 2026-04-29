@@ -24,6 +24,8 @@ export default async function handler(request) {
   }
 
   const apiKey = process.env.OPENAI_API_KEY;
+  const projectId = process.env.OPENAI_PROJECT_ID;
+  const organizationId = process.env.OPENAI_ORGANIZATION;
   if (!apiKey) {
     return jsonResponse(
       {
@@ -61,6 +63,8 @@ export default async function handler(request) {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
+      ...(projectId ? { "OpenAI-Project": projectId } : {}),
+      ...(organizationId ? { "OpenAI-Organization": organizationId } : {}),
     },
     body: upstreamFormData,
   });

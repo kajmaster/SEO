@@ -21,6 +21,11 @@ Zet in Netlify deze environment variable:
 
 - `OPENAI_API_KEY`
 
+Optioneel, maar vaak nodig als je met een specifieke project-key of meerdere OpenAI organisaties werkt:
+
+- `OPENAI_PROJECT_ID`
+- `OPENAI_ORGANIZATION`
+
 Daarna gebruikt de frontend standaard dit endpoint:
 
 - `/.netlify/functions/realtime-session`
