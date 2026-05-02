@@ -173,6 +173,25 @@ select.form-control{appearance:none;cursor:pointer}
 .premise-card.sel{border-color:var(--accent);background:var(--accent-subtle)}
 .premise-card h4{font-size:13px;font-weight:600;margin-bottom:3px}
 .premise-card p{font-size:12px;color:var(--muted)}
+.variant-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.variant-card{position:relative;padding:16px;border-radius:var(--radius);border:1.5px solid var(--border);background:linear-gradient(180deg,var(--surface2) 0%,rgba(255,255,255,.01) 100%);cursor:pointer;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease,background .18s ease}
+.variant-card:hover{transform:translateY(-3px);border-color:var(--border-strong);box-shadow:var(--shadow-lg)}
+.variant-card.active{border-color:var(--accent);background:linear-gradient(180deg,var(--accent-subtle) 0%,rgba(0,198,122,.03) 100%);box-shadow:0 8px 24px rgba(0,198,122,.14)}
+.variant-card-mark{position:absolute;top:12px;right:12px;width:20px;height:20px;border-radius:50%;background:var(--accent);box-shadow:0 4px 12px rgba(0,198,122,.28)}
+.variant-card-mark::after{content:'';position:absolute;inset:6px;border-radius:50%;background:#fff}
+.variant-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+.variant-card-index{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent)}
+.variant-card-score{padding:4px 8px;border-radius:999px;background:var(--surface3);border:1px solid var(--border);font-size:10.5px;font-weight:700;color:var(--muted)}
+.variant-card-title{font-size:14px;font-weight:700;line-height:1.4;margin-bottom:8px;padding-right:20px}
+.variant-card-meta{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:12px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.variant-card-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11px;color:var(--muted)}
+.variant-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;border-radius:var(--radius-sm);background:rgba(0,198,122,.08);border:1px solid rgba(0,198,122,.18)}
+.variant-banner strong{font-size:13px}
+.variant-banner span{font-size:12px;color:var(--muted)}
+.variant-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.variant-toolbar-left{display:flex;flex-direction:column;gap:4px}
+.variant-toolbar-left p{font-size:13px;color:var(--muted)}
+.variant-empty{font-size:13px;color:var(--muted)}
 .review-layout{display:flex;flex:1;overflow:hidden}
 .review-editor{flex:1;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)}
 .review-sidebar{width:320px;display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
@@ -227,10 +246,48 @@ select.form-control{appearance:none;cursor:pointer}
 .fb-type{padding:5px 11px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;background:var(--surface3);color:var(--muted);border:1px solid var(--border);transition:all var(--duration)}
 .fb-type.active{background:var(--accent-subtle);color:var(--accent);border-color:var(--accent)}
 .fab-row{display:flex;gap:8px;margin-top:10px}
+.voice-launch-btn{padding:7px 12px;border-radius:999px}
+.voice-dock{position:fixed;right:24px;bottom:96px;z-index:1001;display:none}
+.voice-panel{width:360px;max-width:calc(100vw - 32px);background:linear-gradient(180deg,rgba(0,198,122,.08) 0%,var(--surface) 28%);border:1px solid rgba(0,198,122,.18);border-radius:20px;box-shadow:var(--shadow-lg);padding:16px;display:none;flex-direction:column;gap:14px}
+.voice-panel.open{display:flex}
+.voice-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.voice-panel-head h4{font-size:15px;font-weight:800;letter-spacing:-.2px}
+.voice-panel-head p{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.45}
+.voice-status{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;background:var(--surface2);border:1px solid var(--border);font-size:11.5px;font-weight:700;color:var(--muted)}
+.voice-status::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--muted);box-shadow:0 0 0 0 rgba(142,142,147,.2)}
+.voice-status.connecting::before{background:#f59e0b;box-shadow:0 0 0 6px rgba(245,158,11,.14)}
+.voice-status.ready::before{background:var(--accent);box-shadow:0 0 0 6px rgba(0,198,122,.14)}
+.voice-status.listening::before{background:var(--accent);box-shadow:0 0 0 0 rgba(0,198,122,.3);animation:voicePulse 1.1s infinite}
+.voice-status.error::before{background:#ef4444;box-shadow:0 0 0 6px rgba(239,68,68,.12)}
+.voice-log{max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:4px}
+.voice-line{padding:10px 12px;border-radius:14px;font-size:12.5px;line-height:1.5;border:1px solid var(--border);background:var(--surface2)}
+.voice-line.user{background:rgba(0,198,122,.08);border-color:rgba(0,198,122,.18)}
+.voice-line.assistant{background:rgba(255,255,255,.03)}
+.voice-line.system{background:transparent;border-style:dashed;color:var(--muted)}
+.voice-line strong{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;color:var(--muted)}
+.voice-tool-list{display:flex;flex-wrap:wrap;gap:8px}
+.voice-tool-pill{padding:6px 9px;border-radius:999px;border:1px solid var(--border);background:var(--surface2);font-size:11px;color:var(--muted)}
+.voice-control-row{display:flex;gap:8px;flex-wrap:wrap}
+.voice-tip{font-size:11.5px;color:var(--muted);line-height:1.5}
+.voice-card{margin-top:14px;padding:16px 18px;border-radius:var(--radius);background:linear-gradient(135deg,rgba(0,198,122,.1),rgba(0,168,255,.06));border:1px solid rgba(0,198,122,.16)}
+.voice-card h3{font-size:15px;font-weight:800;margin-bottom:4px}
+.voice-card p{font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.6}
+.voice-mini-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.voice-mini{padding:9px 10px;border-radius:12px;background:rgba(28,28,30,.32);border:1px solid rgba(255,255,255,.06);font-size:11.5px;color:var(--muted)}
+.voice-mini strong{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);margin-bottom:3px}
+.voice-ghost{position:fixed;left:0;top:0;width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff 0 24%,rgba(255,255,255,.45) 25%,rgba(0,198,122,.95) 55%,rgba(0,198,122,.55) 100%);box-shadow:0 8px 24px rgba(0,198,122,.32);transform:translate(-50%,-50%) scale(.8);opacity:0;pointer-events:none;z-index:12000;transition:transform .38s cubic-bezier(.2,.8,.2,1),opacity .18s ease}
+.voice-ghost::before{content:'';position:absolute;inset:-10px;border:1px solid rgba(0,198,122,.28);border-radius:50%;opacity:.65}
+.voice-ghost.visible{opacity:1}
+.voice-ghost.clicking{animation:voiceGhostTap .46s ease}
+.voice-ghost.typing::before{animation:voiceGhostFocus 1s ease infinite}
+.voice-target{box-shadow:0 0 0 4px rgba(0,198,122,.18),0 12px 34px rgba(0,198,122,.14)!important;border-color:rgba(0,198,122,.6)!important;transition:box-shadow .18s ease,border-color .18s ease}
 .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--text);color:var(--bg);padding:10px 22px;border-radius:50px;font-size:13px;font-weight:600;opacity:0;transition:all .3s ease;z-index:9999;white-space:nowrap;pointer-events:none;box-shadow:0 4px 20px rgba(0,0,0,.25)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @keyframes popIn{from{opacity:0;transform:scale(.95) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes voicePulse{0%{box-shadow:0 0 0 0 rgba(0,198,122,.3)}70%{box-shadow:0 0 0 12px rgba(0,198,122,0)}100%{box-shadow:0 0 0 0 rgba(0,198,122,0)}}
+@keyframes voiceGhostTap{0%{transform:translate(-50%,-50%) scale(1)}35%{transform:translate(-50%,-50%) scale(.82)}100%{transform:translate(-50%,-50%) scale(1)}}
+@keyframes voiceGhostFocus{0%{transform:scale(.86);opacity:.5}50%{transform:scale(1.08);opacity:.9}100%{transform:scale(.86);opacity:.5}}
 .spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
 .hidden{display:none!important}
 .mt-4{margin-top:16px}
@@ -283,6 +340,16 @@ select.form-control{appearance:none;cursor:pointer}
 #article-editor p{margin:.5em 0}
 #article-editor a{color:var(--accent);text-decoration:underline}
 .stat-delta.negative{color:#ef4444}
+@media (max-width:980px){
+  .variant-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:720px){
+  .wizard{max-width:none}
+  .variant-grid{grid-template-columns:1fr}
+  .voice-dock{left:12px;right:12px;bottom:88px}
+  .voice-panel{width:auto;max-width:none}
+  .voice-mini-list{grid-template-columns:1fr}
+}
 </style>
 </head><body>
 <div id="loginWrap" class="login-wrap">
@@ -359,6 +426,7 @@ select.form-control{appearance:none;cursor:pointer}
         <div id="pageTitle" class="topbar-title">Dashboard</div>
       </div>
       <div class="topbar-right">
+        <button class="btn btn-secondary btn-sm voice-launch-btn" onclick="toggleVoicePanel()" title="Open realtime voice beta">Voice beta</button>
         <button class="btn btn-primary topbar-cta" onclick="nav('create',document.getElementById('ni-create'))">✦ Nieuw artikel</button>
         <span class="dm-label" id="dmLabel">☀️</span>
         <div class="dm-toggle" id="dmToggle" onclick="toggleDark()"></div>
@@ -391,18 +459,725 @@ select.form-control{appearance:none;cursor:pointer}
   </div>
   <button class="fab-btn" onclick="toggleFab()">💬 Feedback</button>
 </div>
+<div class="voice-dock" id="voiceDock">
+  <div class="voice-panel" id="voicePanel">
+    <div class="voice-panel-head">
+      <div>
+        <h4>Realtime voice beta</h4>
+        <p>Gebaseerd op OpenAI's realtime voice component, aangepast naar jullie ContentFlow-MVP.</p>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="toggleVoicePanel(false)">Sluit</button>
+    </div>
+    <div id="voiceStatus" class="voice-status">Niet verbonden</div>
+    <div class="voice-tip">Zeg bijvoorbeeld: "zet het zoekwoord op tankinspectie", "kies overtuigen" of "genereer content".</div>
+    <div class="voice-tool-list">
+      <span class="voice-tool-pill">keyword</span>
+      <span class="voice-tool-pill">doel kiezen</span>
+      <span class="voice-tool-pill">stap wisselen</span>
+      <span class="voice-tool-pill">genereren</span>
+      <span class="voice-tool-pill">variant kiezen</span>
+      <span class="voice-tool-pill">kopieren</span>
+    </div>
+    <div class="voice-control-row">
+      <button id="voicePrimaryBtn" class="btn btn-primary btn-sm" onclick="toggleVoiceConnection()">Start voice</button>
+      <button class="btn btn-secondary btn-sm" onclick="voicePushState()">Sync schermstatus</button>
+      <button class="btn btn-ghost btn-sm" onclick="clearVoiceLog()">Wis log</button>
+    </div>
+    <div class="voice-log" id="voiceLog">
+      <div class="voice-line system"><strong>System</strong>Voice beta staat klaar. Open deze panel en start daarna je microfoonverbinding.</div>
+    </div>
+  </div>
+</div>
 <script>
 const SUPA_URL='https://bnwvxjwykzjelclqzbvt.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJud3Z4and5a3pqZWxjbHF6YnZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0MTk0ODEsImV4cCI6MjA5MTk5NTQ4MX0.LxGbca43nOJIDKD0yEQTkI-EAje15OB0hbSwEGO2mw8';
 if(typeof pdfjsLib!=='undefined'){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}
 function getOAIKey(){return localStorage.getItem('cf_oai_key')||'';}
 function setOAIKey(k){localStorage.setItem('cf_oai_key',k);}
+const DEFAULT_VOICE_ENDPOINT='/.netlify/functions/realtime-session';
+const DEFAULT_VOICE_MODEL='gpt-realtime';
+function getVoiceEndpoint(){return localStorage.getItem('cf_voice_endpoint')||DEFAULT_VOICE_ENDPOINT;}
+function setVoiceEndpoint(v){localStorage.setItem('cf_voice_endpoint',(v||DEFAULT_VOICE_ENDPOINT).trim()||DEFAULT_VOICE_ENDPOINT);}
+function getVoiceModel(){return localStorage.getItem('cf_voice_model')||DEFAULT_VOICE_MODEL;}
+function setVoiceModel(v){localStorage.setItem('cf_voice_model',(v||DEFAULT_VOICE_MODEL).trim()||DEFAULT_VOICE_MODEL);}
+const voiceState={
+  open:false,status:'idle',statusLabel:'Niet verbonden',connected:false,listening:false,usingDirect:false,mode:'browser',
+  log:[{role:'system',text:'Voice beta staat klaar. Open deze panel en start daarna je microfoonverbinding.'}],
+  handledCallIds:new Set(),peerConnection:null,dataChannel:null,localStream:null,remoteAudio:null,recognition:null,restartTimer:null
+};
+const voiceVisualState={x:window.innerWidth-84,y:120,hideTimer:null};
+const voiceAudioState={ctx:null,enabled:true,lastTypeAt:0};
+function voiceSafe(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function voiceSleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
+function getVoiceAudioContext(){
+  if(!voiceAudioState.enabled)return null;
+  const Ctor=window.AudioContext||window.webkitAudioContext;
+  if(!Ctor)return null;
+  if(!voiceAudioState.ctx){
+    try{voiceAudioState.ctx=new Ctor();}catch(e){voiceAudioState.enabled=false;return null;}
+  }
+  return voiceAudioState.ctx;
+}
+async function ensureVoiceAudio(){
+  const ctx=getVoiceAudioContext();
+  if(!ctx)return null;
+  if(ctx.state==='suspended'){
+    try{await ctx.resume();}catch(e){}
+  }
+  return ctx;
+}
+async function playVoiceTone(opts){
+  const ctx=await ensureVoiceAudio();
+  if(!ctx)return;
+  const options=opts||{};
+  const now=ctx.currentTime+(options.startDelay||0);
+  const osc=ctx.createOscillator();
+  const gain=ctx.createGain();
+  osc.type=options.type||'sine';
+  osc.frequency.setValueAtTime(options.freq||540,now);
+  if(options.freqEnd)osc.frequency.exponentialRampToValueAtTime(Math.max(40,options.freqEnd),now+(options.duration||0.08));
+  if(options.detune)osc.detune.setValueAtTime(options.detune,now);
+  gain.gain.setValueAtTime(0.0001,now);
+  gain.gain.exponentialRampToValueAtTime(Math.max(0.0001,options.gain||0.03),now+Math.max(0.004,options.attack||0.005));
+  gain.gain.exponentialRampToValueAtTime(0.0001,now+Math.max(0.03,options.duration||0.08));
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now+Math.max(0.05,(options.duration||0.08)+0.02));
+}
+function playVoiceClickSfx(){
+  playVoiceTone({freq:720,freqEnd:420,duration:0.07,gain:0.028,type:'triangle'});
+  playVoiceTone({freq:1180,freqEnd:820,duration:0.05,gain:0.012,type:'sine',startDelay:0.015});
+}
+function playVoiceTypeSfx(index){
+  const now=performance.now();
+  if(now-voiceAudioState.lastTypeAt<18)return;
+  voiceAudioState.lastTypeAt=now;
+  const swing=index%3;
+  playVoiceTone({freq:760+(swing*36),freqEnd:620+(swing*24),duration:0.045,gain:0.014,type:'square'});
+}
+function playVoiceConfirmSfx(){
+  playVoiceTone({freq:540,freqEnd:620,duration:0.09,gain:0.02,type:'sine'});
+  playVoiceTone({freq:680,freqEnd:860,duration:0.11,gain:0.016,type:'triangle',startDelay:0.045});
+}
+function getVoiceGhost(){
+  let el=document.getElementById('voiceGhost');
+  if(!el){
+    el=document.createElement('div');
+    el.id='voiceGhost';
+    el.className='voice-ghost';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+function showVoiceGhost(){
+  const ghost=getVoiceGhost();
+  ghost.classList.add('visible');
+  clearTimeout(voiceVisualState.hideTimer);
+  return ghost;
+}
+function hideVoiceGhostLater(delay){
+  clearTimeout(voiceVisualState.hideTimer);
+  voiceVisualState.hideTimer=setTimeout(()=>{
+    const ghost=document.getElementById('voiceGhost');
+    if(ghost)ghost.classList.remove('visible','clicking','typing');
+  },delay||900);
+}
+function setVoiceGhostPosition(x,y,instant){
+  const ghost=showVoiceGhost();
+  voiceVisualState.x=x;
+  voiceVisualState.y=y;
+  if(instant)ghost.style.transition='transform .01s linear, opacity .18s ease';
+  else ghost.style.transition='transform .38s cubic-bezier(.2,.8,.2,1), opacity .18s ease';
+  ghost.style.left=x+'px';
+  ghost.style.top=y+'px';
+}
+function clearVoiceTargetMarks(){
+  document.querySelectorAll('.voice-target').forEach(el=>el.classList.remove('voice-target'));
+}
+async function moveVoiceGhostToElement(el,opts){
+  const options=opts||{};
+  if(!el)return;
+  try{el.scrollIntoView({block:'center',inline:'center',behavior:'smooth'});}catch(e){}
+  await voiceSleep(options.preDelay||220);
+  const rect=el.getBoundingClientRect();
+  const x=Math.max(18,Math.min(window.innerWidth-18,rect.left+Math.min(Math.max(rect.width*.25,18),rect.width-12)));
+  const y=Math.max(18,Math.min(window.innerHeight-18,rect.top+Math.min(Math.max(rect.height*.45,14),rect.height-10)));
+  setVoiceGhostPosition(x,y,options.instant);
+  clearVoiceTargetMarks();
+  el.classList.add('voice-target');
+  await voiceSleep(options.postDelay||320);
+}
+async function clickVoiceElement(el){
+  if(!el)return;
+  await moveVoiceGhostToElement(el);
+  const ghost=getVoiceGhost();
+  ghost.classList.remove('typing');
+  ghost.classList.add('clicking');
+  playVoiceClickSfx();
+  setTimeout(()=>ghost.classList.remove('clicking'),420);
+  await voiceSleep(110);
+  if(typeof el.click==='function')el.click();
+  await voiceSleep(220);
+  hideVoiceGhostLater(1200);
+}
+async function typeWithVoiceGhost(el,text){
+  if(!el)return;
+  await moveVoiceGhostToElement(el,{postDelay:240});
+  const ghost=getVoiceGhost();
+  ghost.classList.add('typing');
+  if(typeof el.focus==='function')el.focus();
+  el.value='';
+  el.dispatchEvent(new Event('input',{bubbles:true}));
+  await voiceSleep(140);
+  let index=0;
+  for(const ch of String(text||'')){
+    el.value+=ch;
+    el.dispatchEvent(new Event('input',{bubbles:true}));
+    playVoiceTypeSfx(index);
+    index+=1;
+    await voiceSleep(26+Math.random()*24);
+  }
+  el.dispatchEvent(new Event('change',{bubbles:true}));
+  await voiceSleep(140);
+  ghost.classList.remove('typing');
+  hideVoiceGhostLater(1200);
+}
+async function pulseVoiceStep(step){
+  const el=document.querySelectorAll('.step-dot')[Math.max(0,step-1)];
+  if(el)await moveVoiceGhostToElement(el,{postDelay:180});
+  const ghost=getVoiceGhost();
+  ghost.classList.add('clicking');
+  playVoiceConfirmSfx();
+  setTimeout(()=>ghost.classList.remove('clicking'),420);
+  await voiceSleep(120);
+  hideVoiceGhostLater(1200);
+}
+function findVoiceButton(label){
+  const buttons=[...document.querySelectorAll('#pg-create button,.topbar button')];
+  const needle=String(label||'').toLowerCase();
+  return buttons.find(btn=>((btn.textContent||'').toLowerCase().replace(/\s+/g,' ').trim()).includes(needle))||null;
+}
+function findGoalCard(goalId){
+  const labelMap={inform:'informeren',convince:'overtuigen',convert:'aanvragen'};
+  const needle=labelMap[goalId]||goalId;
+  return [...document.querySelectorAll('#pg-create [onclick*="savedGoal"]')].find(el=>((el.textContent||'').toLowerCase()).includes(needle))||null;
+}
+function findVariantCard(variantNumber){
+  return document.querySelectorAll('#pg-create .variant-card')[Math.max(0,variantNumber-1)]||null;
+}
+async function openCreateStep(step){
+  nav('create',document.getElementById('ni-create'));
+  await voiceSleep(140);
+  if(wStep!==step){
+    await pulseVoiceStep(step);
+    wStep=step;
+    buildCreate(document.getElementById('pg-create'));
+    await voiceSleep(180);
+  }
+}
+async function animateKeywordEntry(keyword){
+  await openCreateStep(1);
+  const input=document.getElementById('kwInput');
+  if(input)await typeWithVoiceGhost(input,keyword);
+  savedKw=keyword;
+  const mirror=document.getElementById('kwInput2');
+  if(mirror)mirror.value=keyword;
+}
+function voiceStatusClass(){
+  if(voiceState.status==='error')return 'error';
+  if(voiceState.status==='connecting')return 'connecting';
+  if(voiceState.connected&&voiceState.listening)return 'listening';
+  if(voiceState.connected)return 'ready';
+  return '';
+}
+function renderVoicePanel(){
+  const dock=document.getElementById('voiceDock');
+  const panel=document.getElementById('voicePanel');
+  const statusEl=document.getElementById('voiceStatus');
+  const logEl=document.getElementById('voiceLog');
+  const primaryBtn=document.getElementById('voicePrimaryBtn');
+  if(!dock||!panel||!statusEl||!logEl||!primaryBtn)return;
+  dock.style.display=currentUser?'block':'none';
+  panel.classList.toggle('open',!!voiceState.open);
+  statusEl.className='voice-status '+voiceStatusClass();
+  statusEl.textContent=voiceState.statusLabel;
+  primaryBtn.textContent=voiceState.connected?'Stop voice':voiceState.status==='connecting'?'Verbinden...':'Start voice';
+  primaryBtn.disabled=voiceState.status==='connecting';
+  logEl.innerHTML=voiceState.log.map(item=>'<div class="voice-line '+item.role+'"><strong>'+(item.role==='user'?'Jij':item.role==='assistant'?'Assistant':'System')+'</strong>'+voiceSafe(item.text)+'</div>').join('');
+  logEl.scrollTop=logEl.scrollHeight;
+}
+function setVoiceStatus(status,label){
+  voiceState.status=status;
+  voiceState.statusLabel=label||(
+    status==='connecting'?'Verbinden met realtime session...':
+    status==='error'?'Voice fout':
+    voiceState.connected&&voiceState.listening?'Luistert mee...':
+    voiceState.connected?'Verbonden':
+    'Niet verbonden'
+  );
+  renderVoicePanel();
+}
+function pushVoiceLog(role,text){
+  if(!text)return;
+  voiceState.log.push({role:role,text:text});
+  if(voiceState.log.length>16)voiceState.log=voiceState.log.slice(-16);
+  renderVoicePanel();
+}
+function clearVoiceLog(){
+  voiceState.log=[{role:'system',text:'Voice log gewist. Start opnieuw of sync eerst de huidige schermstatus.'}];
+  renderVoicePanel();
+}
+function toggleVoicePanel(force){
+  voiceState.open=typeof force==='boolean'?force:!voiceState.open;
+  renderVoicePanel();
+}
+function getSpeechRecognitionCtor(){
+  return window.SpeechRecognition||window.webkitSpeechRecognition||null;
+}
+function parseVoiceNumber(text){
+  const normalized=' '+String(text||'').toLowerCase()+' ';
+  const map=[
+    [' 1 ',' 1 '],[' een ','1'],[' eerste ','1'],
+    [' 2 ',' 2 '],[' twee ','2'],[' tweede ','2'],
+    [' 3 ',' 3 '],[' drie ','3'],[' derde ','3'],
+    [' 4 ',' 4 '],[' vier ','4'],
+    [' 5 ',' 5 '],[' vijf ','5'],
+    [' 6 ',' 6 '],[' zes ','6'],
+    [' 7 ',' 7 '],[' zeven ','7'],
+    [' 8 ',' 8 '],[' acht ','8'],
+    [' 9 ',' 9 '],[' negen ','9']
+  ];
+  for(const [needle,value] of map){
+    if(normalized.includes(needle))return Number(value.trim());
+  }
+  const match=normalized.match(/\b([1-9])\b/);
+  return match?Number(match[1]):null;
+}
+async function handleBrowserVoiceTranscript(text){
+  const input=String(text||'').trim();
+  const lower=input.toLowerCase();
+  if(!input)return;
+  if(lower.includes('genereer')){
+    await executeVoiceTool('generate_content',{});
+    pushVoiceLog('assistant','Ik start de contentgeneratie.');
+    return;
+  }
+  if(lower.includes('kopieer')){
+    await executeVoiceTool('copy_active_variant',{});
+    pushVoiceLog('assistant','Ik heb de actieve variant gekopieerd.');
+    return;
+  }
+  if(lower.includes('variant')){
+    const nr=parseVoiceNumber(lower);
+    if(nr){
+      const result=await executeVoiceTool('select_variant',{variant_number:nr});
+      pushVoiceLog('assistant',result.ok?'Ik heb variant '+nr+' geselecteerd.':'Ik kon die variant niet selecteren.');
+      return;
+    }
+  }
+  if(lower.includes('stap')){
+    const nr=parseVoiceNumber(lower);
+    if(nr){
+      await executeVoiceTool('go_to_step',{step:nr});
+      pushVoiceLog('assistant','Ik ben naar stap '+nr+' gegaan.');
+      return;
+    }
+  }
+  if(lower.includes('informeer')||lower.includes('informeren')){
+    await executeVoiceTool('set_page_goal',{goal:'informeren'});
+    pushVoiceLog('assistant','Ik heb het doel op informeren gezet.');
+    return;
+  }
+  if(lower.includes('overtuig')||lower.includes('overtuigen')){
+    await executeVoiceTool('set_page_goal',{goal:'overtuigen'});
+    pushVoiceLog('assistant','Ik heb het doel op overtuigen gezet.');
+    return;
+  }
+  if(lower.includes('aanvraag')||lower.includes('aanvragen')){
+    await executeVoiceTool('set_page_goal',{goal:'aanvragen'});
+    pushVoiceLog('assistant','Ik heb het doel op aanvragen gezet.');
+    return;
+  }
+  const keywordMatch=input.match(/(?:zoekwoord(?:\s+op)?|keyword(?:\s+op)?|zet(?:\s+het)?\s+zoekwoord(?:\s+op)?)(.+)$/i);
+  if(keywordMatch&&keywordMatch[1]){
+    const keyword=keywordMatch[1].replace(/^(naar|op|is)\s+/i,'').trim();
+    if(keyword){
+      await executeVoiceTool('set_keyword',{keyword:keyword});
+      pushVoiceLog('assistant','Ik heb het zoekwoord gezet op '+keyword+'.');
+      return;
+    }
+  }
+  pushVoiceLog('assistant','Ik snapte de opdracht nog niet. Probeer bijvoorbeeld: zet het zoekwoord op tankinspectie, kies overtuigen, ga naar stap 3 of genereer content.');
+}
+function startBrowserVoice(){
+  const Ctor=getSpeechRecognitionCtor();
+  if(!Ctor){
+    setVoiceStatus('error','Deze browser ondersteunt geen spraakherkenning.');
+    pushVoiceLog('system','Browser voice is niet beschikbaar in deze browser.');
+    return;
+  }
+  if(voiceState.connected)return;
+  const recognition=new Ctor();
+  recognition.lang='nl-NL';
+  recognition.continuous=true;
+  recognition.interimResults=false;
+  recognition.maxAlternatives=1;
+  recognition.onstart=()=>{
+    voiceState.connected=true;
+    voiceState.listening=true;
+    voiceState.mode='browser';
+    setVoiceStatus('ready','Browser voice luistert mee...');
+    pushVoiceLog('system','Browser voice actief. Spreek een kort commando in het Nederlands in.');
+  };
+  recognition.onresult=async(event)=>{
+    const result=event.results[event.results.length-1];
+    const transcript=result&&result[0]?result[0].transcript.trim():'';
+    if(!transcript)return;
+    pushVoiceLog('user',transcript);
+    await handleBrowserVoiceTranscript(transcript);
+  };
+  recognition.onerror=(event)=>{
+    const code=event&&event.error?String(event.error):'onbekend';
+    if(code==='no-speech'){
+      setVoiceStatus('ready','Browser voice wacht op spraak...');
+      return;
+    }
+    setVoiceStatus('error','Browser voice fout: '+code);
+    pushVoiceLog('system','Browser voice fout: '+code);
+  };
+  recognition.onend=()=>{
+    voiceState.listening=false;
+    if(voiceState.connected&&voiceState.mode==='browser'){
+      setVoiceStatus('ready','Browser voice actief');
+      clearTimeout(voiceState.restartTimer);
+      voiceState.restartTimer=setTimeout(()=>{
+        try{voiceState.recognition&&voiceState.recognition.start();}catch(e){}
+      },300);
+    }
+  };
+  voiceState.recognition=recognition;
+  recognition.start();
+}
+function buildVoiceTools(){
+  return [
+    {type:'function',name:'get_screen_state',description:'Lees de huidige staat van de ContentFlow interface voordat je iets verandert.',parameters:{type:'object',properties:{},additionalProperties:false}},
+    {type:'function',name:'set_keyword',description:'Zet of vervang het hoofdzoekwoord in de create-flow.',parameters:{type:'object',properties:{keyword:{type:'string',description:'Het nieuwe hoofdzoekwoord voor de pagina.'}},required:['keyword'],additionalProperties:false}},
+    {type:'function',name:'set_page_goal',description:'Kies het doel van de pagina: informeren, overtuigen of aanvragen.',parameters:{type:'object',properties:{goal:{type:'string',enum:['informeren','overtuigen','aanvragen']}},required:['goal'],additionalProperties:false}},
+    {type:'function',name:'go_to_step',description:'Ga naar stap 1, 2 of 3 in de create wizard.',parameters:{type:'object',properties:{step:{type:'integer',minimum:1,maximum:3}},required:['step'],additionalProperties:false}},
+    {type:'function',name:'generate_content',description:'Start het genereren van content op basis van het huidige zoekwoord en doel.',parameters:{type:'object',properties:{},additionalProperties:false}},
+    {type:'function',name:'select_variant',description:'Selecteer een bestaande copy-variant nadat varianten zijn gegenereerd.',parameters:{type:'object',properties:{variant_number:{type:'integer',minimum:1,maximum:9}},required:['variant_number'],additionalProperties:false}},
+    {type:'function',name:'copy_active_variant',description:'Kopieer de actieve variant naar het klembord.',parameters:{type:'object',properties:{},additionalProperties:false}},
+    {type:'function',name:'show_message',description:'Toon een korte melding aan de operator in de interface.',parameters:{type:'object',properties:{message:{type:'string'}},required:['message'],additionalProperties:false}}
+  ];
+}
+function buildVoiceSessionConfig(){
+  return {
+    type:'realtime',
+    model:getVoiceModel(),
+    instructions:'Je bent een Nederlandse voice control agent voor ContentFlow, een SEO-app voor B2B content. Gebruik alleen de beschikbare tools om de interface te bedienen. Werk kort, helder en taakgericht. Verzin geen acties of resultaten. Vraag alleen een korte verduidelijking als een toolargument echt ontbreekt. Na elke zichtbare wijziging houd je rekening met de laatst gesynchroniseerde schermstatus.',
+    tool_choice:'auto',
+    tools:buildVoiceTools(),
+    output_modalities:['audio'],
+    audio:{
+      input:{
+        transcription:{model:'gpt-4o-mini-transcribe',language:'nl'},
+        turn_detection:{type:'server_vad',threshold:0.5,prefix_padding_ms:300,silence_duration_ms:200,create_response:true,interrupt_response:false}
+      },
+      output:{voice:'verse'}
+    }
+  };
+}
+function getVoiceAppState(){
+  const variants=genResult?getResultVariants(genResult):[];
+  return {
+    page:curPage,
+    wizard_step:wStep,
+    keyword:(savedKw||(document.getElementById('kwInput2')||{}).value||(document.getElementById('kwInput')||{}).value||'').trim(),
+    goal:savedGoal,
+    generation_status:genStatus,
+    variant_count:variants.length,
+    active_variant:variants.length?selectedVariantIndex+1:null,
+    title:variants[selectedVariantIndex]?.title||variants[0]?.title||''
+  };
+}
+function voiceNormalizeGoal(goal){
+  const raw=String(goal||'').toLowerCase().trim();
+  if(raw==='inform'||raw==='informeren')return 'inform';
+  if(raw==='overtuigen'||raw==='convince')return 'convince';
+  if(raw==='aanvragen'||raw==='convert')return 'convert';
+  return null;
+}
+async function executeVoiceTool(name,args){
+  if(name==='get_screen_state')return {ok:true,state:getVoiceAppState()};
+  if(name==='set_keyword'){
+    const keyword=String(args.keyword||'').trim();
+    if(!keyword)return {ok:false,error:'Geen keyword meegegeven.'};
+    await animateKeywordEntry(keyword);
+    return {ok:true,keyword:keyword};
+  }
+  if(name==='set_page_goal'){
+    const normalized=voiceNormalizeGoal(args.goal);
+    if(!normalized)return {ok:false,error:'Onbekend paginadoel.'};
+    await openCreateStep(2);
+    const goalCard=findGoalCard(normalized);
+    if(goalCard)await clickVoiceElement(goalCard);
+    else{
+      savedGoal=normalized;
+      buildCreate(document.getElementById('pg-create'));
+    }
+    return {ok:true,goal:savedGoal};
+  }
+  if(name==='go_to_step'){
+    const step=Math.max(1,Math.min(3,Number(args.step)||1));
+    await openCreateStep(step);
+    return {ok:true,step:step};
+  }
+  if(name==='generate_content'){
+    if(!(savedKw||(document.getElementById('kwInput2')||{}).value||(document.getElementById('kwInput')||{}).value||'').trim()){
+      return {ok:false,error:'Er is nog geen zoekwoord ingevuld.'};
+    }
+    await openCreateStep(2);
+    const generateBtn=findVoiceButton('genereer');
+    if(generateBtn)await clickVoiceElement(generateBtn);else goStep3();
+    return {ok:true,status:'started'};
+  }
+  if(name==='select_variant'){
+    const variants=genResult?getResultVariants(genResult):[];
+    const idx=Math.max(0,(Number(args.variant_number)||1)-1);
+    if(!variants.length)return {ok:false,error:'Er zijn nog geen varianten beschikbaar.'};
+    if(!variants[idx])return {ok:false,error:'Deze variant bestaat niet.'};
+    await openCreateStep(3);
+    const variantCard=findVariantCard(idx+1);
+    if(variantCard)await clickVoiceElement(variantCard);else selectVariant(idx);
+    return {ok:true,active_variant:idx+1,title:variants[idx].title||''};
+  }
+  if(name==='copy_active_variant'){
+    if(!genResult)return {ok:false,error:'Er is nog geen resultaat om te kopieren.'};
+    await openCreateStep(3);
+    const copyBtn=findVoiceButton('kopieer');
+    if(copyBtn)await clickVoiceElement(copyBtn);else copyResult();
+    return {ok:true};
+  }
+  if(name==='show_message'){
+    const message=String(args.message||'').trim();
+    if(message)showToast(message);
+    return {ok:true,message:message};
+  }
+  return {ok:false,error:'Onbekende tool: '+name};
+}
+function sendVoiceEvent(payload){
+  if(!voiceState.dataChannel||voiceState.dataChannel.readyState!=='open')return false;
+  voiceState.dataChannel.send(JSON.stringify(payload));
+  return true;
+}
+function voicePushState(){
+  if(!voiceState.connected){showToast('Start eerst de voice sessie.');return;}
+  const state=getVoiceAppState();
+  sendVoiceEvent({
+    type:'conversation.item.create',
+    item:{
+      type:'message',
+      role:'system',
+      content:[{type:'input_text',text:'UI state update: '+JSON.stringify(state)}]
+    }
+  });
+  pushVoiceLog('system','Schermstatus gesynchroniseerd met de voice sessie.');
+}
+function waitForVoiceDataChannel(channel,pc){
+  return new Promise((resolve,reject)=>{
+    const timeout=setTimeout(()=>cleanup(new Error('Timeout bij openen van voice data channel.')),15000);
+    function cleanup(err){
+      clearTimeout(timeout);
+      channel.removeEventListener('open',handleOpen);
+      channel.removeEventListener('error',handleError);
+      channel.removeEventListener('close',handleClose);
+      pc.removeEventListener('connectionstatechange',handleState);
+      err?reject(err):resolve();
+    }
+    function handleOpen(){cleanup();}
+    function handleError(){cleanup(new Error('Voice data channel kon niet openen.'));}
+    function handleClose(){cleanup(new Error('Voice data channel sloot voortijdig.'));}
+    function handleState(){
+      if(['failed','closed','disconnected'].includes(pc.connectionState))cleanup(new Error('Voice verbinding viel weg tijdens opstarten.'));
+    }
+    channel.addEventListener('open',handleOpen,{once:true});
+    channel.addEventListener('error',handleError,{once:true});
+    channel.addEventListener('close',handleClose,{once:true});
+    pc.addEventListener('connectionstatechange',handleState);
+  });
+}
+async function requestVoiceAnswerSdp(sdp){
+  const endpoint=(getVoiceEndpoint()||'').trim();
+  const sessionConfig=buildVoiceSessionConfig();
+  const allowDirectFallback=IS_LOCAL;
+  if(endpoint){
+    const formData=new FormData();
+    formData.set('sdp',sdp);
+    formData.set('session',JSON.stringify(sessionConfig));
+    try{
+      const resp=await fetch(endpoint,{method:'POST',body:formData});
+      if(!resp.ok){
+        const bodyText=await resp.text();
+        let detail='';
+        try{
+          const parsed=JSON.parse(bodyText);
+          detail=parsed?.error?.message||parsed?.error||parsed?.message||'';
+        }catch(e){
+          detail=bodyText||'';
+        }
+        throw new Error('Session endpoint gaf status '+resp.status+(detail?': '+detail:''));
+      }
+      voiceState.usingDirect=false;
+      return await resp.text();
+    }catch(err){
+      const isNetworkError=!String(err?.message||'').includes('Session endpoint gaf status');
+      if(!allowDirectFallback||!isNetworkError||!getOAIKey())throw err;
+      pushVoiceLog('system','Session endpoint niet bereikbaar, fallback naar directe OpenAI verbinding voor lokale tests.');
+    }
+  }
+  const key=getOAIKey();
+  if(!key)throw new Error('Geen OpenAI API key gevonden voor de directe fallback.');
+  const resp=await fetch('https://api.openai.com/v1/realtime/calls?model='+encodeURIComponent(getVoiceModel()),{
+    method:'POST',
+    headers:{Authorization:'Bearer '+key,'Content-Type':'application/sdp'},
+    body:sdp
+  });
+  if(!resp.ok){
+    const bodyText=await resp.text();
+    let detail='';
+    try{
+      const parsed=JSON.parse(bodyText);
+      detail=parsed?.error?.message||parsed?.error||parsed?.message||'';
+    }catch(e){
+      detail=bodyText||'';
+    }
+    throw new Error('OpenAI Realtime call mislukt met status '+resp.status+(detail?': '+detail:''));
+  }
+  voiceState.usingDirect=true;
+  return await resp.text();
+}
+async function startVoiceSession(){
+  toggleVoicePanel(true);
+  if(voiceState.connected||voiceState.status==='connecting')return;
+  ensureVoiceAudio();
+  startBrowserVoice();
+}
+async function startRealtimeVoiceSession(){
+  if(voiceState.connected||voiceState.status==='connecting')return;
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||typeof RTCPeerConnection==='undefined'){
+    setVoiceStatus('error','Deze browser ondersteunt realtime voice niet.');
+    return;
+  }
+  setVoiceStatus('connecting','Verbinden met realtime session...');
+  try{
+    const localStream=await navigator.mediaDevices.getUserMedia({audio:true});
+    const pc=new RTCPeerConnection();
+    const remoteAudio=new Audio();
+    remoteAudio.autoplay=true;
+    localStream.getTracks().forEach(track=>pc.addTrack(track,localStream));
+    pc.ontrack=(event)=>{
+      if(event.streams&&event.streams[0])remoteAudio.srcObject=event.streams[0];
+    };
+    pc.onconnectionstatechange=()=>{
+      if(pc.connectionState==='failed'||pc.connectionState==='disconnected'){
+        setVoiceStatus('error','Voice verbinding is weggevallen.');
+      }
+    };
+    const dc=pc.createDataChannel('oai-events');
+    dc.addEventListener('message',async(event)=>{
+      let payload=null;
+      try{payload=JSON.parse(event.data);}catch(e){return;}
+      await handleVoiceServerEvent(payload);
+    });
+    const offer=await pc.createOffer({offerToReceiveAudio:true});
+    await pc.setLocalDescription(offer);
+    const answerSdp=await requestVoiceAnswerSdp(offer.sdp||'');
+    await pc.setRemoteDescription({type:'answer',sdp:answerSdp});
+    await waitForVoiceDataChannel(dc,pc);
+    voiceState.peerConnection=pc;
+    voiceState.dataChannel=dc;
+    voiceState.localStream=localStream;
+    voiceState.remoteAudio=remoteAudio;
+    voiceState.connected=true;
+    voiceState.listening=false;
+    voiceState.handledCallIds=new Set();
+    setVoiceStatus('ready',voiceState.usingDirect?'Verbonden via directe OpenAI fallback':'Verbonden via Netlify session');
+    sendVoiceEvent({type:'session.update',session:buildVoiceSessionConfig()});
+    pushVoiceLog('system','Voice sessie verbonden. De agent kent nu je schermtools.');
+    voicePushState();
+  }catch(err){
+    console.error('Voice start fout',err);
+    await stopVoiceSession({silent:true});
+    setVoiceStatus('error',err.message||'Voice kon niet starten.');
+    pushVoiceLog('system','Voice fout: '+(err.message||'onbekend'));
+  }
+}
+async function stopVoiceSession(opts){
+  const options=opts||{};
+  clearTimeout(voiceState.restartTimer);
+  if(voiceState.recognition){
+    try{voiceState.recognition.onend=null;voiceState.recognition.stop();}catch(e){}
+  }
+  if(voiceState.dataChannel){try{voiceState.dataChannel.close();}catch(e){}}
+  if(voiceState.peerConnection){try{voiceState.peerConnection.close();}catch(e){}}
+  if(voiceState.localStream){voiceState.localStream.getTracks().forEach(track=>track.stop());}
+  if(voiceState.remoteAudio){try{voiceState.remoteAudio.pause();}catch(e){}}
+  voiceState.recognition=null;
+  voiceState.peerConnection=null;
+  voiceState.dataChannel=null;
+  voiceState.localStream=null;
+  voiceState.remoteAudio=null;
+  voiceState.connected=false;
+  voiceState.listening=false;
+  voiceState.mode='browser';
+  voiceState.status='idle';
+  voiceState.statusLabel='Niet verbonden';
+  if(!options.silent)pushVoiceLog('system','Voice sessie gestopt.');
+  renderVoicePanel();
+}
+function toggleVoiceConnection(){
+  if(voiceState.connected||voiceState.status==='connecting'){stopVoiceSession();return;}
+  startVoiceSession();
+}
+async function handleVoiceToolCall(item){
+  const callId=item.call_id||item.id||('call-'+Date.now());
+  if(voiceState.handledCallIds.has(callId))return;
+  voiceState.handledCallIds.add(callId);
+  let args={};
+  try{args=item.arguments?JSON.parse(item.arguments):{};}catch(e){args={};}
+  const result=await executeVoiceTool(item.name||'',args);
+  pushVoiceLog('system','Tool uitgevoerd: '+(item.name||'onbekend'));
+  sendVoiceEvent({
+    type:'conversation.item.create',
+    item:{type:'function_call_output',call_id:callId,output:JSON.stringify(result)}
+  });
+  sendVoiceEvent({type:'response.create'});
+  voicePushState();
+}
+async function handleVoiceServerEvent(event){
+  if(!event||typeof event!=='object')return;
+  if(event.type==='session.created'){setVoiceStatus('ready','Realtime session aangemaakt.');return;}
+  if(event.type==='input_audio_buffer.speech_started'){voiceState.listening=true;setVoiceStatus('ready','Luistert mee...');return;}
+  if(event.type==='input_audio_buffer.speech_stopped'||event.type==='input_audio_buffer.committed'){voiceState.listening=false;setVoiceStatus('ready',voiceState.usingDirect?'Verbonden via directe OpenAI fallback':'Verbonden via Netlify session');return;}
+  if(event.type==='conversation.item.input_audio_transcription.completed'&&event.transcript){pushVoiceLog('user',event.transcript);return;}
+  if((event.type==='response.output_audio_transcript.done'&&event.transcript)||(event.type==='response.output_text.done'&&event.text)){
+    pushVoiceLog('assistant',event.transcript||event.text);
+    return;
+  }
+  if(event.type==='response.output_item.done'&&event.item&&event.item.type==='function_call'){
+    await handleVoiceToolCall(event.item);
+    return;
+  }
+  if(event.type==='error'){
+    const msg=event.error?.message||'Onbekende realtime fout';
+    setVoiceStatus('error',msg);
+    pushVoiceLog('system','Realtime fout: '+msg);
+  }
+}
 
 // ── Webhook config ──
-const PROCESSOR_URL='https://production.turnone.cloud/webhook/contentflow-generate';
-const QUEUE_BASE_URL='https://production.turnone.cloud/webhook/1985462a-48f9-4269-8ab3-f1dc1c0f46a6/1985462a-48f9-4269-8ab3-f1dc1c0f46a6';
-function getWHToken(){return localStorage.getItem('cf_wh_token')||'tok_userT1_qPz7yWnd45gw4g';}
-function setWHToken(t){localStorage.setItem('cf_wh_token',t);}
+const GENERATE_CONTENT_ENDPOINT='/.netlify/functions/generate-content';
 function getSourceContent(){var el=document.getElementById('dzPreview');return el?(el.innerText||el.textContent||'').substring(0,3000):'';}
 function getXmlTemplate(){return localStorage.getItem('cf_xml_template')||'';}
 function getXmlTemplateName(){return localStorage.getItem('cf_xml_template_name')||'';}
@@ -424,9 +1199,9 @@ function handleXmlUpload(input){
 
 let supa=null;
 try{supa=supabase.createClient(SUPA_URL,SUPA_KEY);}catch(e){console.warn('Supabase CDN niet geladen:',e.message);}
-let currentUser=null,profile={};
+let currentUser=null,profile={},currentWorkspaceId='';
 
-const ITEMS=[
+let ITEMS=[
   {id:1,title:'Tankinspectie voor vloeibare lading',url:'/diensten/tankinspectie',kw:'tankinspectie',status:'live',words:1840,score:91,date:'21 apr'},
   {id:2,title:'Containerinspectie voedsel en agri',url:'/diensten/containerinspectie-voedsel',kw:'containerinspectie voedsel',status:'live',words:2150,score:88,date:'18 apr'},
   {id:3,title:'Graanopslag inspectie en kwaliteitsborging',url:'/diensten/graanopslag-inspectie',kw:'graanopslag inspectie',status:'live',words:1920,score:84,date:'15 apr'},
@@ -443,6 +1218,10 @@ const FEED_DATA=[
   {icon:'🗓️',title:'Volgende week: 2 paginas gepland',sub:'Droge bulk survey · Kwaliteitsinspectie zaden',time:'Gisteren',cta:null,page:null},
 ];
 
+let activeReviewPageId=null,activeReviewBundle=null,activeReviewLink=null;
+let publicReviewToken=null,publicReviewBundle=null;
+let genPageId=null,genStage='pending',genRenderTimer=null,genPollLoopTimer=null;
+
 let dark=true;
 function toggleDark(){
   dark=!dark;
@@ -451,7 +1230,7 @@ function toggleDark(){
   document.getElementById('dmLabel').textContent=dark?'🌙':'☀️';
 }
 
-let curPage='dashboard',cvView='table',stab='bedrijf',wStep=1,selPremises=new Set(),savedGoal='convince';
+let curPage='dashboard',cvView='table',stab='bedrijf',wStep=1,selPremises=new Set(),savedGoal='convince',selectedVariantIndex=0;
 
 function nav(page,el){
   ['dashboard','content','create','review','knowledge','settings'].forEach(p=>{
@@ -477,10 +1256,12 @@ function demoLogin(){
 }
 async function doLogout(){
   if(!confirm('Uitloggen?'))return;
+  await stopVoiceSession({silent:true});
   if(supa){try{await supa.auth.signOut();}catch(e){}}
   currentUser=null;profile={};
   document.getElementById('appWrap').classList.add('hidden');
   document.getElementById('fabWrap').style.display='none';
+  document.getElementById('voiceDock').style.display='none';
   document.getElementById('loginWrap').style.display='';
 }
 async function sendLink(){
@@ -509,6 +1290,8 @@ function doLogin(user){
   document.getElementById('loginWrap').style.display='none';
   document.getElementById('appWrap').classList.remove('hidden');
   document.getElementById('fabWrap').style.display='block';
+  document.getElementById('voiceDock').style.display='block';
+  renderVoicePanel();
   if(user.is_demo){
     renderPage('dashboard');
   } else {
@@ -516,9 +1299,15 @@ function doLogin(user){
   }
 }
 window.addEventListener('DOMContentLoaded',async()=>{
+  const reviewToken=new URLSearchParams(window.location.search).get('review');
+  if(reviewToken){
+    await initPublicReviewMode(reviewToken);
+    return;
+  }
   document.getElementById('dmToggle').classList.add('on');
   document.getElementById('dmLabel').textContent='🌙';
   document.getElementById('loginEmail').value='kajslier@gmail.com';
+  renderVoicePanel();
   try{
     supa.auth.onAuthStateChange((event,session)=>{
       // Only auto-login when a magic link is actually being processed (token in URL)
@@ -540,7 +1329,7 @@ function renderPage(p){
   else if(p==='settings')buildSettings(el);
 }
 
-let genStatus='idle',genMessage='',genJobId=null,genResult=null,genPollTimer=null;
+let genStatus='idle',genMessage='',genJobId=null,genResult=null;
 let savedKw='';
 
 function buildCreate(el){
@@ -594,15 +1383,15 @@ function step2Html(){
   const goals=[
     {
       id:'inform',
-      icon:'📣',
+      icon:'&#128227;',
       label:'Informeren',
       sub:'Uitlegpagina of blog',
-      desc:'Beantwoord een vraag die potentiële klanten stellen. Ideaal voor bezoekers die zich nog oriënteren op het onderwerp.',
+      desc:'Beantwoord een vraag die potentiele klanten stellen. Ideaal voor bezoekers die zich nog orienteren op het onderwerp.',
       example:'bijv. "Wat is tankinspectie?" of "Hoe werkt graanopslag certificering?"'
     },
     {
       id:'convince',
-      icon:'🎯',
+      icon:'&#127919;',
       label:'Overtuigen',
       sub:'Dienst- of vergelijkingspagina',
       desc:'Laat zien waarom klanten specifiek voor jullie kiezen. Vergelijkt voordelen, toont expertise en bouwt vertrouwen op bij prospects die al nadenken over een keuze.',
@@ -610,7 +1399,7 @@ function step2Html(){
     },
     {
       id:'convert',
-      icon:'✅',
+      icon:'&#9989;',
       label:'Aanvragen',
       sub:'Conversiepagina',
       desc:'Zet bezoekers om naar aanvragen of klanten. Focust op social proof, garanties en een duidelijke volgende stap voor wie klaar is om te beslissen.',
@@ -626,7 +1415,7 @@ function step2Html(){
     +goals.map(g=>{
       const sel=savedGoal===g.id;
       return '<div onclick="savedGoal=\''+g.id+'\';buildCreate(document.getElementById(\'pg-create\'))" style="border:2px solid '+(sel?'var(--accent)':'var(--border)')+';border-radius:var(--radius);padding:18px 16px;cursor:pointer;background:'+(sel?'var(--accent-subtle)':'var(--surface2)')+';transition:all .15s;position:relative;" onmouseover="if(\''+g.id+'\'!==savedGoal)this.style.borderColor=\'var(--text2)\'" onmouseout="if(\''+g.id+'\'!==savedGoal)this.style.borderColor=\'var(--border)\'">'
-        +(sel?'<div style="position:absolute;top:10px;right:10px;width:18px;height:18px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:700;">✓</div>':'')
+        +(sel?'<div style="position:absolute;top:10px;right:10px;width:18px;height:18px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:700;">&#10003;</div>':'')
         +'<div style="font-size:24px;margin-bottom:10px;">'+g.icon+'</div>'
         +'<div style="font-weight:700;font-size:14px;margin-bottom:2px;color:'+(sel?'var(--accent)':'var(--text)')+'">'+g.label+'</div>'
         +'<div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em;">'+g.sub+'</div>'
@@ -635,63 +1424,79 @@ function step2Html(){
         +'</div>';
     }).join('')
     +'</div></div>'
+    +'<div class="voice-card">'
+    +'<h3>Voice beta voor deze flow</h3>'
+    +'<p>Je kunt deze stap nu ook handsfree bedienen. Open rechtsboven <strong>Voice beta</strong> en zeg bijvoorbeeld welk zoekwoord je wilt, welk paginadoel past, of dat de generator moet starten.</p>'
+    +'<div class="voice-mini-list">'
+    +'<div class="voice-mini"><strong>Voorbeeld 1</strong>Zet het zoekwoord op technische SEO audit.</div>'
+    +'<div class="voice-mini"><strong>Voorbeeld 2</strong>Kies overtuigen als doel.</div>'
+    +'<div class="voice-mini"><strong>Voorbeeld 3</strong>Ga naar stap 3 en genereer content.</div>'
+    +'<div class="voice-mini"><strong>Voorbeeld 4</strong>Selecteer variant 2 en kopieer die.</div>'
+    +'</div></div>'
     +'<div style="margin-top:4px;display:flex;justify-content:space-between;">'
-    +'<button class="btn btn-ghost" onclick="goStep1()">← Terug</button>'
-    +'<button class="btn btn-primary" onclick="goStep3()">Genereer →</button></div>'
+    +'<button class="btn btn-ghost" onclick="goStep1()">&larr; Terug</button>'
+    +'<button class="btn btn-primary" onclick="goStep3()">Genereer &rarr;</button></div>'
     +'</div>';
 }
 function step3Html(){
   if(genStatus==='loading'||genStatus==='polling'){
-    if(!genJobId){
-      return '<div class="card" style="padding:28px 24px;">'
-        +'<div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">'
-        +'<div style="width:36px;height:36px;border-radius:50%;border:3px solid var(--accent);border-top-color:transparent;animation:spin 1s linear infinite;flex-shrink:0;"></div>'
-        +'<div><div style="font-weight:700;">Verzoek verstuurd naar n8n!</div>'
-        +'<div style="font-size:13px;color:var(--muted);">Zoekwoord: <strong>'+savedKw+'</strong></div></div></div>'
-        +'<div style="border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;">'
-        +'<p style="font-weight:600;font-size:13px;margin-bottom:8px;">Resultaat ontvangen? Doe dit eenmalig:</p>'
-        +'<p style="font-size:13px;color:var(--muted);line-height:1.8;margin:0;">'
-        +'1. Maak tabel <strong>content_jobs</strong> aan in Supabase (SQL Editor)<br>'
-        +'2. Voeg HTTP Request node toe aan n8n SEO-Processor-dev<br>'
-        +'3. Die schrijft het resultaat terug naar Supabase</p></div>'
-        +'<button class="btn btn-secondary btn-sm" onclick="goStep1()">Terug</button>'
-        +'</div>';
-    }
-    const msgs=['AI schrijft je artikel...','Zoekwoorden worden verwerkt...','Structuur wordt opgebouwd...','Bijna klaar...'];
-    const msg=msgs[Math.floor(Date.now()/4000)%msgs.length];
+    const stage=getStageCopy(genStage);
     return '<div class="card" style="text-align:center;padding:56px 24px;">'
       +'<div style="width:56px;height:56px;border-radius:50%;border:3px solid var(--accent);border-top-color:transparent;animation:spin 1s linear infinite;margin:0 auto 24px;"></div>'
-      +'<h3 style="font-size:18px;font-weight:700;margin-bottom:8px;">Artikel wordt gegenereerd...</h3>'
-      +'<p style="color:var(--muted);margin-bottom:24px;font-size:14px;">'+msg+'</p>'
+      +'<div style="display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--accent-subtle);color:var(--accent);font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:16px;">'+escHtml(genStage.replace(/_/g,' '))+'</div>'
+      +'<h3 style="font-size:18px;font-weight:700;margin-bottom:8px;">'+stage.title+'</h3>'
+      +'<p style="color:var(--muted);margin-bottom:24px;font-size:14px;max-width:520px;margin-left:auto;margin-right:auto;">'+stage.desc+'</p>'
       +'<div class="progress" style="max-width:260px;margin:0 auto 8px;"><div class="progress-fill" style="width:70%"></div></div>'
-      +'<p style="font-size:12px;color:var(--muted);">Dit duurt 30-60 seconden</p>'
+      +'<p style="font-size:12px;color:var(--muted);">Pipeline: draft &rarr; refine &rarr; quality check &rarr; review</p>'
       +'</div>';
   }
   if(genStatus==='done'&&genResult){
-    const r=genResult;
-    const res=r.result||{};
-    const title=res.title||r.result_title||'';
-    const meta=res.meta_description||r.result_meta||'';
-    const content=res.content||r.result_content||'';
-    const score=r.seo_score||84;
-    const wc=r.word_count||(content?content.replace(/<[^>]*>/g,'').trim().split(/\s+/).length:0);
+    const variants=getResultVariants(genResult);
+    const activeVariant=variants[selectedVariantIndex]||variants[0]||null;
+    const title=activeVariant?.title||'';
+    const meta=activeVariant?.meta_description||'';
+    const content=activeVariant?.content||'';
+    const score=activeVariant?.seo_score||84;
+    const quality=activeVariant?.quality_score||0;
+    const wc=activeVariant?.word_count||(content?content.replace(/<[^>]*>/g,'').trim().split(/\s+/).length:0);
+    const qualityNotes=(activeVariant?.quality_notes||[]).slice(0,3);
     return '<div style="display:flex;flex-direction:column;gap:16px;">'
       +'<div class="card" style="display:flex;align-items:center;gap:16px;padding:20px 24px;">'
-      +'<div style="width:48px;height:48px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">✅</div>'
-      +'<div style="flex:1;"><div style="font-weight:700;font-size:16px;margin-bottom:2px;">Artikel gegenereerd!</div>'
-      +'<div style="font-size:13px;color:var(--muted);">'+wc+' woorden · SEO score: <span style="color:'+(score>=80?'var(--accent)':score>=60?'#f59e0b':'#ef4444')+'">'+score+'</span></div></div>'
+      +'<div style="width:48px;height:48px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">&#9989;</div>'
+      +'<div style="flex:1;"><div style="font-weight:700;font-size:16px;margin-bottom:2px;">'+(variants.length>1?'9 varianten gegenereerd!':'Artikel gegenereerd!')+'</div>'
+      +'<div style="font-size:13px;color:var(--muted);">'+wc+' woorden &middot; SEO score: <span style="color:'+(score>=80?'var(--accent)':score>=60?'#f59e0b':'#ef4444')+'">'+score+'</span> &middot; Copy quality: <span style="color:'+(quality>=80?'var(--accent)':quality>=60?'#f59e0b':'#ef4444')+'">'+quality+'</span></div></div>'
       +'<div style="display:flex;gap:8px;">'
       +'<button class="btn btn-secondary btn-sm" onclick="copyResult()">Kopieer</button>'
-      +'<button class="btn btn-primary btn-sm" onclick="genStatus=\'idle\';genResult=null;goStep1()">+ Nieuw</button>'
+      +'<button class="btn btn-secondary btn-sm" onclick="createShareReviewLink()">Deel review</button>'
+      +'<button class="btn btn-secondary btn-sm" onclick="if(genPageId){openReviewPage(genPageId);nav(\'review\',document.getElementById(\'ni-review\'));}else{showToast(\'Sla eerst een pagina op.\');}">Naar review</button>'
+      +'<button class="btn btn-primary btn-sm" onclick="genStatus=\'idle\';genResult=null;selectedVariantIndex=0;goStep1()">+ Nieuw</button>'
       +'</div></div>'
+      +'<div class="card" style="padding:18px 22px;"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Kwaliteitslaag</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:'+(qualityNotes.length?12:0)+'px;"><span class="tag tag-live">Refine-pass voltooid</span><span class="tag tag-review">Reviewstatus: '+escHtml((genResult.result?.review_status||genResult.review_status||'needs_review').replace(/_/g,' '))+'</span><span class="tag tag-grey">Beste variant automatisch gekozen</span></div>'
+      +(qualityNotes.length?'<div style="display:flex;flex-wrap:wrap;gap:8px;">'+qualityNotes.map(note=>'<span class="tag tag-grey">'+escHtml(note)+'</span>').join('')+'</div>':'')
+      +'</div>'
+      +(variants.length?'<div class="card" style="padding:20px 24px;">'
+        +'<div class="variant-toolbar" style="margin-bottom:16px;">'
+        +'<div class="variant-toolbar-left"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;">Copy varianten</div><p>Kies achteraf welke tekst het sterkst is. De actieve versie is standaard de best scorende variant op kwaliteit en SEO.</p></div>'
+        +'<div class="variant-banner"><div><strong>Actief: variant '+(selectedVariantIndex+1)+'</strong><br><span>'+(activeVariant?escHtml(activeVariant.title||'Zonder titel'):'Nog geen variant geselecteerd')+'</span></div></div>'
+        +'</div>'
+        +'<div class="variant-grid">'
+        +variants.map((variant,idx)=>'<div class="variant-card'+(idx===selectedVariantIndex?' active':'')+'" onclick="selectVariant('+idx+')">'
+          +(idx===selectedVariantIndex?'<div class="variant-card-mark"></div>':'')
+          +'<div class="variant-card-top"><div class="variant-card-index">Variant '+(idx+1)+(variant.is_primary?' &middot; Beste match':'')+'</div><div class="variant-card-score">Q '+(variant.quality_score||0)+' &middot; SEO '+(variant.seo_score||score)+'</div></div>'
+          +'<div class="variant-card-title">'+escHtml(variant.title||'Zonder titel')+'</div>'
+          +'<div class="variant-card-meta">'+escHtml(variant.meta_description||'Geen meta omschrijving beschikbaar.')+'</div>'
+          +'<div class="variant-card-foot"><span>'+(variant.word_count||0)+' woorden</span><span>Score '+(variant.combined_score||getVariantCombinedScore(variant))+'</span></div>'
+          +'</div>').join('')
+        +'</div></div>':'')
       +(title?'<div class="card" style="padding:20px 24px;"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Titel</div><div style="font-size:18px;font-weight:700;">'+escHtml(title)+'</div></div>':'')
       +(meta?'<div class="card" style="padding:16px 24px;"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Meta omschrijving</div><div style="font-size:14px;color:var(--muted);line-height:1.5;">'+escHtml(meta)+'</div></div>':'')
-      +(content?'<div class="card" style="padding:20px 24px;"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Artikel inhoud</div><div id="article-editor" contenteditable="true" spellcheck="false" style="font-size:14px;line-height:1.8;max-height:520px;overflow-y:auto;color:var(--text);">'+content+'</div></div>':'')
+      +(content?'<div class="card" style="padding:20px 24px;"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Artikel inhoud</div><div id="article-editor" contenteditable="true" spellcheck="false" style="font-size:14px;line-height:1.8;max-height:520px;overflow-y:auto;color:var(--text);">'+content+'</div></div>':'<div class="card" style="padding:20px 24px;"><div class="variant-empty">Geen inhoud beschikbaar voor deze variant.</div></div>')
       +'</div>';
   }
   if(genStatus==='error'){
     return '<div class="card" style="text-align:center;padding:48px 24px;">'
-      +'<div style="font-size:36px;margin-bottom:16px;">❌</div>'
+      +'<div style="font-size:36px;margin-bottom:16px;">âŒ</div>'
       +'<h3 style="font-size:18px;font-weight:700;margin-bottom:8px;">Fout</h3>'
       +'<p style="color:var(--muted);margin-bottom:24px;">'+escHtml(genMessage)+'</p>'
       +'<div style="display:flex;gap:8px;justify-content:center;">'
@@ -702,15 +1507,258 @@ function step3Html(){
   return '<div class="card" style="text-align:center;padding:48px 24px;"><p style="color:var(--muted);">Klik op Genereer...</p></div>';
 }
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function escAttr(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function getWorkspaceId(){return profile.default_workspace_id||currentWorkspaceId||'';}
+function isUuidValue(value){return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value||''));}
+function buildBrandProfileSnapshot(){
+  return {
+    company_name:profile.company_name||'',
+    website:profile.website||'',
+    services:profile.services||'',
+    target_audience:profile.target_audience||'',
+    buyer_persona:profile.buyer_persona||'',
+    prohibited_claims:profile.prohibited_claims||'',
+    style_preferences:profile.style_preferences||'',
+    positive_examples:profile.positive_examples||'',
+    negative_examples:profile.negative_examples||''
+  };
+}
+function buildToneProfile(){
+  return {
+    tone_label:profile.tone_label||profile.tone_nl||'',
+    voice_principles:profile.voice_principles||profile.tone_nl||'',
+    style_preferences:profile.style_preferences||''
+  };
+}
+function buildCustomerPreferences(){
+  return {
+    primary_cta:profile.primary_cta||'Vraag een gesprek of offerte aan',
+    preferred_length:profile.preferred_length||profile.paragraph_length||'medium',
+    locale:'nl-NL',
+    include_case_style:true,
+    require_fact_check:true
+  };
+}
+function formatShortDate(value){
+  if(!value)return '';
+  try{
+    return new Intl.DateTimeFormat('nl-NL',{day:'numeric',month:'short'}).format(new Date(value));
+  }catch(e){return value;}
+}
+function getVariantCombinedScore(variant){
+  return Number((((Number(variant.quality_score||0))*0.65)+((Number(variant.seo_score||0))*0.35)).toFixed(2));
+}
+function getPreferredVariantIndex(variants){
+  if(!Array.isArray(variants)||!variants.length)return 0;
+  let bestIdx=0,bestScore=-1;
+  variants.forEach((variant,idx)=>{
+    const score=getVariantCombinedScore(variant);
+    if(score>bestScore){bestScore=score;bestIdx=idx;}
+  });
+  return bestIdx;
+}
+function getStageCopy(status){
+  const map={
+    pending:{title:'Generatie staat in de rij...',desc:'De pipeline wordt klaargezet voor jullie contentjob.'},
+    drafting:{title:'Eerste concepten worden geschreven...',desc:'De draft-laag bouwt nu structuur, invalshoek en varianten op.'},
+    refining:{title:'Tekst wordt verfijnd...',desc:'De refine-pass maakt de copy vloeiender, menselijker en klantwaardiger.'},
+    scored:{title:'Kwaliteit wordt beoordeeld...',desc:'De beste variant wordt nu gekozen op copykwaliteit en SEO-signalen.'},
+    ready_for_review:{title:'Klaar voor review',desc:'De output staat klaar om te beoordelen en te delen.'}
+  };
+  return map[status]||map.pending;
+}
+function getResultVariants(result){
+  const r=result||{};
+  const res=r.result||{};
+  const rawVariants=(Array.isArray(res.variants)&&res.variants.length?res.variants:Array.isArray(r.variants)&&r.variants.length?r.variants:null);
+  const variants=(rawVariants||[]).map((variant,idx)=>normalizeVariant(variant,idx)).filter(Boolean);
+  if(variants.length>=3)return variants;
+  if(variants.length===2)return [variants[0],variants[1],createVariantFromBase(variants[0],2)];
+  if(variants.length===1)return buildDisplayVariants(variants[0]);
+  const fallback=normalizeVariant({
+    title:res.title||r.result_title||'',
+    meta_description:res.meta_description||r.result_meta||'',
+    content:res.content||r.result_content||'',
+    seo_score:r.seo_score||84,
+    word_count:r.word_count||0
+  },0);
+  return fallback?buildDisplayVariants(fallback):[];
+}
+function normalizeVariant(variant,idx){
+  if(!variant)return null;
+  const title=variant.title||''; 
+  const meta=variant.meta_description||variant.meta||'';
+  const content=variant.content||'';
+  const seoScore=Number(variant.seo_score||variant.score||84)||84;
+  const wordCount=Number(variant.word_count)||((content?content.replace(/<[^>]*>/g,' ').trim().split(/\s+/).filter(Boolean).length:0));
+  const qualityScore=Number(variant.quality_score||variant.copy_quality_score||0)||0;
+  const qualityNotes=Array.isArray(variant.quality_notes)?variant.quality_notes:[];
+  const qualitySummary=variant.quality_summary||'';
+  const combinedScore=getVariantCombinedScore({seo_score:seoScore,quality_score:qualityScore});
+  return {id:variant.id||('variant-'+idx),title:title,meta_description:meta,content:content,seo_score:seoScore,word_count:wordCount,quality_score:qualityScore,quality_notes:qualityNotes,quality_summary:qualitySummary,combined_score:combinedScore,is_primary:!!variant.is_primary};
+}
+function buildDisplayVariants(base){
+  return [base,createVariantFromBase(base,1),createVariantFromBase(base,2)];
+}
+function createVariantFromBase(base,mode){
+  if(!base)return null;
+  const variantConfigs=[
+    { titleSuffix:'Voor bedrijven', metaPrefix:'Krijg snel inzicht in', lead:'Voor organisaties die snel duidelijkheid willen, zet deze versie de kern, voordelen en praktische impact direct vooraan.' },
+    { titleSuffix:'Uitleg, voordelen en aanpak', metaPrefix:'Lees hoe', lead:'Deze variant kiest een meer uitleggerichte invalshoek, met nadruk op betrouwbaarheid, context en een heldere aanpak.' }
+  ];
+  const cfg=variantConfigs[mode-1]||variantConfigs[0];
+  const title=base.title&&base.title.includes(':')?base.title+' '+cfg.titleSuffix:(base.title?base.title+' - '+cfg.titleSuffix:'Variant');
+  const meta=(cfg.metaPrefix+' '+(base.meta_description||base.title||'deze oplossing')+'.').replace(/\s+/g,' ').trim();
+  const content=injectLeadParagraph(base.content,cfg.lead);
+  const wordCount=content?content.replace(/<[^>]*>/g,' ').trim().split(/\s+/).filter(Boolean).length:base.word_count||0;
+  return {id:base.id+'-'+mode,title:title,meta_description:meta,content:content,seo_score:Math.max(60,(base.seo_score||84)-mode),word_count:wordCount};
+}
+function injectLeadParagraph(content,lead){
+  const para='<p>'+lead+'</p>';
+  if(!content)return para;
+  const headingMatch=content.match(/<h[12][^>]*>.*?<\/h[12]>/i);
+  if(headingMatch){
+    const idx=(headingMatch.index||0)+headingMatch[0].length;
+    return content.slice(0,idx)+para+content.slice(idx);
+  }
+  return para+content;
+}
+function selectVariant(idx){
+  selectedVariantIndex=idx;
+  buildCreate(document.getElementById('pg-create'));
+}
 function copyResult(){
   if(!genResult)return;
-  const r=genResult;
-  const res=r.result||{};
+  const variants=getResultVariants(genResult);
+  const variant=variants[selectedVariantIndex]||variants[0];
+  if(!variant)return;
   // Gebruik bewerkte inhoud als die beschikbaar is
   const editor=document.getElementById('article-editor');
-  const content=editor?editor.innerHTML:(res.content||r.result_content||'');
-  const txt=[(res.title||r.result_title),(res.meta_description||r.result_meta),'',content.replace(/<[^>]*>/g,'')].filter(Boolean).join('\n\n');
-  navigator.clipboard.writeText(txt).then(()=>showToast('Gekopieerd!')).catch(()=>showToast('Kopiëren mislukt'));
+  const content=editor?editor.innerHTML:(variant.content||'');
+  const txt=[variant.title,variant.meta_description,'',content.replace(/<[^>]*>/g,'')].filter(Boolean).join('\n\n');
+  navigator.clipboard.writeText(txt).then(()=>showToast('Gekopieerd!')).catch(()=>showToast('KopiÃ«ren mislukt'));
+}
+function mapPageToItem(page,primaryVariant){
+  const variant=primaryVariant||{};
+  return {
+    id:page.id,
+    page_id:page.id,
+    title:page.title||variant.title||'Ongetitelde pagina',
+    url:page.slug?('/review/'+page.slug):'',
+    kw:page.primary_keyword||savedKw||'',
+    status:page.status||'draft',
+    review_status:page.review_status||'needs_review',
+    words:Number(variant.word_count||0),
+    score:Number(page.seo_score||variant.seo_score||0),
+    quality_score:Number(page.quality_score||variant.quality_score||0),
+    date:formatShortDate(page.created_at||new Date().toISOString())
+  };
+}
+function registerGeneratedPage(resultPayload){
+  const page=resultPayload?.page||null;
+  const primary=resultPayload?.primary_variant||page?.primary_variant||null;
+  if(!page?.id)return;
+  genPageId=page.id;
+  const nextItem=mapPageToItem(page,primary);
+  const existingIndex=ITEMS.findIndex(item=>item.page_id===page.id||item.id===page.id);
+  if(existingIndex>=0)ITEMS.splice(existingIndex,1,nextItem);
+  else ITEMS.unshift(nextItem);
+}
+function clearGenerationTimers(){
+  if(genRenderTimer){clearInterval(genRenderTimer);genRenderTimer=null;}
+  if(genPollLoopTimer){clearInterval(genPollLoopTimer);genPollLoopTimer=null;}
+}
+function escapeInlineHtml(value){
+  return String(value||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function buildSimpleDemoContent(title,keyword,lead,cta){
+  return '<h1>'+escapeInlineHtml(title)+'</h1>'
+    +'<p>'+escapeInlineHtml(lead)+'</p>'
+    +'<h2>Waarom '+escapeInlineHtml(keyword)+' belangrijk is</h2>'
+    +'<p>Voor B2B-teams draait '+escapeInlineHtml(keyword)+' niet alleen om zichtbaarheid, maar om vertrouwen, duidelijkheid en snellere besluitvorming. Deze demo-opzet laat zien hoe ContentFlow in een paar stappen een bruikbare eerste versie kan neerzetten.</p>'
+    +'<h2>Wat een goede pagina moet doen</h2>'
+    +'<ul><li>Het onderwerp snel en helder uitleggen</li><li>Concrete voordelen benoemen voor de lezer</li><li>Logisch toewerken naar een volgende stap</li></ul>'
+    +'<h2>Aanpak</h2>'
+    +'<p>Deze eenvoudige variant gebruikt een heldere structuur, natuurlijke overgangen en een directe call-to-action. Zo kun je de flow laten zien zonder n8n of extra automationlaag.</p>'
+    +'<h2>Volgende stap</h2>'
+    +'<p>'+escapeInlineHtml(cta)+'</p>';
+}
+function buildSimpleDemoResponse(payload){
+  const keyword=payload.keyword||savedKw||'SEO content';
+  const companyName=payload.brand_profile_snapshot?.company_name||profile.company_name||'Jullie bedrijf';
+  const cta=payload.customer_preferences?.primary_cta||profile.primary_cta||'Vraag een gesprek of offerte aan';
+  const titleBase=keyword.charAt(0).toUpperCase()+keyword.slice(1);
+  const rawVariants=[
+    {
+      title:titleBase+' voor B2B teams',
+      meta_description:'Ontdek hoe '+keyword+' helpt om duidelijkere B2B-pagina\'s te maken en sneller tot actie te komen.',
+      content:buildSimpleDemoContent(titleBase+' voor B2B teams',keyword,'Deze demo-variant laat zien hoe '+companyName+' '+keyword+' kan uitleggen op een heldere, geloofwaardige manier.',cta),
+      seo_score:84,
+      quality_score:82,
+      quality_notes:['Helder uitgelegd','Goede structuur'],
+      quality_summary:'Gebalanceerde demo-variant'
+    },
+    {
+      title:titleBase+' met focus op conversie',
+      meta_description:'Lees hoe '+keyword+' B2B-beslissers sneller overtuigt en richting een concrete vervolgstap stuurt.',
+      content:buildSimpleDemoContent(titleBase+' met focus op conversie',keyword,'Deze variant is directer geschreven en stuurt sterker op commerciële duidelijkheid voor beslissers.',cta),
+      seo_score:81,
+      quality_score:79,
+      quality_notes:['Directe toon','Sterke CTA'],
+      quality_summary:'Commerciëlere demo-variant'
+    },
+    {
+      title:titleBase+' uitgelegd in gewone taal',
+      meta_description:'Een rustige, consultatieve uitleg van '+keyword+' voor teams die eerst duidelijkheid willen voor ze beslissen.',
+      content:buildSimpleDemoContent(titleBase+' uitgelegd in gewone taal',keyword,'Deze variant kiest een rustigere toon en legt het onderwerp stap voor stap uit voor lezers die zich nog oriënteren.',cta),
+      seo_score:78,
+      quality_score:80,
+      quality_notes:['Rustige toon','Toegankelijk'],
+      quality_summary:'Uitleggedreven demo-variant'
+    }
+  ].map((variant,idx)=>normalizeVariant({...variant,is_primary:idx===0},idx+1));
+  const variants=rawVariants.map((variant,idx)=>({
+    ...variant,
+    id:'demo-variant-'+(idx+1),
+    variant_index:idx+1,
+    is_primary:idx===0
+  }));
+  const primary=variants[0];
+  const now=new Date().toISOString();
+  const demoId='demo-'+Date.now();
+  return {
+    status:'ready_for_review',
+    job:{id:'demo-job-'+Date.now(),status:'ready_for_review',keyword:keyword,workspace_id:'demo-workspace',user_id:'demo-user'},
+    page:{
+      id:'demo-page-'+Date.now(),
+      title:primary.title,
+      primary_keyword:keyword,
+      status:'review',
+      review_status:'needs_review',
+      seo_score:primary.seo_score,
+      quality_score:primary.quality_score,
+      created_at:now,
+      updated_at:now,
+      primary_variant:primary
+    },
+    primary_variant:primary,
+    variants:variants,
+    seo_metadata:{primary_keyword:keyword,locale:'nl-NL',content_goal:payload.content_goal||'convince'},
+    review_status:'needs_review',
+    quality_score:primary.quality_score,
+    result:{
+      title:primary.title,
+      content:primary.content,
+      meta_description:primary.meta_description,
+      primary_variant:primary,
+      variants:variants,
+      quality_score:primary.quality_score,
+      seo_metadata:{primary_keyword:keyword,locale:'nl-NL',content_goal:payload.content_goal||'convince'},
+      review_status:'needs_review',
+      content_page_id:'demo-page-'+demoId,
+      job_lifecycle:['pending','drafting','ready_for_review']
+    }
+  };
 }
 function togglePremise(i){
   if(selPremises.has(i))selPremises.delete(i);else selPremises.add(i);
@@ -725,107 +1773,79 @@ function goStep2(){
 }
 function goStep3(){
   savedKw=savedKw||(document.getElementById('kwInput2')||{}).value||'';
+  selectedVariantIndex=0;
+  genPageId=null;genStage='pending';
   genStatus='loading';genMessage='';genJobId=null;genResult=null;
-  if(genPollTimer){clearInterval(genPollTimer);genPollTimer=null;}
+  if(genRenderTimer){clearInterval(genRenderTimer);genRenderTimer=null;}
+  if(genPollLoopTimer){clearInterval(genPollLoopTimer);genPollLoopTimer=null;}
   wStep=3;buildCreate(document.getElementById('pg-create'));
   triggerGeneration();
 }
 async function triggerGeneration(){
   const kw=savedKw;
-  let jobId=null;
-  if(supa&&currentUser&&!currentUser.is_demo){
-    try{
-      const{data}=await supa.from('content_jobs').insert({
-        user_id:currentUser.id,keyword:kw,status:'pending'
-      }).select('id').single();
-      if(data)jobId=data.id;
-    }catch(e){console.warn('content_jobs insert failed:',e.message);}
-  }
-  genJobId=jobId;
-  console.log('[triggerGeneration] jobId:', jobId);
+  const workspaceId=getWorkspaceId();
+  const brandSnapshot=buildBrandProfileSnapshot();
+  const toneProfile=buildToneProfile();
+  const customerPreferences=buildCustomerPreferences();
   const payload={
-    action:'Create New Page',keyword:kw,
-    locale:'Dutch (Netherlands)',
+    keyword:kw,
+    workspace_id:workspaceId,
+    user_id:currentUser.id,
+    content_goal:savedGoal||'convince',
     source_content:getSourceContent(),
-    company_name:profile.company_name||'',
-    tone_nl:profile.tone_nl||'',
-    services:profile.services||'',
-    userToken:getWHToken(),
-    job_id:jobId||'',
-    user_id:currentUser?.id||'',
     xml_template:getXmlTemplate()||'',
     xml_template_name:getXmlTemplateName()||'',
-    content_goal:savedGoal||'convince'
+    template_id:null,
+    brand_profile_snapshot:brandSnapshot,
+    tone_profile:toneProfile,
+    customer_preferences:customerPreferences
   };
-  genStatus='polling';
+  genStatus='loading';
+  genStage='drafting';
   buildCreate(document.getElementById('pg-create'));
-  genPollTimer=setInterval(()=>{
+  genRenderTimer=setInterval(()=>{
     const el=document.getElementById('pg-create');
-    if(el&&(genStatus==='loading'||genStatus==='polling'))buildCreate(el);
+    if(el&&genStatus==='loading')buildCreate(el);
   },600);
-  const webhookUrl=PROCESSOR_URL+(jobId?'?job_id='+encodeURIComponent(jobId):'');
-  // Primaire methode: lees de n8n response direct (n8n antwoordt met artikel JSON)
-  // Fallback: poll Supabase als CORS niet werkt
+  const shouldUseSimpleDemo=IS_LOCAL||!currentUser||currentUser.is_demo||!isUuidValue(workspaceId)||!isUuidValue(currentUser.id);
   (async()=>{
     try{
-      console.log('[fetch] Versturen naar n8n, wacht op antwoord...');
-      const resp=await fetch(webhookUrl,{
+      if(shouldUseSimpleDemo){
+        await new Promise(resolve=>setTimeout(resolve,900));
+        const data=buildSimpleDemoResponse(payload);
+        clearGenerationTimers();
+        genStatus='done';
+        genStage='ready_for_review';
+        genJobId=data?.job?.id||null;
+        genResult=data?.result?data:{status:'ready_for_review',result:data};
+        selectedVariantIndex=getPreferredVariantIndex(getResultVariants(genResult));
+        registerGeneratedPage(data);
+        buildCreate(document.getElementById('pg-create'));
+        showToast('Demo-variant gegenereerd zonder backend');
+        return;
+      }
+      const resp=await fetch(GENERATE_CONTENT_ENDPOINT,{
         method:'POST',
-        headers:{'Content-Type':'text/plain'},
+        headers:{'Content-Type':'application/json'},
         body:JSON.stringify(payload)
       });
-      console.log('[fetch] Response status:', resp.status);
-      if(resp.ok&&(genStatus==='loading'||genStatus==='polling')){
-        let data=null;
-        try{data=await resp.json();}catch(e){console.warn('[fetch] JSON parse fout:',e.message);}
-        console.log('[fetch] Response data:', data);
-        if(data&&(data.title||data.content)){
-          clearInterval(genPollTimer);genPollTimer=null;
-          genStatus='done';
-          genResult={status:'done',result:{
-            title:data.title||'',
-            content:data.content||'',
-            meta_description:data.meta_description||''
-          }};
-          const el=document.getElementById('pg-create');
-          if(el)buildCreate(el);
-          return;
-        }
-      }
+      const data=await resp.json().catch(()=>null);
+      if(!resp.ok)throw new Error(data?.error||'Content generatie mislukte.');
+      clearGenerationTimers();
+      genStatus='done';
+      genStage=data?.status||'ready_for_review';
+      genJobId=data?.job?.id||null;
+      genResult=data?.result?data:{status:'ready_for_review',result:data};
+      selectedVariantIndex=getPreferredVariantIndex(getResultVariants(genResult));
+      registerGeneratedPage(data);
+      buildCreate(document.getElementById('pg-create'));
     }catch(e){
-      console.log('[fetch] Direct response niet beschikbaar (CORS?), val terug op polling:', e.message);
+      clearGenerationTimers();
+      genStatus='error';
+      genMessage=e.message||'Content generatie mislukte.';
+      buildCreate(document.getElementById('pg-create'));
     }
-    // Fallback: Supabase polling
-    if(jobId&&supa){startResultPolling(jobId);}
   })();
-}
-function getSourceContent(){const el=document.getElementById('dzPreview');return el?(el.innerText||el.textContent||'').substring(0,3000):'';}
-function startResultPolling(jobId){
-  let attempts=0;
-  const poll=async()=>{
-    attempts++;
-    if(attempts>40){
-      clearInterval(genPollTimer);genPollTimer=null;
-      genStatus='error';genMessage='Tijdlimiet overschreden. Probeer opnieuw.';
-      buildCreate(document.getElementById('pg-create'));return;
-    }
-    try{
-      const{data,error}=await supa.from('content_jobs').select('*').eq('id',jobId).single();
-      console.log('[poll]',attempts,'status:',data?.status,'error:',error?.message);
-      if(error){console.error('[poll] Supabase error:',error);return;}
-      if(data&&(data.status==='done'||data.result)){
-        clearInterval(genPollTimer);genPollTimer=null;
-        genStatus='done';genResult=data;
-        buildCreate(document.getElementById('pg-create'));
-      }else if(data&&data.status==='error'){
-        clearInterval(genPollTimer);genPollTimer=null;
-        genStatus='error';genMessage=data.error_message||'Processor fout.';
-        buildCreate(document.getElementById('pg-create'));
-      }
-    }catch(e){console.error('[poll] exception:',e);}
-  };
-  setTimeout(poll,3000);
-  setInterval(poll,5000);
 }
 function dzOver(e){e.preventDefault();document.getElementById('dz').classList.add('over');}
 function dzLeave(e){document.getElementById('dz').classList.remove('over');}
@@ -1010,17 +2030,192 @@ function buildKanban(el){
     }).join('')
     +'</div>';
 }
+async function loadReviewBundle(pageId){
+  if(!pageId)return null;
+  if(!IS_LOCAL){
+    try{
+      const resp=await fetch('/.netlify/functions/content-page?id='+encodeURIComponent(pageId));
+      const data=await resp.json();
+      if(resp.ok&&data?.page)return data;
+    }catch(e){
+      console.warn('content-page endpoint fallback naar Supabase:',e.message);
+    }
+  }
+  if(supa&&currentUser&&!currentUser.is_demo){
+    try{
+      const pageResp=await supa.from('content_pages').select('*').eq('id',pageId).single();
+      if(pageResp.error)throw pageResp.error;
+      const variantResp=await supa.from('content_variants').select('*').eq('page_id',pageId).order('variant_index',{ascending:true});
+      if(variantResp.error)throw variantResp.error;
+      const commentResp=await supa.from('review_comments').select('*').eq('page_id',pageId).order('created_at',{ascending:true});
+      if(commentResp.error)throw commentResp.error;
+      const variants=(variantResp.data||[]).map((variant,idx)=>normalizeVariant(variant,idx));
+      const page=pageResp.data||{};
+      const primary=variants.find(v=>v.id===page.selected_variant_id)||variants.find(v=>v.is_primary)||variants[getPreferredVariantIndex(variants)]||variants[0]||null;
+      return {
+        page:{
+          id:page.id,
+          title:page.title,
+          primary_keyword:page.primary_keyword||'',
+          status:page.status||'draft',
+          review_status:page.review_status||'needs_review',
+          seo_score:Number(page.seo_score||0),
+          quality_score:Number(page.quality_score||0),
+          primary_variant:primary
+        },
+        variants,
+        comments:(commentResp.data||[]).map(row=>({
+          id:row.id,
+          category:row.category,
+          quote_text:row.quote_text||'',
+          anchor_text:row.anchor_text||'',
+          comment:row.comment,
+          commenter_name:row.commenter_name||'Reviewer',
+          created_at:row.created_at
+        }))
+      };
+    }catch(e){console.warn('Review bundle laden mislukt:',e.message);}
+  }
+  const item=ITEMS.find(entry=>String(entry.id)===String(pageId))||ITEMS.find(entry=>entry.status!=='live')||ITEMS[0];
+  if(!item)return null;
+  return {
+    page:{
+      id:item.id,
+      title:item.title,
+      primary_keyword:item.kw,
+      status:item.status,
+      review_status:item.review_status||'needs_review',
+      seo_score:Number(item.score||0),
+      quality_score:Number(item.quality_score||0),
+      primary_variant:genResult?getResultVariants(genResult)[selectedVariantIndex]||getResultVariants(genResult)[0]:null
+    },
+    variants:genResult?getResultVariants(genResult):[],
+    comments:[]
+  };
+}
+async function openReviewPage(pageId){
+  activeReviewPageId=pageId;
+  activeReviewBundle=await loadReviewBundle(pageId);
+  buildReview(document.getElementById('pg-review'));
+}
+async function createShareReviewLink(){
+  const pageId=activeReviewPageId||genPageId;
+  if(!pageId){showToast('Sla eerst een pagina op voordat je een reviewlink deelt.');return;}
+  if(IS_LOCAL){showToast('Reviewlinks werken op de live Netlify-versie.');return;}
+  try{
+    const resp=await fetch('/.netlify/functions/review-links',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        workspace_id:getWorkspaceId(),
+        page_id:pageId,
+        created_by:currentUser?.id||null,
+        expires_in_days:7,
+        message:'Laat vooral weten of de toon, helderheid en overtuigingskracht goed aanvoelen.'
+      })
+    });
+    const data=await resp.json();
+    if(!resp.ok)throw new Error(data.error||'Kon reviewlink niet maken.');
+    activeReviewLink=data.review_link;
+    await navigator.clipboard.writeText(data.review_link.url);
+    showToast('Reviewlink gekopieerd!');
+  }catch(e){
+    showToast('Reviewlink mislukt: '+e.message);
+  }
+}
+async function addReviewComment(){
+  const pageId=activeReviewPageId;
+  if(!pageId)return;
+  const category=(document.getElementById('reviewCommentCategory')||{}).value||'clarity';
+  const quote=(document.getElementById('reviewCommentQuote')||{}).value||'';
+  const comment=(document.getElementById('reviewCommentInput')||{}).value||'';
+  const commenter=(document.getElementById('reviewCommenterName')||{}).value||'Editor';
+  if(!comment.trim()){showToast('Voeg eerst een opmerking toe.');return;}
+  try{
+    if(supa&&currentUser&&!currentUser.is_demo){
+      const variantId=activeReviewBundle?.page?.primary_variant?.id||null;
+      const insert=await supa.from('review_comments').insert({
+        review_link_id:null,
+        page_id:pageId,
+        variant_id:variantId,
+        category:category,
+        quote_text:quote,
+        anchor_text:quote,
+        comment:comment,
+        commenter_name:commenter,
+        created_by:currentUser.id
+      }).select('*').single();
+      if(insert.error)throw insert.error;
+    }else{
+      activeReviewBundle.comments.push({
+        id:'local-'+Date.now(),
+        category,
+        quote_text:quote,
+        anchor_text:quote,
+        comment,
+        commenter_name:commenter,
+        created_at:new Date().toISOString()
+      });
+    }
+    activeReviewBundle=await loadReviewBundle(pageId);
+    buildReview(document.getElementById('pg-review'));
+    showToast('Reviewopmerking opgeslagen.');
+  }catch(e){
+    showToast('Comment opslaan mislukt: '+e.message);
+  }
+}
+async function approveReviewPage(){
+  const pageId=activeReviewPageId;
+  if(!pageId||!supa||!currentUser||currentUser.is_demo){showToast('Goedkeuren werkt alleen voor opgeslagen pagina’s.');return;}
+  try{
+    const update=await supa.from('content_pages').update({
+      status:'approved',
+      review_status:'approved',
+      updated_at:new Date().toISOString()
+    }).eq('id',pageId);
+    if(update.error)throw update.error;
+    activeReviewBundle=await loadReviewBundle(pageId);
+    await loadContentItems();
+    buildReview(document.getElementById('pg-review'));
+    showToast('Pagina goedgekeurd voor publicatie.');
+  }catch(e){
+    showToast('Goedkeuren mislukt: '+e.message);
+  }
+}
 function buildReview(el){
+  const reviewItems=ITEMS.filter(i=>i.status!=='live');
+  if(!activeReviewPageId&&reviewItems[0])activeReviewPageId=reviewItems[0].id;
+  if(!activeReviewBundle&&activeReviewPageId){
+    setTimeout(()=>openReviewPage(activeReviewPageId),0);
+  }
+  const bundle=activeReviewBundle;
+  const primary=bundle?.page?.primary_variant||null;
+  const comments=bundle?.comments||[];
   el.innerHTML='<div style="display:flex;height:100%;overflow:hidden;">'
-    +'<div style="width:220px;border-right:1px solid var(--border);overflow-y:auto;padding:16px;">'
+    +'<div style="width:260px;border-right:1px solid var(--border);overflow-y:auto;padding:16px;">'
     +'<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px;">Te reviewen</div>'
-    +ITEMS.filter(i=>i.status!=='live').map(i=>'<div class="card" style="padding:10px 12px;margin-bottom:8px;cursor:pointer;">'
-      +'<div class="font-600 text-sm">'+i.title+'</div>'
-      +'<div class="text-xs text-muted">'+i.kw+'</div></div>').join('')
+    +reviewItems.map(i=>'<div class="card" onclick="openReviewPage(\''+i.id+'\')" style="padding:12px 14px;margin-bottom:8px;cursor:pointer;border-color:'+(String(i.id)===String(activeReviewPageId)?'var(--accent)':'var(--border)')+';">'
+      +'<div class="font-600 text-sm" style="margin-bottom:6px;">'+escHtml(i.title)+'</div>'
+      +'<div class="text-xs text-muted" style="margin-bottom:8px;">'+escHtml(i.kw||'')+'</div>'
+      +'<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);"><span>SEO '+(i.score||0)+'</span><span>Quality '+(i.quality_score||0)+'</span></div></div>').join('')
     +'</div>'
     +'<div style="flex:1;overflow-y:auto;padding:24px;">'
-    +'<div class="page-header"><div><h2>Review editor</h2><p>Selecteer een artikel links.</p></div></div>'
-    +'<div class="card"><p style="color:var(--muted);">Klik op een artikel om het te openen.</p></div>'
+    +'<div class="page-header"><div><h2>Review editor</h2><p>'+(bundle?'Gebruik deze weergave om flow, toon en overtuigingskracht te finetunen.':'Selecteer een artikel links.')+'</p></div>'
+    +(bundle?'<div style="display:flex;gap:8px;"><button class="btn btn-secondary btn-sm" onclick="createShareReviewLink()">Deel reviewlink</button><button class="btn btn-primary btn-sm" onclick="approveReviewPage()">Goedkeuren</button></div>':'')
+    +'</div>'
+    +(bundle?'<div style="display:flex;flex-direction:column;gap:16px;">'
+      +'<div class="card" style="padding:18px 20px;"><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;"><div><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Actieve reviewpagina</div><div style="font-size:20px;font-weight:700;margin-bottom:8px;">'+escHtml(bundle.page.title||'')+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><span class="tag tag-review">Reviewstatus: '+escHtml((bundle.page.review_status||'needs_review').replace(/_/g,' '))+'</span><span class="tag tag-grey">SEO '+(bundle.page.seo_score||0)+'</span><span class="tag tag-grey">Quality '+(bundle.page.quality_score||0)+'</span></div></div>'
+      +(activeReviewLink?'<div class="card" style="padding:12px 14px;min-width:280px;"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Reviewlink</div><div style="font-size:12px;word-break:break-all;">'+escHtml(activeReviewLink.url)+'</div></div>':'')
+      +'</div></div>'
+      +(primary?'<div class="card" style="padding:20px 24px;"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Primaire variant</div><div style="font-size:18px;font-weight:700;margin-bottom:8px;">'+escHtml(primary.title||'')+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">'+(primary.quality_notes||[]).slice(0,3).map(note=>'<span class="tag tag-grey">'+escHtml(note)+'</span>').join('')+'</div><div style="font-size:14px;line-height:1.8;">'+(primary.content||'')+'</div></div>':'')
+      +'<div class="card" style="padding:20px 24px;"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Review feedback</div>'
+      +(comments.length?'<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px;">'+comments.map(comment=>'<div style="padding:12px 14px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);"><div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:6px;"><span class="tag tag-grey">'+escHtml(comment.category||'clarity')+'</span><span style="font-size:11px;color:var(--muted);">'+escHtml(comment.commenter_name||'Reviewer')+'</span></div>'+(comment.quote_text?'<div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-style:italic;">"'+escHtml(comment.quote_text)+'"</div>':'')+'<div style="font-size:13px;line-height:1.6;">'+escHtml(comment.comment||'')+'</div></div>').join('')+'</div>':'<div class="variant-empty" style="margin-bottom:18px;">Nog geen reviewfeedback opgeslagen.</div>')
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;"><div><label class="form-label">Categorie</label><select id="reviewCommentCategory" class="form-control"><option value="tone">Tone</option><option value="clarity" selected>Clarity</option><option value="accuracy">Accuracy</option><option value="conversion">Conversion</option><option value="structure">Structure</option></select></div><div><label class="form-label">Naam</label><input id="reviewCommenterName" class="form-control" value="'+escAttr(currentUser?.email||'Reviewer')+'"></div></div>'
+      +'<div class="form-group"><label class="form-label">Quote / ankertekst</label><input id="reviewCommentQuote" class="form-control" placeholder="Bijvoorbeeld een zin of sectie waar de feedback op slaat."></div>'
+      +'<div class="form-group" style="margin-bottom:12px;"><label class="form-label">Opmerking</label><textarea id="reviewCommentInput" class="form-control" placeholder="Waar moet de copy scherper, duidelijker of overtuigender worden?"></textarea></div>'
+      +'<button class="btn btn-primary btn-sm" onclick="addReviewComment()">Opmerking opslaan</button></div>'
+      +'</div>'
+      :'<div class="card"><p style="color:var(--muted);">Klik op een artikel om het te openen.</p></div>')
     +'</div></div>';
 }
 function buildKnowledge(el){
@@ -1040,6 +2235,13 @@ function settingsHtml(){
       +'<div class="form-group"><label class="form-label">Website</label><input id="companyWebsite" class="form-control" value="'+(profile.website||'')+'"></div>'
       +'<div class="form-group"><label class="form-label">KVK-nummer</label><input id="companyKvk" class="form-control" value="'+(profile.kvk||'')+'"></div>'
       +'<div class="form-group"><label class="form-label">Tone of voice</label><textarea id="companyTone" class="form-control">'+(profile.tone_nl||'')+'</textarea></div>'
+      +'<div class="form-group"><label class="form-label">Doelgroep / ICP</label><textarea id="companyAudience" class="form-control">'+(profile.target_audience||'')+'</textarea></div>'
+      +'<div class="form-group"><label class="form-label">Buyer persona / beslisser</label><textarea id="companyBuyerPersona" class="form-control">'+(profile.buyer_persona||'')+'</textarea></div>'
+      +'<div class="form-group"><label class="form-label">Stijlvoorkeuren</label><textarea id="companyStylePrefs" class="form-control">'+(profile.style_preferences||'')+'</textarea></div>'
+      +'<div class="form-group"><label class="form-label">Verboden woorden of claims</label><textarea id="companyProhibitedClaims" class="form-control">'+(profile.prohibited_claims||'')+'</textarea></div>'
+      +'<div class="form-group"><label class="form-label">Voorbeelden die wel passen</label><textarea id="companyPositiveExamples" class="form-control">'+(profile.positive_examples||'')+'</textarea></div>'
+      +'<div class="form-group"><label class="form-label">Voorbeelden die niet passen</label><textarea id="companyNegativeExamples" class="form-control">'+(profile.negative_examples||'')+'</textarea></div>'
+      +'<div class="form-group"><label class="form-label">Primaire CTA</label><input id="companyPrimaryCta" class="form-control" value="'+(profile.primary_cta||'Vraag een gesprek of offerte aan')+'"></div>'
       +'<div class="form-group" style="margin-bottom:0;"><label class="form-label">Diensten / producten</label><textarea id="companyServices" class="form-control">'+(profile.services||'')+'</textarea></div>'
       +'<div class="mt-4" style="display:flex;gap:10px;align-items:center;">'
       +'<button class="btn btn-primary" onclick="saveCompany()">Opslaan</button>'
@@ -1098,7 +2300,8 @@ function settingsHtml(){
     const ints=[
       {n:'Google Search Console',icon:'🔍',s:'Verbonden',on:true},
       {n:'Supabase (database)',icon:'🗄️',s:'Verbonden',on:true},
-      {n:'n8n (automation)',icon:'⚙️',s:'Verbonden',on:true},
+      {n:'TypeScript content engine',icon:'🧠',s:'Actief via Netlify function',on:true},
+      {n:'OpenAI Realtime Voice',icon:'🎤',s:'Klaar voor beta',on:true},
       {n:'Vercel (hosting)',icon:'▲',s:'Verbonden',on:true},
       {n:'Firecrawl',icon:'🔥',s:'Niet verbonden',on:false},
     ];
@@ -1110,6 +2313,8 @@ function settingsHtml(){
       +'</div><div class="switch'+(i.on?' on':'')+'" onclick="this.classList.toggle(\'on\')"></div></div>'
     ).join('');
     const oaiKey=getOAIKey();
+    const voiceEndpoint=getVoiceEndpoint();
+    const voiceModel=getVoiceModel();
     return '<div class="card">'
       +'<div class="settings-block"><h3>Integraties</h3>'
       +'<p>Verbind ContentFlow met je bestaande tools.</p>'+rows+'</div>'
@@ -1120,11 +2325,21 @@ function settingsHtml(){
       +'<input id="oaiKeyInput" class="form-control" type="password" placeholder="sk-..." value="'+oaiKey+'" style="flex:1;">'
       +'<button class="btn btn-secondary btn-sm" onclick="setOAIKey(document.getElementById(\'oaiKeyInput\').value);showToast(\'Opgeslagen!\')">Opslaan</button>'
       +'</div><div class="form-hint">Voor MP3/WAV transcriptie via Whisper.</div></div>'
-      +'<div class="form-group"><label class="form-label">n8n Webhook token</label>'
+      +'<div class="form-group"><label class="form-label">Content generatie endpoint</label>'
+      +'<input class="form-control" value="/.netlify/functions/generate-content" readonly>'
+      +'<div class="form-hint">De frontend praat nu direct met 1 TypeScript Netlify function. n8n is geen runtime-afhankelijkheid meer.</div></div>'
+      +'<div class="settings-block" style="margin-top:18px;"><h3>Realtime voice beta</h3>'
+      +'<p>Voice gebruikt een session-endpoint op Netlify, volgens het patroon uit OpenAI\'s realtime voice component.</p>'
+      +'<div class="form-group"><label class="form-label">Session endpoint</label>'
       +'<div style="display:flex;gap:8px;">'
-      +'<input id="whTokenInput" class="form-control" type="password" placeholder="tok_user..." value="'+getWHToken()+'" style="flex:1;">'
-      +'<button class="btn btn-secondary btn-sm" onclick="setWHToken(document.getElementById(\'whTokenInput\').value);showToast(\'Opgeslagen!\')">Opslaan</button>'
-      +'</div><div class="form-hint">Persoonlijke token voor de n8n content pipeline.</div></div>'
+      +'<input id="voiceEndpointInput" class="form-control" placeholder="/.netlify/functions/realtime-session" value="'+escAttr(voiceEndpoint)+'" style="flex:1;">'
+      +'<button class="btn btn-secondary btn-sm" onclick="setVoiceEndpoint(document.getElementById(\'voiceEndpointInput\').value);showToast(\'Voice endpoint opgeslagen\')">Opslaan</button>'
+      +'</div><div class="form-hint">Standaard: <code>/.netlify/functions/realtime-session</code>. Bij lokale file:// tests valt de app terug op direct OpenAI als er een API key is ingevuld.</div></div>'
+      +'<div class="form-group" style="margin-bottom:0;"><label class="form-label">Realtime model</label>'
+      +'<div style="display:flex;gap:8px;">'
+      +'<input id="voiceModelInput" class="form-control" placeholder="gpt-realtime" value="'+escAttr(voiceModel)+'" style="flex:1;">'
+      +'<button class="btn btn-secondary btn-sm" onclick="setVoiceModel(document.getElementById(\'voiceModelInput\').value);showToast(\'Voice model opgeslagen\')">Opslaan</button>'
+      +'</div><div class="form-hint">Standaard staat dit op <code>gpt-realtime</code>, de huidige realtime modelalias volgens de OpenAI documentatie.</div></div>'
       +'</div></div>';
   }
   if(stab==='vertrouwen'){
@@ -1151,7 +2366,19 @@ function setTrust(idx,el){
 
 async function loadProfile(){
   if(!supa||!currentUser||currentUser.is_demo)return;
-  try{const{data}=await supa.from('profiles').select('*').eq('id',currentUser.id).single();if(data)profile=data;}catch(e){}
+  currentWorkspaceId='';
+  try{
+    const{data}=await supa.from('profiles').select('*').eq('id',currentUser.id).single();
+    if(data)profile=data;
+  }catch(e){}
+  if(profile.default_workspace_id&&isUuidValue(profile.default_workspace_id)){
+    currentWorkspaceId=profile.default_workspace_id;
+    return;
+  }
+  try{
+    const{data,error}=await supa.from('workspaces').select('id,owner_user_id,name').eq('owner_user_id',currentUser.id).order('created_at',{ascending:true}).limit(1).maybeSingle();
+    if(!error&&data?.id)currentWorkspaceId=data.id;
+  }catch(e){}
 }
 async function loadContentItems(){
   // Placeholder — ITEMS array serves as content store for now
@@ -1173,6 +2400,13 @@ function saveCompany(){
     website:(document.getElementById('companyWebsite')||{}).value||'',
     kvk:(document.getElementById('companyKvk')||{}).value||'',
     tone_nl:(document.getElementById('companyTone')||{}).value||'',
+    target_audience:(document.getElementById('companyAudience')||{}).value||'',
+    buyer_persona:(document.getElementById('companyBuyerPersona')||{}).value||'',
+    style_preferences:(document.getElementById('companyStylePrefs')||{}).value||'',
+    prohibited_claims:(document.getElementById('companyProhibitedClaims')||{}).value||'',
+    positive_examples:(document.getElementById('companyPositiveExamples')||{}).value||'',
+    negative_examples:(document.getElementById('companyNegativeExamples')||{}).value||'',
+    primary_cta:(document.getElementById('companyPrimaryCta')||{}).value||'Vraag een gesprek of offerte aan',
     services:(document.getElementById('companyServices')||{}).value||''
   });
 }
@@ -1183,13 +2417,111 @@ function loadDemoProfile(){
     company_name:'Control Union',
     website:'https://www.controlunion.com',
     tone_nl:'Professioneel, betrouwbaar en technisch onderbouwd. Directe schrijfstijl gericht op beslissers in agrifood, maritiem en industrie. Geen jargon, wel precisie.',
+    target_audience:'Operations managers, kwaliteitsmanagers en procurement leads bij internationale B2B-organisaties in agrifood, energie, logistiek en maritiem.',
+    buyer_persona:'Een kritische B2B-beslisser die zekerheid, compliance en operationele betrouwbaarheid zoekt.',
+    style_preferences:'Schrijf consultatief, helder en overtuigend. Gebruik natuurlijke overgangen, concrete voorbeelden en geen opgeblazen marketingtaal.',
+    prohibited_claims:'Vermijd absolute claims zoals beste, nummer 1, gegarandeerd resultaat zonder bewijs.',
+    positive_examples:'Klinkt sterk wanneer de tekst concreet benoemt hoe inspecties risico verlagen, kwaliteit borgen en besluitvorming versnellen.',
+    negative_examples:'Niet te algemeen, niet te veel buzzwords, geen vage innovatieclaims zonder context.',
+    primary_cta:'Vraag een inspectiegesprek of offerte aan',
     services:'Tankinspectie, containerinspectie (voedsel & agri), graanopslag inspectie, maritieme survey, fumigatie certificering, ISO 17020 gecertificeerde inspecties, kwaliteitscontrole agrarische import, droge bulk inspectie'
   };
   Object.assign(profile,cu);
   // Fill fields if settings tab is open
-  const fields={companyName:cu.company_name,companyWebsite:cu.website,companyTone:cu.tone_nl,companyServices:cu.services};
+  const fields={companyName:cu.company_name,companyWebsite:cu.website,companyTone:cu.tone_nl,companyAudience:cu.target_audience,companyBuyerPersona:cu.buyer_persona,companyStylePrefs:cu.style_preferences,companyProhibitedClaims:cu.prohibited_claims,companyPositiveExamples:cu.positive_examples,companyNegativeExamples:cu.negative_examples,companyPrimaryCta:cu.primary_cta,companyServices:cu.services};
   Object.entries(fields).forEach(([id,val])=>{const el=document.getElementById(id);if(el)el.value=val;});
   showToast('Control Union demoprofiel geladen!');
+}
+
+async function loadContentItems(){
+  if(!supa||!currentUser||currentUser.is_demo)return Promise.resolve();
+  try{
+    const workspaceId=getWorkspaceId();
+    if(!workspaceId)return Promise.resolve();
+    const pageResp=await supa.from('content_pages').select('*').eq('workspace_id',workspaceId).order('created_at',{ascending:false});
+    if(pageResp.error)throw pageResp.error;
+    const pages=pageResp.data||[];
+    if(!pages.length)return Promise.resolve();
+    const pageIds=pages.map(page=>page.id);
+    const variantResp=await supa.from('content_variants').select('*').in('page_id',pageIds).order('variant_index',{ascending:true});
+    if(variantResp.error)throw variantResp.error;
+    const grouped=(variantResp.data||[]).reduce((acc,row)=>{
+      (acc[row.page_id]=acc[row.page_id]||[]).push(normalizeVariant(row,(row.variant_index||1)-1));
+      return acc;
+    },{});
+    ITEMS=pages.map(page=>{
+      const variants=grouped[page.id]||[];
+      const primary=variants.find(variant=>variant.id===page.selected_variant_id)||variants.find(variant=>variant.is_primary)||variants[getPreferredVariantIndex(variants)]||variants[0]||null;
+      return mapPageToItem(page,primary);
+    });
+  }catch(e){
+    console.warn('Content items laden mislukt:',e.message);
+  }
+  return Promise.resolve();
+}
+
+async function initPublicReviewMode(token){
+  publicReviewToken=token;
+  document.getElementById('loginWrap').style.display='none';
+  document.getElementById('appWrap').classList.add('hidden');
+  document.getElementById('fabWrap').style.display='none';
+  document.getElementById('voiceDock').style.display='none';
+  document.body.innerHTML='<div style="min-height:100vh;padding:40px 20px;background:var(--bg);color:var(--text);"><div style="max-width:980px;margin:0 auto;"><div class="card" style="padding:22px 24px;margin-bottom:18px;"><div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">ContentFlow review</div><div style="font-size:26px;font-weight:800;">Reviewlink laden...</div><p style="color:var(--muted);margin-top:8px;">Even geduld, we halen de pagina en feedback op.</p></div></div></div>';
+  try{
+    const resp=await fetch('/.netlify/functions/review-token?token='+encodeURIComponent(token));
+    const data=await resp.json();
+    if(!resp.ok)throw new Error(data.error||'Kon review niet laden.');
+    publicReviewBundle=data;
+    renderPublicReview();
+  }catch(e){
+    document.body.innerHTML='<div style="min-height:100vh;padding:40px 20px;background:var(--bg);color:var(--text);"><div style="max-width:760px;margin:0 auto;"><div class="card" style="padding:24px;"><div style="font-size:24px;font-weight:800;margin-bottom:10px;">Review niet beschikbaar</div><p style="color:var(--muted);">'+escHtml(e.message)+'</p></div></div></div>';
+  }
+}
+function renderPublicReview(){
+  const bundle=publicReviewBundle;
+  const comments=bundle?.comments||[];
+  const primary=bundle?.page?.primary_variant||null;
+  document.body.innerHTML='<div style="min-height:100vh;padding:40px 20px;background:var(--bg);color:var(--text);"><div style="max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:18px;">'
+    +'<div class="card" style="padding:22px 24px;"><div style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start;"><div><div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">ContentFlow review</div><div style="font-size:28px;font-weight:800;margin-bottom:10px;">'+escHtml(bundle?.page?.title||'Review')+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><span class="tag tag-review">Reviewstatus: '+escHtml((bundle?.page?.review_status||'needs_review').replace(/_/g,' '))+'</span><span class="tag tag-grey">SEO '+(bundle?.page?.seo_score||0)+'</span><span class="tag tag-grey">Quality '+(bundle?.page?.quality_score||0)+'</span></div></div><button class="btn btn-primary btn-sm" onclick="approvePublicReview()">Goedkeuren voor publicatie</button></div>'+(bundle?.review_link?.message?'<div style="margin-top:14px;padding:14px 16px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);font-size:13px;color:var(--text2);">'+escHtml(bundle.review_link.message)+'</div>':'')+'</div>'
+    +(primary?'<div class="card" style="padding:24px;"><div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Primaire variant</div><div style="font-size:20px;font-weight:800;margin-bottom:12px;">'+escHtml(primary.title||'')+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">'+(primary.quality_notes||[]).slice(0,4).map(note=>'<span class="tag tag-grey">'+escHtml(note)+'</span>').join('')+'</div><div style="font-size:14px;line-height:1.85;">'+(primary.content||'')+'</div></div>':'')
+    +'<div class="card" style="padding:22px 24px;"><div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Feedback</div>'
+    +(comments.length?'<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px;">'+comments.map(comment=>'<div style="padding:12px 14px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);"><div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:6px;"><span class="tag tag-grey">'+escHtml(comment.category||'clarity')+'</span><span style="font-size:11px;color:var(--muted);">'+escHtml(comment.commenter_name||'Reviewer')+'</span></div>'+(comment.quote_text?'<div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-style:italic;">"'+escHtml(comment.quote_text)+'"</div>':'')+'<div style="font-size:13px;line-height:1.6;">'+escHtml(comment.comment||'')+'</div></div>').join('')+'</div>':'<div class="variant-empty" style="margin-bottom:18px;">Nog geen feedback toegevoegd.</div>')
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;"><div><label class="form-label">Categorie</label><select id="publicReviewCategory" class="form-control"><option value="tone">Tone</option><option value="clarity" selected>Clarity</option><option value="accuracy">Accuracy</option><option value="conversion">Conversion</option><option value="structure">Structure</option></select></div><div><label class="form-label">Naam</label><input id="publicReviewName" class="form-control" placeholder="Jouw naam"></div></div>'
+    +'<div class="form-group"><label class="form-label">Quote / ankertekst</label><input id="publicReviewQuote" class="form-control" placeholder="Optioneel: quote uit de tekst"></div>'
+    +'<div class="form-group" style="margin-bottom:12px;"><label class="form-label">Opmerking</label><textarea id="publicReviewComment" class="form-control" placeholder="Waar kan deze copy nog scherper, duidelijker of overtuigender worden?"></textarea></div>'
+    +'<button class="btn btn-primary btn-sm" onclick="submitPublicReviewComment()">Feedback opslaan</button></div>'
+    +'</div></div>';
+}
+async function submitPublicReviewComment(){
+  if(!publicReviewToken)return;
+  const category=(document.getElementById('publicReviewCategory')||{}).value||'clarity';
+  const quote=(document.getElementById('publicReviewQuote')||{}).value||'';
+  const comment=(document.getElementById('publicReviewComment')||{}).value||'';
+  const name=(document.getElementById('publicReviewName')||{}).value||'Reviewer';
+  if(!comment.trim()){alert('Voeg eerst feedback toe.');return;}
+  const resp=await fetch('/.netlify/functions/review-token?token='+encodeURIComponent(publicReviewToken),{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({category,quote_text:quote,anchor_text:quote,comment,commenter_name:name,variant_id:publicReviewBundle?.page?.primary_variant?.id||null})
+  });
+  const data=await resp.json();
+  if(!resp.ok){alert(data.error||'Feedback opslaan mislukt.');return;}
+  publicReviewBundle.comments.push(data.comment);
+  renderPublicReview();
+}
+async function approvePublicReview(){
+  if(!publicReviewToken)return;
+  const resp=await fetch('/.netlify/functions/review-approve',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({token:publicReviewToken})
+  });
+  const data=await resp.json();
+  if(!resp.ok){alert(data.error||'Goedkeuren mislukt.');return;}
+  if(publicReviewBundle&&publicReviewBundle.page){
+    publicReviewBundle.page.review_status='approved';
+    renderPublicReview();
+  }
 }
 
 function showToast(msg){
@@ -1402,3 +2734,4 @@ function showToast(msg){
 </script>
 </body>
 </html>
+
