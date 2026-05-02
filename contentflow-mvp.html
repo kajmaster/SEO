@@ -1177,10 +1177,7 @@ async function handleVoiceServerEvent(event){
 }
 
 // ── Webhook config ──
-const PROCESSOR_URL='https://production.turnone.cloud/webhook/contentflow-generate';
-const QUEUE_BASE_URL='https://production.turnone.cloud/webhook/1985462a-48f9-4269-8ab3-f1dc1c0f46a6/1985462a-48f9-4269-8ab3-f1dc1c0f46a6';
-function getWHToken(){return localStorage.getItem('cf_wh_token')||'tok_userT1_qPz7yWnd45gw4g';}
-function setWHToken(t){localStorage.setItem('cf_wh_token',t);}
+const GENERATE_CONTENT_ENDPOINT='/.netlify/functions/generate-content';
 function getSourceContent(){var el=document.getElementById('dzPreview');return el?(el.innerText||el.textContent||'').substring(0,3000):'';}
 function getXmlTemplate(){return localStorage.getItem('cf_xml_template')||'';}
 function getXmlTemplateName(){return localStorage.getItem('cf_xml_template_name')||'';}
@@ -1202,9 +1199,9 @@ function handleXmlUpload(input){
 
 let supa=null;
 try{supa=supabase.createClient(SUPA_URL,SUPA_KEY);}catch(e){console.warn('Supabase CDN niet geladen:',e.message);}
-let currentUser=null,profile={};
+let currentUser=null,profile={},currentWorkspaceId='';
 
-const ITEMS=[
+let ITEMS=[
   {id:1,title:'Tankinspectie voor vloeibare lading',url:'/diensten/tankinspectie',kw:'tankinspectie',status:'live',words:1840,score:91,date:'21 apr'},
   {id:2,title:'Containerinspectie voedsel en agri',url:'/diensten/containerinspectie-voedsel',kw:'containerinspectie voedsel',status:'live',words:2150,score:88,date:'18 apr'},
   {id:3,title:'Graanopslag inspectie en kwaliteitsborging',url:'/diensten/graanopslag-inspectie',kw:'graanopslag inspectie',status:'live',words:1920,score:84,date:'15 apr'},
@@ -1220,6 +1217,10 @@ const FEED_DATA=[
   {icon:'💡',title:'Tip: publiceer ISO 17020 pagina op dinsdag',sub:'Optimaal bereik op basis van zoekvolume data',time:'Gisteren',cta:null,page:null},
   {icon:'🗓️',title:'Volgende week: 2 paginas gepland',sub:'Droge bulk survey · Kwaliteitsinspectie zaden',time:'Gisteren',cta:null,page:null},
 ];
+
+let activeReviewPageId=null,activeReviewBundle=null,activeReviewLink=null;
+let publicReviewToken=null,publicReviewBundle=null;
+let genPageId=null,genStage='pending',genRenderTimer=null,genPollLoopTimer=null;
 
 let dark=true;
 function toggleDark(){
@@ -1298,6 +1299,11 @@ function doLogin(user){
   }
 }
 window.addEventListener('DOMContentLoaded',async()=>{
+  const reviewToken=new URLSearchParams(window.location.search).get('review');
+  if(reviewToken){
+    await initPublicReviewMode(reviewToken);
+    return;
+  }
   document.getElementById('dmToggle').classList.add('on');
   document.getElementById('dmLabel').textContent='🌙';
   document.getElementById('loginEmail').value='kajslier@gmail.com';
@@ -1323,7 +1329,7 @@ function renderPage(p){
   else if(p==='settings')buildSettings(el);
 }
 
-let genStatus='idle',genMessage='',genJobId=null,genResult=null,genPollTimer=null;
+let genStatus='idle',genMessage='',genJobId=null,genResult=null;
 let savedKw='';
 
 function buildCreate(el){
@@ -1434,29 +1440,14 @@ function step2Html(){
 }
 function step3Html(){
   if(genStatus==='loading'||genStatus==='polling'){
-    if(!genJobId){
-      return '<div class="card" style="padding:28px 24px;">'
-        +'<div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">'
-        +'<div style="width:36px;height:36px;border-radius:50%;border:3px solid var(--accent);border-top-color:transparent;animation:spin 1s linear infinite;flex-shrink:0;"></div>'
-        +'<div><div style="font-weight:700;">Verzoek verstuurd naar n8n!</div>'
-        +'<div style="font-size:13px;color:var(--muted);">Zoekwoord: <strong>'+savedKw+'</strong></div></div></div>'
-        +'<div style="border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;">'
-        +'<p style="font-weight:600;font-size:13px;margin-bottom:8px;">Resultaat ontvangen? Doe dit eenmalig:</p>'
-        +'<p style="font-size:13px;color:var(--muted);line-height:1.8;margin:0;">'
-        +'1. Maak tabel <strong>content_jobs</strong> aan in Supabase (SQL Editor)<br>'
-        +'2. Voeg HTTP Request node toe aan n8n SEO-Processor-dev<br>'
-        +'3. Die schrijft het resultaat terug naar Supabase</p></div>'
-        +'<button class="btn btn-secondary btn-sm" onclick="goStep1()">Terug</button>'
-        +'</div>';
-    }
-    const msgs=['AI schrijft je varianten...','Zoekwoorden worden verwerkt...','Structuur wordt opgebouwd...','Bijna klaar...'];
-    const msg=msgs[Math.floor(Date.now()/4000)%msgs.length];
+    const stage=getStageCopy(genStage);
     return '<div class="card" style="text-align:center;padding:56px 24px;">'
       +'<div style="width:56px;height:56px;border-radius:50%;border:3px solid var(--accent);border-top-color:transparent;animation:spin 1s linear infinite;margin:0 auto 24px;"></div>'
-      +'<h3 style="font-size:18px;font-weight:700;margin-bottom:8px;">Varianten worden gegenereerd...</h3>'
-      +'<p style="color:var(--muted);margin-bottom:24px;font-size:14px;">'+msg+'</p>'
+      +'<div style="display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:var(--accent-subtle);color:var(--accent);font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:16px;">'+escHtml(genStage.replace(/_/g,' '))+'</div>'
+      +'<h3 style="font-size:18px;font-weight:700;margin-bottom:8px;">'+stage.title+'</h3>'
+      +'<p style="color:var(--muted);margin-bottom:24px;font-size:14px;max-width:520px;margin-left:auto;margin-right:auto;">'+stage.desc+'</p>'
       +'<div class="progress" style="max-width:260px;margin:0 auto 8px;"><div class="progress-fill" style="width:70%"></div></div>'
-      +'<p style="font-size:12px;color:var(--muted);">Dit duurt 30-60 seconden</p>'
+      +'<p style="font-size:12px;color:var(--muted);">Pipeline: draft &rarr; refine &rarr; quality check &rarr; review</p>'
       +'</div>';
   }
   if(genStatus==='done'&&genResult){
@@ -1466,28 +1457,36 @@ function step3Html(){
     const meta=activeVariant?.meta_description||'';
     const content=activeVariant?.content||'';
     const score=activeVariant?.seo_score||84;
+    const quality=activeVariant?.quality_score||0;
     const wc=activeVariant?.word_count||(content?content.replace(/<[^>]*>/g,'').trim().split(/\s+/).length:0);
+    const qualityNotes=(activeVariant?.quality_notes||[]).slice(0,3);
     return '<div style="display:flex;flex-direction:column;gap:16px;">'
       +'<div class="card" style="display:flex;align-items:center;gap:16px;padding:20px 24px;">'
       +'<div style="width:48px;height:48px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">&#9989;</div>'
       +'<div style="flex:1;"><div style="font-weight:700;font-size:16px;margin-bottom:2px;">'+(variants.length>1?'9 varianten gegenereerd!':'Artikel gegenereerd!')+'</div>'
-      +'<div style="font-size:13px;color:var(--muted);">'+wc+' woorden &middot; SEO score: <span style="color:'+(score>=80?'var(--accent)':score>=60?'#f59e0b':'#ef4444')+'">'+score+'</span></div></div>'
+      +'<div style="font-size:13px;color:var(--muted);">'+wc+' woorden &middot; SEO score: <span style="color:'+(score>=80?'var(--accent)':score>=60?'#f59e0b':'#ef4444')+'">'+score+'</span> &middot; Copy quality: <span style="color:'+(quality>=80?'var(--accent)':quality>=60?'#f59e0b':'#ef4444')+'">'+quality+'</span></div></div>'
       +'<div style="display:flex;gap:8px;">'
       +'<button class="btn btn-secondary btn-sm" onclick="copyResult()">Kopieer</button>'
+      +'<button class="btn btn-secondary btn-sm" onclick="createShareReviewLink()">Deel review</button>'
+      +'<button class="btn btn-secondary btn-sm" onclick="if(genPageId){openReviewPage(genPageId);nav(\'review\',document.getElementById(\'ni-review\'));}else{showToast(\'Sla eerst een pagina op.\');}">Naar review</button>'
       +'<button class="btn btn-primary btn-sm" onclick="genStatus=\'idle\';genResult=null;selectedVariantIndex=0;goStep1()">+ Nieuw</button>'
       +'</div></div>'
+      +'<div class="card" style="padding:18px 22px;"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Kwaliteitslaag</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:'+(qualityNotes.length?12:0)+'px;"><span class="tag tag-live">Refine-pass voltooid</span><span class="tag tag-review">Reviewstatus: '+escHtml((genResult.result?.review_status||genResult.review_status||'needs_review').replace(/_/g,' '))+'</span><span class="tag tag-grey">Beste variant automatisch gekozen</span></div>'
+      +(qualityNotes.length?'<div style="display:flex;flex-wrap:wrap;gap:8px;">'+qualityNotes.map(note=>'<span class="tag tag-grey">'+escHtml(note)+'</span>').join('')+'</div>':'')
+      +'</div>'
       +(variants.length?'<div class="card" style="padding:20px 24px;">'
         +'<div class="variant-toolbar" style="margin-bottom:16px;">'
-        +'<div class="variant-toolbar-left"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;">Copy varianten</div><p>Kies achteraf welke tekst het sterkst is. De actieve versie zie je hieronder volledig.</p></div>'
+        +'<div class="variant-toolbar-left"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;">Copy varianten</div><p>Kies achteraf welke tekst het sterkst is. De actieve versie is standaard de best scorende variant op kwaliteit en SEO.</p></div>'
         +'<div class="variant-banner"><div><strong>Actief: variant '+(selectedVariantIndex+1)+'</strong><br><span>'+(activeVariant?escHtml(activeVariant.title||'Zonder titel'):'Nog geen variant geselecteerd')+'</span></div></div>'
         +'</div>'
         +'<div class="variant-grid">'
         +variants.map((variant,idx)=>'<div class="variant-card'+(idx===selectedVariantIndex?' active':'')+'" onclick="selectVariant('+idx+')">'
           +(idx===selectedVariantIndex?'<div class="variant-card-mark"></div>':'')
-          +'<div class="variant-card-top"><div class="variant-card-index">Variant '+(idx+1)+'</div><div class="variant-card-score">SEO '+(variant.seo_score||score)+'</div></div>'
+          +'<div class="variant-card-top"><div class="variant-card-index">Variant '+(idx+1)+(variant.is_primary?' &middot; Beste match':'')+'</div><div class="variant-card-score">Q '+(variant.quality_score||0)+' &middot; SEO '+(variant.seo_score||score)+'</div></div>'
           +'<div class="variant-card-title">'+escHtml(variant.title||'Zonder titel')+'</div>'
           +'<div class="variant-card-meta">'+escHtml(variant.meta_description||'Geen meta omschrijving beschikbaar.')+'</div>'
-          +'<div class="variant-card-foot"><span>'+(variant.word_count||0)+' woorden</span><span>Klik om te openen</span></div>'
+          +'<div class="variant-card-foot"><span>'+(variant.word_count||0)+' woorden</span><span>Score '+(variant.combined_score||getVariantCombinedScore(variant))+'</span></div>'
           +'</div>').join('')
         +'</div></div>':'')
       +(title?'<div class="card" style="padding:20px 24px;"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Titel</div><div style="font-size:18px;font-weight:700;">'+escHtml(title)+'</div></div>':'')
@@ -1509,6 +1508,65 @@ function step3Html(){
 }
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function escAttr(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function getWorkspaceId(){return profile.default_workspace_id||currentWorkspaceId||'';}
+function isUuidValue(value){return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value||''));}
+function buildBrandProfileSnapshot(){
+  return {
+    company_name:profile.company_name||'',
+    website:profile.website||'',
+    services:profile.services||'',
+    target_audience:profile.target_audience||'',
+    buyer_persona:profile.buyer_persona||'',
+    prohibited_claims:profile.prohibited_claims||'',
+    style_preferences:profile.style_preferences||'',
+    positive_examples:profile.positive_examples||'',
+    negative_examples:profile.negative_examples||''
+  };
+}
+function buildToneProfile(){
+  return {
+    tone_label:profile.tone_label||profile.tone_nl||'',
+    voice_principles:profile.voice_principles||profile.tone_nl||'',
+    style_preferences:profile.style_preferences||''
+  };
+}
+function buildCustomerPreferences(){
+  return {
+    primary_cta:profile.primary_cta||'Vraag een gesprek of offerte aan',
+    preferred_length:profile.preferred_length||profile.paragraph_length||'medium',
+    locale:'nl-NL',
+    include_case_style:true,
+    require_fact_check:true
+  };
+}
+function formatShortDate(value){
+  if(!value)return '';
+  try{
+    return new Intl.DateTimeFormat('nl-NL',{day:'numeric',month:'short'}).format(new Date(value));
+  }catch(e){return value;}
+}
+function getVariantCombinedScore(variant){
+  return Number((((Number(variant.quality_score||0))*0.65)+((Number(variant.seo_score||0))*0.35)).toFixed(2));
+}
+function getPreferredVariantIndex(variants){
+  if(!Array.isArray(variants)||!variants.length)return 0;
+  let bestIdx=0,bestScore=-1;
+  variants.forEach((variant,idx)=>{
+    const score=getVariantCombinedScore(variant);
+    if(score>bestScore){bestScore=score;bestIdx=idx;}
+  });
+  return bestIdx;
+}
+function getStageCopy(status){
+  const map={
+    pending:{title:'Generatie staat in de rij...',desc:'De pipeline wordt klaargezet voor jullie contentjob.'},
+    drafting:{title:'Eerste concepten worden geschreven...',desc:'De draft-laag bouwt nu structuur, invalshoek en varianten op.'},
+    refining:{title:'Tekst wordt verfijnd...',desc:'De refine-pass maakt de copy vloeiender, menselijker en klantwaardiger.'},
+    scored:{title:'Kwaliteit wordt beoordeeld...',desc:'De beste variant wordt nu gekozen op copykwaliteit en SEO-signalen.'},
+    ready_for_review:{title:'Klaar voor review',desc:'De output staat klaar om te beoordelen en te delen.'}
+  };
+  return map[status]||map.pending;
+}
 function getResultVariants(result){
   const r=result||{};
   const res=r.result||{};
@@ -1528,12 +1586,16 @@ function getResultVariants(result){
 }
 function normalizeVariant(variant,idx){
   if(!variant)return null;
-  const title=variant.title||'';
+  const title=variant.title||''; 
   const meta=variant.meta_description||variant.meta||'';
   const content=variant.content||'';
   const seoScore=Number(variant.seo_score||variant.score||84)||84;
   const wordCount=Number(variant.word_count)||((content?content.replace(/<[^>]*>/g,' ').trim().split(/\s+/).filter(Boolean).length:0));
-  return {id:variant.id||('variant-'+idx),title:title,meta_description:meta,content:content,seo_score:seoScore,word_count:wordCount};
+  const qualityScore=Number(variant.quality_score||variant.copy_quality_score||0)||0;
+  const qualityNotes=Array.isArray(variant.quality_notes)?variant.quality_notes:[];
+  const qualitySummary=variant.quality_summary||'';
+  const combinedScore=getVariantCombinedScore({seo_score:seoScore,quality_score:qualityScore});
+  return {id:variant.id||('variant-'+idx),title:title,meta_description:meta,content:content,seo_score:seoScore,word_count:wordCount,quality_score:qualityScore,quality_notes:qualityNotes,quality_summary:qualitySummary,combined_score:combinedScore,is_primary:!!variant.is_primary};
 }
 function buildDisplayVariants(base){
   return [base,createVariantFromBase(base,1),createVariantFromBase(base,2)];
@@ -1576,6 +1638,128 @@ function copyResult(){
   const txt=[variant.title,variant.meta_description,'',content.replace(/<[^>]*>/g,'')].filter(Boolean).join('\n\n');
   navigator.clipboard.writeText(txt).then(()=>showToast('Gekopieerd!')).catch(()=>showToast('KopiÃ«ren mislukt'));
 }
+function mapPageToItem(page,primaryVariant){
+  const variant=primaryVariant||{};
+  return {
+    id:page.id,
+    page_id:page.id,
+    title:page.title||variant.title||'Ongetitelde pagina',
+    url:page.slug?('/review/'+page.slug):'',
+    kw:page.primary_keyword||savedKw||'',
+    status:page.status||'draft',
+    review_status:page.review_status||'needs_review',
+    words:Number(variant.word_count||0),
+    score:Number(page.seo_score||variant.seo_score||0),
+    quality_score:Number(page.quality_score||variant.quality_score||0),
+    date:formatShortDate(page.created_at||new Date().toISOString())
+  };
+}
+function registerGeneratedPage(resultPayload){
+  const page=resultPayload?.page||null;
+  const primary=resultPayload?.primary_variant||page?.primary_variant||null;
+  if(!page?.id)return;
+  genPageId=page.id;
+  const nextItem=mapPageToItem(page,primary);
+  const existingIndex=ITEMS.findIndex(item=>item.page_id===page.id||item.id===page.id);
+  if(existingIndex>=0)ITEMS.splice(existingIndex,1,nextItem);
+  else ITEMS.unshift(nextItem);
+}
+function clearGenerationTimers(){
+  if(genRenderTimer){clearInterval(genRenderTimer);genRenderTimer=null;}
+  if(genPollLoopTimer){clearInterval(genPollLoopTimer);genPollLoopTimer=null;}
+}
+function escapeInlineHtml(value){
+  return String(value||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function buildSimpleDemoContent(title,keyword,lead,cta){
+  return '<h1>'+escapeInlineHtml(title)+'</h1>'
+    +'<p>'+escapeInlineHtml(lead)+'</p>'
+    +'<h2>Waarom '+escapeInlineHtml(keyword)+' belangrijk is</h2>'
+    +'<p>Voor B2B-teams draait '+escapeInlineHtml(keyword)+' niet alleen om zichtbaarheid, maar om vertrouwen, duidelijkheid en snellere besluitvorming. Deze demo-opzet laat zien hoe ContentFlow in een paar stappen een bruikbare eerste versie kan neerzetten.</p>'
+    +'<h2>Wat een goede pagina moet doen</h2>'
+    +'<ul><li>Het onderwerp snel en helder uitleggen</li><li>Concrete voordelen benoemen voor de lezer</li><li>Logisch toewerken naar een volgende stap</li></ul>'
+    +'<h2>Aanpak</h2>'
+    +'<p>Deze eenvoudige variant gebruikt een heldere structuur, natuurlijke overgangen en een directe call-to-action. Zo kun je de flow laten zien zonder n8n of extra automationlaag.</p>'
+    +'<h2>Volgende stap</h2>'
+    +'<p>'+escapeInlineHtml(cta)+'</p>';
+}
+function buildSimpleDemoResponse(payload){
+  const keyword=payload.keyword||savedKw||'SEO content';
+  const companyName=payload.brand_profile_snapshot?.company_name||profile.company_name||'Jullie bedrijf';
+  const cta=payload.customer_preferences?.primary_cta||profile.primary_cta||'Vraag een gesprek of offerte aan';
+  const titleBase=keyword.charAt(0).toUpperCase()+keyword.slice(1);
+  const rawVariants=[
+    {
+      title:titleBase+' voor B2B teams',
+      meta_description:'Ontdek hoe '+keyword+' helpt om duidelijkere B2B-pagina\'s te maken en sneller tot actie te komen.',
+      content:buildSimpleDemoContent(titleBase+' voor B2B teams',keyword,'Deze demo-variant laat zien hoe '+companyName+' '+keyword+' kan uitleggen op een heldere, geloofwaardige manier.',cta),
+      seo_score:84,
+      quality_score:82,
+      quality_notes:['Helder uitgelegd','Goede structuur'],
+      quality_summary:'Gebalanceerde demo-variant'
+    },
+    {
+      title:titleBase+' met focus op conversie',
+      meta_description:'Lees hoe '+keyword+' B2B-beslissers sneller overtuigt en richting een concrete vervolgstap stuurt.',
+      content:buildSimpleDemoContent(titleBase+' met focus op conversie',keyword,'Deze variant is directer geschreven en stuurt sterker op commerciële duidelijkheid voor beslissers.',cta),
+      seo_score:81,
+      quality_score:79,
+      quality_notes:['Directe toon','Sterke CTA'],
+      quality_summary:'Commerciëlere demo-variant'
+    },
+    {
+      title:titleBase+' uitgelegd in gewone taal',
+      meta_description:'Een rustige, consultatieve uitleg van '+keyword+' voor teams die eerst duidelijkheid willen voor ze beslissen.',
+      content:buildSimpleDemoContent(titleBase+' uitgelegd in gewone taal',keyword,'Deze variant kiest een rustigere toon en legt het onderwerp stap voor stap uit voor lezers die zich nog oriënteren.',cta),
+      seo_score:78,
+      quality_score:80,
+      quality_notes:['Rustige toon','Toegankelijk'],
+      quality_summary:'Uitleggedreven demo-variant'
+    }
+  ].map((variant,idx)=>normalizeVariant({...variant,is_primary:idx===0},idx+1));
+  const variants=rawVariants.map((variant,idx)=>({
+    ...variant,
+    id:'demo-variant-'+(idx+1),
+    variant_index:idx+1,
+    is_primary:idx===0
+  }));
+  const primary=variants[0];
+  const now=new Date().toISOString();
+  const demoId='demo-'+Date.now();
+  return {
+    status:'ready_for_review',
+    job:{id:'demo-job-'+Date.now(),status:'ready_for_review',keyword:keyword,workspace_id:'demo-workspace',user_id:'demo-user'},
+    page:{
+      id:'demo-page-'+Date.now(),
+      title:primary.title,
+      primary_keyword:keyword,
+      status:'review',
+      review_status:'needs_review',
+      seo_score:primary.seo_score,
+      quality_score:primary.quality_score,
+      created_at:now,
+      updated_at:now,
+      primary_variant:primary
+    },
+    primary_variant:primary,
+    variants:variants,
+    seo_metadata:{primary_keyword:keyword,locale:'nl-NL',content_goal:payload.content_goal||'convince'},
+    review_status:'needs_review',
+    quality_score:primary.quality_score,
+    result:{
+      title:primary.title,
+      content:primary.content,
+      meta_description:primary.meta_description,
+      primary_variant:primary,
+      variants:variants,
+      quality_score:primary.quality_score,
+      seo_metadata:{primary_keyword:keyword,locale:'nl-NL',content_goal:payload.content_goal||'convince'},
+      review_status:'needs_review',
+      content_page_id:'demo-page-'+demoId,
+      job_lifecycle:['pending','drafting','ready_for_review']
+    }
+  };
+}
 function togglePremise(i){
   if(selPremises.has(i))selPremises.delete(i);else selPremises.add(i);
   buildCreate(document.getElementById('pg-create'));
@@ -1590,107 +1774,78 @@ function goStep2(){
 function goStep3(){
   savedKw=savedKw||(document.getElementById('kwInput2')||{}).value||'';
   selectedVariantIndex=0;
+  genPageId=null;genStage='pending';
   genStatus='loading';genMessage='';genJobId=null;genResult=null;
-  if(genPollTimer){clearInterval(genPollTimer);genPollTimer=null;}
+  if(genRenderTimer){clearInterval(genRenderTimer);genRenderTimer=null;}
+  if(genPollLoopTimer){clearInterval(genPollLoopTimer);genPollLoopTimer=null;}
   wStep=3;buildCreate(document.getElementById('pg-create'));
   triggerGeneration();
 }
 async function triggerGeneration(){
   const kw=savedKw;
-  let jobId=null;
-  if(supa&&currentUser&&!currentUser.is_demo){
-    try{
-      const{data}=await supa.from('content_jobs').insert({
-        user_id:currentUser.id,keyword:kw,status:'pending'
-      }).select('id').single();
-      if(data)jobId=data.id;
-    }catch(e){console.warn('content_jobs insert failed:',e.message);}
-  }
-  genJobId=jobId;
-  console.log('[triggerGeneration] jobId:', jobId);
+  const workspaceId=getWorkspaceId();
+  const brandSnapshot=buildBrandProfileSnapshot();
+  const toneProfile=buildToneProfile();
+  const customerPreferences=buildCustomerPreferences();
   const payload={
-    action:'Create New Page',keyword:kw,
-    locale:'Dutch (Netherlands)',
+    keyword:kw,
+    workspace_id:workspaceId,
+    user_id:currentUser.id,
+    content_goal:savedGoal||'convince',
     source_content:getSourceContent(),
-    company_name:profile.company_name||'',
-    tone_nl:profile.tone_nl||'',
-    services:profile.services||'',
-    userToken:getWHToken(),
-    job_id:jobId||'',
-    user_id:currentUser?.id||'',
     xml_template:getXmlTemplate()||'',
     xml_template_name:getXmlTemplateName()||'',
-    content_goal:savedGoal||'convince'
+    template_id:null,
+    brand_profile_snapshot:brandSnapshot,
+    tone_profile:toneProfile,
+    customer_preferences:customerPreferences
   };
-  genStatus='polling';
+  genStatus='loading';
+  genStage='drafting';
   buildCreate(document.getElementById('pg-create'));
-  genPollTimer=setInterval(()=>{
+  genRenderTimer=setInterval(()=>{
     const el=document.getElementById('pg-create');
-    if(el&&(genStatus==='loading'||genStatus==='polling'))buildCreate(el);
+    if(el&&genStatus==='loading')buildCreate(el);
   },600);
-  const webhookUrl=PROCESSOR_URL+(jobId?'?job_id='+encodeURIComponent(jobId):'');
-  // Primaire methode: lees de n8n response direct (n8n antwoordt met artikel JSON)
-  // Fallback: poll Supabase als CORS niet werkt
+  const shouldUseSimpleDemo=IS_LOCAL||!currentUser||currentUser.is_demo||!isUuidValue(workspaceId)||!isUuidValue(currentUser.id);
   (async()=>{
     try{
-      console.log('[fetch] Versturen naar n8n, wacht op antwoord...');
-      const resp=await fetch(webhookUrl,{
+      if(shouldUseSimpleDemo){
+        await new Promise(resolve=>setTimeout(resolve,900));
+        const data=buildSimpleDemoResponse(payload);
+        clearGenerationTimers();
+        genStatus='done';
+        genStage='ready_for_review';
+        genJobId=data?.job?.id||null;
+        genResult=data?.result?data:{status:'ready_for_review',result:data};
+        selectedVariantIndex=getPreferredVariantIndex(getResultVariants(genResult));
+        registerGeneratedPage(data);
+        buildCreate(document.getElementById('pg-create'));
+        showToast('Demo-variant gegenereerd zonder backend');
+        return;
+      }
+      const resp=await fetch(GENERATE_CONTENT_ENDPOINT,{
         method:'POST',
-        headers:{'Content-Type':'text/plain'},
+        headers:{'Content-Type':'application/json'},
         body:JSON.stringify(payload)
       });
-      console.log('[fetch] Response status:', resp.status);
-      if(resp.ok&&(genStatus==='loading'||genStatus==='polling')){
-        let data=null;
-        try{data=await resp.json();}catch(e){console.warn('[fetch] JSON parse fout:',e.message);}
-        console.log('[fetch] Response data:', data);
-        if(data&&(data.title||data.content)){
-          clearInterval(genPollTimer);genPollTimer=null;
-          genStatus='done';
-          genResult={status:'done',result:{
-            title:data.title||'',
-            content:data.content||'',
-            meta_description:data.meta_description||''
-          }};
-          const el=document.getElementById('pg-create');
-          if(el)buildCreate(el);
-          return;
-        }
-      }
+      const data=await resp.json().catch(()=>null);
+      if(!resp.ok)throw new Error(data?.error||'Content generatie mislukte.');
+      clearGenerationTimers();
+      genStatus='done';
+      genStage=data?.status||'ready_for_review';
+      genJobId=data?.job?.id||null;
+      genResult=data?.result?data:{status:'ready_for_review',result:data};
+      selectedVariantIndex=getPreferredVariantIndex(getResultVariants(genResult));
+      registerGeneratedPage(data);
+      buildCreate(document.getElementById('pg-create'));
     }catch(e){
-      console.log('[fetch] Direct response niet beschikbaar (CORS?), val terug op polling:', e.message);
+      clearGenerationTimers();
+      genStatus='error';
+      genMessage=e.message||'Content generatie mislukte.';
+      buildCreate(document.getElementById('pg-create'));
     }
-    // Fallback: Supabase polling
-    if(jobId&&supa){startResultPolling(jobId);}
   })();
-}
-function getSourceContent(){const el=document.getElementById('dzPreview');return el?(el.innerText||el.textContent||'').substring(0,3000):'';}
-function startResultPolling(jobId){
-  let attempts=0;
-  const poll=async()=>{
-    attempts++;
-    if(attempts>40){
-      clearInterval(genPollTimer);genPollTimer=null;
-      genStatus='error';genMessage='Tijdlimiet overschreden. Probeer opnieuw.';
-      buildCreate(document.getElementById('pg-create'));return;
-    }
-    try{
-      const{data,error}=await supa.from('content_jobs').select('*').eq('id',jobId).single();
-      console.log('[poll]',attempts,'status:',data?.status,'error:',error?.message);
-      if(error){console.error('[poll] Supabase error:',error);return;}
-      if(data&&(data.status==='done'||data.result)){
-        clearInterval(genPollTimer);genPollTimer=null;
-        genStatus='done';genResult=data;
-        buildCreate(document.getElementById('pg-create'));
-      }else if(data&&data.status==='error'){
-        clearInterval(genPollTimer);genPollTimer=null;
-        genStatus='error';genMessage=data.error_message||'Processor fout.';
-        buildCreate(document.getElementById('pg-create'));
-      }
-    }catch(e){console.error('[poll] exception:',e);}
-  };
-  setTimeout(poll,3000);
-  setInterval(poll,5000);
 }
 function dzOver(e){e.preventDefault();document.getElementById('dz').classList.add('over');}
 function dzLeave(e){document.getElementById('dz').classList.remove('over');}
@@ -1875,17 +2030,192 @@ function buildKanban(el){
     }).join('')
     +'</div>';
 }
+async function loadReviewBundle(pageId){
+  if(!pageId)return null;
+  if(!IS_LOCAL){
+    try{
+      const resp=await fetch('/.netlify/functions/content-page?id='+encodeURIComponent(pageId));
+      const data=await resp.json();
+      if(resp.ok&&data?.page)return data;
+    }catch(e){
+      console.warn('content-page endpoint fallback naar Supabase:',e.message);
+    }
+  }
+  if(supa&&currentUser&&!currentUser.is_demo){
+    try{
+      const pageResp=await supa.from('content_pages').select('*').eq('id',pageId).single();
+      if(pageResp.error)throw pageResp.error;
+      const variantResp=await supa.from('content_variants').select('*').eq('page_id',pageId).order('variant_index',{ascending:true});
+      if(variantResp.error)throw variantResp.error;
+      const commentResp=await supa.from('review_comments').select('*').eq('page_id',pageId).order('created_at',{ascending:true});
+      if(commentResp.error)throw commentResp.error;
+      const variants=(variantResp.data||[]).map((variant,idx)=>normalizeVariant(variant,idx));
+      const page=pageResp.data||{};
+      const primary=variants.find(v=>v.id===page.selected_variant_id)||variants.find(v=>v.is_primary)||variants[getPreferredVariantIndex(variants)]||variants[0]||null;
+      return {
+        page:{
+          id:page.id,
+          title:page.title,
+          primary_keyword:page.primary_keyword||'',
+          status:page.status||'draft',
+          review_status:page.review_status||'needs_review',
+          seo_score:Number(page.seo_score||0),
+          quality_score:Number(page.quality_score||0),
+          primary_variant:primary
+        },
+        variants,
+        comments:(commentResp.data||[]).map(row=>({
+          id:row.id,
+          category:row.category,
+          quote_text:row.quote_text||'',
+          anchor_text:row.anchor_text||'',
+          comment:row.comment,
+          commenter_name:row.commenter_name||'Reviewer',
+          created_at:row.created_at
+        }))
+      };
+    }catch(e){console.warn('Review bundle laden mislukt:',e.message);}
+  }
+  const item=ITEMS.find(entry=>String(entry.id)===String(pageId))||ITEMS.find(entry=>entry.status!=='live')||ITEMS[0];
+  if(!item)return null;
+  return {
+    page:{
+      id:item.id,
+      title:item.title,
+      primary_keyword:item.kw,
+      status:item.status,
+      review_status:item.review_status||'needs_review',
+      seo_score:Number(item.score||0),
+      quality_score:Number(item.quality_score||0),
+      primary_variant:genResult?getResultVariants(genResult)[selectedVariantIndex]||getResultVariants(genResult)[0]:null
+    },
+    variants:genResult?getResultVariants(genResult):[],
+    comments:[]
+  };
+}
+async function openReviewPage(pageId){
+  activeReviewPageId=pageId;
+  activeReviewBundle=await loadReviewBundle(pageId);
+  buildReview(document.getElementById('pg-review'));
+}
+async function createShareReviewLink(){
+  const pageId=activeReviewPageId||genPageId;
+  if(!pageId){showToast('Sla eerst een pagina op voordat je een reviewlink deelt.');return;}
+  if(IS_LOCAL){showToast('Reviewlinks werken op de live Netlify-versie.');return;}
+  try{
+    const resp=await fetch('/.netlify/functions/review-links',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        workspace_id:getWorkspaceId(),
+        page_id:pageId,
+        created_by:currentUser?.id||null,
+        expires_in_days:7,
+        message:'Laat vooral weten of de toon, helderheid en overtuigingskracht goed aanvoelen.'
+      })
+    });
+    const data=await resp.json();
+    if(!resp.ok)throw new Error(data.error||'Kon reviewlink niet maken.');
+    activeReviewLink=data.review_link;
+    await navigator.clipboard.writeText(data.review_link.url);
+    showToast('Reviewlink gekopieerd!');
+  }catch(e){
+    showToast('Reviewlink mislukt: '+e.message);
+  }
+}
+async function addReviewComment(){
+  const pageId=activeReviewPageId;
+  if(!pageId)return;
+  const category=(document.getElementById('reviewCommentCategory')||{}).value||'clarity';
+  const quote=(document.getElementById('reviewCommentQuote')||{}).value||'';
+  const comment=(document.getElementById('reviewCommentInput')||{}).value||'';
+  const commenter=(document.getElementById('reviewCommenterName')||{}).value||'Editor';
+  if(!comment.trim()){showToast('Voeg eerst een opmerking toe.');return;}
+  try{
+    if(supa&&currentUser&&!currentUser.is_demo){
+      const variantId=activeReviewBundle?.page?.primary_variant?.id||null;
+      const insert=await supa.from('review_comments').insert({
+        review_link_id:null,
+        page_id:pageId,
+        variant_id:variantId,
+        category:category,
+        quote_text:quote,
+        anchor_text:quote,
+        comment:comment,
+        commenter_name:commenter,
+        created_by:currentUser.id
+      }).select('*').single();
+      if(insert.error)throw insert.error;
+    }else{
+      activeReviewBundle.comments.push({
+        id:'local-'+Date.now(),
+        category,
+        quote_text:quote,
+        anchor_text:quote,
+        comment,
+        commenter_name:commenter,
+        created_at:new Date().toISOString()
+      });
+    }
+    activeReviewBundle=await loadReviewBundle(pageId);
+    buildReview(document.getElementById('pg-review'));
+    showToast('Reviewopmerking opgeslagen.');
+  }catch(e){
+    showToast('Comment opslaan mislukt: '+e.message);
+  }
+}
+async function approveReviewPage(){
+  const pageId=activeReviewPageId;
+  if(!pageId||!supa||!currentUser||currentUser.is_demo){showToast('Goedkeuren werkt alleen voor opgeslagen pagina’s.');return;}
+  try{
+    const update=await supa.from('content_pages').update({
+      status:'approved',
+      review_status:'approved',
+      updated_at:new Date().toISOString()
+    }).eq('id',pageId);
+    if(update.error)throw update.error;
+    activeReviewBundle=await loadReviewBundle(pageId);
+    await loadContentItems();
+    buildReview(document.getElementById('pg-review'));
+    showToast('Pagina goedgekeurd voor publicatie.');
+  }catch(e){
+    showToast('Goedkeuren mislukt: '+e.message);
+  }
+}
 function buildReview(el){
+  const reviewItems=ITEMS.filter(i=>i.status!=='live');
+  if(!activeReviewPageId&&reviewItems[0])activeReviewPageId=reviewItems[0].id;
+  if(!activeReviewBundle&&activeReviewPageId){
+    setTimeout(()=>openReviewPage(activeReviewPageId),0);
+  }
+  const bundle=activeReviewBundle;
+  const primary=bundle?.page?.primary_variant||null;
+  const comments=bundle?.comments||[];
   el.innerHTML='<div style="display:flex;height:100%;overflow:hidden;">'
-    +'<div style="width:220px;border-right:1px solid var(--border);overflow-y:auto;padding:16px;">'
+    +'<div style="width:260px;border-right:1px solid var(--border);overflow-y:auto;padding:16px;">'
     +'<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px;">Te reviewen</div>'
-    +ITEMS.filter(i=>i.status!=='live').map(i=>'<div class="card" style="padding:10px 12px;margin-bottom:8px;cursor:pointer;">'
-      +'<div class="font-600 text-sm">'+i.title+'</div>'
-      +'<div class="text-xs text-muted">'+i.kw+'</div></div>').join('')
+    +reviewItems.map(i=>'<div class="card" onclick="openReviewPage(\''+i.id+'\')" style="padding:12px 14px;margin-bottom:8px;cursor:pointer;border-color:'+(String(i.id)===String(activeReviewPageId)?'var(--accent)':'var(--border)')+';">'
+      +'<div class="font-600 text-sm" style="margin-bottom:6px;">'+escHtml(i.title)+'</div>'
+      +'<div class="text-xs text-muted" style="margin-bottom:8px;">'+escHtml(i.kw||'')+'</div>'
+      +'<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);"><span>SEO '+(i.score||0)+'</span><span>Quality '+(i.quality_score||0)+'</span></div></div>').join('')
     +'</div>'
     +'<div style="flex:1;overflow-y:auto;padding:24px;">'
-    +'<div class="page-header"><div><h2>Review editor</h2><p>Selecteer een artikel links.</p></div></div>'
-    +'<div class="card"><p style="color:var(--muted);">Klik op een artikel om het te openen.</p></div>'
+    +'<div class="page-header"><div><h2>Review editor</h2><p>'+(bundle?'Gebruik deze weergave om flow, toon en overtuigingskracht te finetunen.':'Selecteer een artikel links.')+'</p></div>'
+    +(bundle?'<div style="display:flex;gap:8px;"><button class="btn btn-secondary btn-sm" onclick="createShareReviewLink()">Deel reviewlink</button><button class="btn btn-primary btn-sm" onclick="approveReviewPage()">Goedkeuren</button></div>':'')
+    +'</div>'
+    +(bundle?'<div style="display:flex;flex-direction:column;gap:16px;">'
+      +'<div class="card" style="padding:18px 20px;"><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;"><div><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Actieve reviewpagina</div><div style="font-size:20px;font-weight:700;margin-bottom:8px;">'+escHtml(bundle.page.title||'')+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><span class="tag tag-review">Reviewstatus: '+escHtml((bundle.page.review_status||'needs_review').replace(/_/g,' '))+'</span><span class="tag tag-grey">SEO '+(bundle.page.seo_score||0)+'</span><span class="tag tag-grey">Quality '+(bundle.page.quality_score||0)+'</span></div></div>'
+      +(activeReviewLink?'<div class="card" style="padding:12px 14px;min-width:280px;"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">Reviewlink</div><div style="font-size:12px;word-break:break-all;">'+escHtml(activeReviewLink.url)+'</div></div>':'')
+      +'</div></div>'
+      +(primary?'<div class="card" style="padding:20px 24px;"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Primaire variant</div><div style="font-size:18px;font-weight:700;margin-bottom:8px;">'+escHtml(primary.title||'')+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">'+(primary.quality_notes||[]).slice(0,3).map(note=>'<span class="tag tag-grey">'+escHtml(note)+'</span>').join('')+'</div><div style="font-size:14px;line-height:1.8;">'+(primary.content||'')+'</div></div>':'')
+      +'<div class="card" style="padding:20px 24px;"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;">Review feedback</div>'
+      +(comments.length?'<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px;">'+comments.map(comment=>'<div style="padding:12px 14px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);"><div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:6px;"><span class="tag tag-grey">'+escHtml(comment.category||'clarity')+'</span><span style="font-size:11px;color:var(--muted);">'+escHtml(comment.commenter_name||'Reviewer')+'</span></div>'+(comment.quote_text?'<div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-style:italic;">"'+escHtml(comment.quote_text)+'"</div>':'')+'<div style="font-size:13px;line-height:1.6;">'+escHtml(comment.comment||'')+'</div></div>').join('')+'</div>':'<div class="variant-empty" style="margin-bottom:18px;">Nog geen reviewfeedback opgeslagen.</div>')
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;"><div><label class="form-label">Categorie</label><select id="reviewCommentCategory" class="form-control"><option value="tone">Tone</option><option value="clarity" selected>Clarity</option><option value="accuracy">Accuracy</option><option value="conversion">Conversion</option><option value="structure">Structure</option></select></div><div><label class="form-label">Naam</label><input id="reviewCommenterName" class="form-control" value="'+escAttr(currentUser?.email||'Reviewer')+'"></div></div>'
+      +'<div class="form-group"><label class="form-label">Quote / ankertekst</label><input id="reviewCommentQuote" class="form-control" placeholder="Bijvoorbeeld een zin of sectie waar de feedback op slaat."></div>'
+      +'<div class="form-group" style="margin-bottom:12px;"><label class="form-label">Opmerking</label><textarea id="reviewCommentInput" class="form-control" placeholder="Waar moet de copy scherper, duidelijker of overtuigender worden?"></textarea></div>'
+      +'<button class="btn btn-primary btn-sm" onclick="addReviewComment()">Opmerking opslaan</button></div>'
+      +'</div>'
+      :'<div class="card"><p style="color:var(--muted);">Klik op een artikel om het te openen.</p></div>')
     +'</div></div>';
 }
 function buildKnowledge(el){
@@ -1905,6 +2235,13 @@ function settingsHtml(){
       +'<div class="form-group"><label class="form-label">Website</label><input id="companyWebsite" class="form-control" value="'+(profile.website||'')+'"></div>'
       +'<div class="form-group"><label class="form-label">KVK-nummer</label><input id="companyKvk" class="form-control" value="'+(profile.kvk||'')+'"></div>'
       +'<div class="form-group"><label class="form-label">Tone of voice</label><textarea id="companyTone" class="form-control">'+(profile.tone_nl||'')+'</textarea></div>'
+      +'<div class="form-group"><label class="form-label">Doelgroep / ICP</label><textarea id="companyAudience" class="form-control">'+(profile.target_audience||'')+'</textarea></div>'
+      +'<div class="form-group"><label class="form-label">Buyer persona / beslisser</label><textarea id="companyBuyerPersona" class="form-control">'+(profile.buyer_persona||'')+'</textarea></div>'
+      +'<div class="form-group"><label class="form-label">Stijlvoorkeuren</label><textarea id="companyStylePrefs" class="form-control">'+(profile.style_preferences||'')+'</textarea></div>'
+      +'<div class="form-group"><label class="form-label">Verboden woorden of claims</label><textarea id="companyProhibitedClaims" class="form-control">'+(profile.prohibited_claims||'')+'</textarea></div>'
+      +'<div class="form-group"><label class="form-label">Voorbeelden die wel passen</label><textarea id="companyPositiveExamples" class="form-control">'+(profile.positive_examples||'')+'</textarea></div>'
+      +'<div class="form-group"><label class="form-label">Voorbeelden die niet passen</label><textarea id="companyNegativeExamples" class="form-control">'+(profile.negative_examples||'')+'</textarea></div>'
+      +'<div class="form-group"><label class="form-label">Primaire CTA</label><input id="companyPrimaryCta" class="form-control" value="'+(profile.primary_cta||'Vraag een gesprek of offerte aan')+'"></div>'
       +'<div class="form-group" style="margin-bottom:0;"><label class="form-label">Diensten / producten</label><textarea id="companyServices" class="form-control">'+(profile.services||'')+'</textarea></div>'
       +'<div class="mt-4" style="display:flex;gap:10px;align-items:center;">'
       +'<button class="btn btn-primary" onclick="saveCompany()">Opslaan</button>'
@@ -1963,7 +2300,7 @@ function settingsHtml(){
     const ints=[
       {n:'Google Search Console',icon:'🔍',s:'Verbonden',on:true},
       {n:'Supabase (database)',icon:'🗄️',s:'Verbonden',on:true},
-      {n:'n8n (automation)',icon:'⚙️',s:'Verbonden',on:true},
+      {n:'TypeScript content engine',icon:'🧠',s:'Actief via Netlify function',on:true},
       {n:'OpenAI Realtime Voice',icon:'🎤',s:'Klaar voor beta',on:true},
       {n:'Vercel (hosting)',icon:'▲',s:'Verbonden',on:true},
       {n:'Firecrawl',icon:'🔥',s:'Niet verbonden',on:false},
@@ -1988,11 +2325,9 @@ function settingsHtml(){
       +'<input id="oaiKeyInput" class="form-control" type="password" placeholder="sk-..." value="'+oaiKey+'" style="flex:1;">'
       +'<button class="btn btn-secondary btn-sm" onclick="setOAIKey(document.getElementById(\'oaiKeyInput\').value);showToast(\'Opgeslagen!\')">Opslaan</button>'
       +'</div><div class="form-hint">Voor MP3/WAV transcriptie via Whisper.</div></div>'
-      +'<div class="form-group"><label class="form-label">n8n Webhook token</label>'
-      +'<div style="display:flex;gap:8px;">'
-      +'<input id="whTokenInput" class="form-control" type="password" placeholder="tok_user..." value="'+getWHToken()+'" style="flex:1;">'
-      +'<button class="btn btn-secondary btn-sm" onclick="setWHToken(document.getElementById(\'whTokenInput\').value);showToast(\'Opgeslagen!\')">Opslaan</button>'
-      +'</div><div class="form-hint">Persoonlijke token voor de n8n content pipeline.</div></div>'
+      +'<div class="form-group"><label class="form-label">Content generatie endpoint</label>'
+      +'<input class="form-control" value="/.netlify/functions/generate-content" readonly>'
+      +'<div class="form-hint">De frontend praat nu direct met 1 TypeScript Netlify function. n8n is geen runtime-afhankelijkheid meer.</div></div>'
       +'<div class="settings-block" style="margin-top:18px;"><h3>Realtime voice beta</h3>'
       +'<p>Voice gebruikt een session-endpoint op Netlify, volgens het patroon uit OpenAI\'s realtime voice component.</p>'
       +'<div class="form-group"><label class="form-label">Session endpoint</label>'
@@ -2031,7 +2366,19 @@ function setTrust(idx,el){
 
 async function loadProfile(){
   if(!supa||!currentUser||currentUser.is_demo)return;
-  try{const{data}=await supa.from('profiles').select('*').eq('id',currentUser.id).single();if(data)profile=data;}catch(e){}
+  currentWorkspaceId='';
+  try{
+    const{data}=await supa.from('profiles').select('*').eq('id',currentUser.id).single();
+    if(data)profile=data;
+  }catch(e){}
+  if(profile.default_workspace_id&&isUuidValue(profile.default_workspace_id)){
+    currentWorkspaceId=profile.default_workspace_id;
+    return;
+  }
+  try{
+    const{data,error}=await supa.from('workspaces').select('id,owner_user_id,name').eq('owner_user_id',currentUser.id).order('created_at',{ascending:true}).limit(1).maybeSingle();
+    if(!error&&data?.id)currentWorkspaceId=data.id;
+  }catch(e){}
 }
 async function loadContentItems(){
   // Placeholder — ITEMS array serves as content store for now
@@ -2053,6 +2400,13 @@ function saveCompany(){
     website:(document.getElementById('companyWebsite')||{}).value||'',
     kvk:(document.getElementById('companyKvk')||{}).value||'',
     tone_nl:(document.getElementById('companyTone')||{}).value||'',
+    target_audience:(document.getElementById('companyAudience')||{}).value||'',
+    buyer_persona:(document.getElementById('companyBuyerPersona')||{}).value||'',
+    style_preferences:(document.getElementById('companyStylePrefs')||{}).value||'',
+    prohibited_claims:(document.getElementById('companyProhibitedClaims')||{}).value||'',
+    positive_examples:(document.getElementById('companyPositiveExamples')||{}).value||'',
+    negative_examples:(document.getElementById('companyNegativeExamples')||{}).value||'',
+    primary_cta:(document.getElementById('companyPrimaryCta')||{}).value||'Vraag een gesprek of offerte aan',
     services:(document.getElementById('companyServices')||{}).value||''
   });
 }
@@ -2063,13 +2417,111 @@ function loadDemoProfile(){
     company_name:'Control Union',
     website:'https://www.controlunion.com',
     tone_nl:'Professioneel, betrouwbaar en technisch onderbouwd. Directe schrijfstijl gericht op beslissers in agrifood, maritiem en industrie. Geen jargon, wel precisie.',
+    target_audience:'Operations managers, kwaliteitsmanagers en procurement leads bij internationale B2B-organisaties in agrifood, energie, logistiek en maritiem.',
+    buyer_persona:'Een kritische B2B-beslisser die zekerheid, compliance en operationele betrouwbaarheid zoekt.',
+    style_preferences:'Schrijf consultatief, helder en overtuigend. Gebruik natuurlijke overgangen, concrete voorbeelden en geen opgeblazen marketingtaal.',
+    prohibited_claims:'Vermijd absolute claims zoals beste, nummer 1, gegarandeerd resultaat zonder bewijs.',
+    positive_examples:'Klinkt sterk wanneer de tekst concreet benoemt hoe inspecties risico verlagen, kwaliteit borgen en besluitvorming versnellen.',
+    negative_examples:'Niet te algemeen, niet te veel buzzwords, geen vage innovatieclaims zonder context.',
+    primary_cta:'Vraag een inspectiegesprek of offerte aan',
     services:'Tankinspectie, containerinspectie (voedsel & agri), graanopslag inspectie, maritieme survey, fumigatie certificering, ISO 17020 gecertificeerde inspecties, kwaliteitscontrole agrarische import, droge bulk inspectie'
   };
   Object.assign(profile,cu);
   // Fill fields if settings tab is open
-  const fields={companyName:cu.company_name,companyWebsite:cu.website,companyTone:cu.tone_nl,companyServices:cu.services};
+  const fields={companyName:cu.company_name,companyWebsite:cu.website,companyTone:cu.tone_nl,companyAudience:cu.target_audience,companyBuyerPersona:cu.buyer_persona,companyStylePrefs:cu.style_preferences,companyProhibitedClaims:cu.prohibited_claims,companyPositiveExamples:cu.positive_examples,companyNegativeExamples:cu.negative_examples,companyPrimaryCta:cu.primary_cta,companyServices:cu.services};
   Object.entries(fields).forEach(([id,val])=>{const el=document.getElementById(id);if(el)el.value=val;});
   showToast('Control Union demoprofiel geladen!');
+}
+
+async function loadContentItems(){
+  if(!supa||!currentUser||currentUser.is_demo)return Promise.resolve();
+  try{
+    const workspaceId=getWorkspaceId();
+    if(!workspaceId)return Promise.resolve();
+    const pageResp=await supa.from('content_pages').select('*').eq('workspace_id',workspaceId).order('created_at',{ascending:false});
+    if(pageResp.error)throw pageResp.error;
+    const pages=pageResp.data||[];
+    if(!pages.length)return Promise.resolve();
+    const pageIds=pages.map(page=>page.id);
+    const variantResp=await supa.from('content_variants').select('*').in('page_id',pageIds).order('variant_index',{ascending:true});
+    if(variantResp.error)throw variantResp.error;
+    const grouped=(variantResp.data||[]).reduce((acc,row)=>{
+      (acc[row.page_id]=acc[row.page_id]||[]).push(normalizeVariant(row,(row.variant_index||1)-1));
+      return acc;
+    },{});
+    ITEMS=pages.map(page=>{
+      const variants=grouped[page.id]||[];
+      const primary=variants.find(variant=>variant.id===page.selected_variant_id)||variants.find(variant=>variant.is_primary)||variants[getPreferredVariantIndex(variants)]||variants[0]||null;
+      return mapPageToItem(page,primary);
+    });
+  }catch(e){
+    console.warn('Content items laden mislukt:',e.message);
+  }
+  return Promise.resolve();
+}
+
+async function initPublicReviewMode(token){
+  publicReviewToken=token;
+  document.getElementById('loginWrap').style.display='none';
+  document.getElementById('appWrap').classList.add('hidden');
+  document.getElementById('fabWrap').style.display='none';
+  document.getElementById('voiceDock').style.display='none';
+  document.body.innerHTML='<div style="min-height:100vh;padding:40px 20px;background:var(--bg);color:var(--text);"><div style="max-width:980px;margin:0 auto;"><div class="card" style="padding:22px 24px;margin-bottom:18px;"><div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">ContentFlow review</div><div style="font-size:26px;font-weight:800;">Reviewlink laden...</div><p style="color:var(--muted);margin-top:8px;">Even geduld, we halen de pagina en feedback op.</p></div></div></div>';
+  try{
+    const resp=await fetch('/.netlify/functions/review-token?token='+encodeURIComponent(token));
+    const data=await resp.json();
+    if(!resp.ok)throw new Error(data.error||'Kon review niet laden.');
+    publicReviewBundle=data;
+    renderPublicReview();
+  }catch(e){
+    document.body.innerHTML='<div style="min-height:100vh;padding:40px 20px;background:var(--bg);color:var(--text);"><div style="max-width:760px;margin:0 auto;"><div class="card" style="padding:24px;"><div style="font-size:24px;font-weight:800;margin-bottom:10px;">Review niet beschikbaar</div><p style="color:var(--muted);">'+escHtml(e.message)+'</p></div></div></div>';
+  }
+}
+function renderPublicReview(){
+  const bundle=publicReviewBundle;
+  const comments=bundle?.comments||[];
+  const primary=bundle?.page?.primary_variant||null;
+  document.body.innerHTML='<div style="min-height:100vh;padding:40px 20px;background:var(--bg);color:var(--text);"><div style="max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:18px;">'
+    +'<div class="card" style="padding:22px 24px;"><div style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start;"><div><div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">ContentFlow review</div><div style="font-size:28px;font-weight:800;margin-bottom:10px;">'+escHtml(bundle?.page?.title||'Review')+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><span class="tag tag-review">Reviewstatus: '+escHtml((bundle?.page?.review_status||'needs_review').replace(/_/g,' '))+'</span><span class="tag tag-grey">SEO '+(bundle?.page?.seo_score||0)+'</span><span class="tag tag-grey">Quality '+(bundle?.page?.quality_score||0)+'</span></div></div><button class="btn btn-primary btn-sm" onclick="approvePublicReview()">Goedkeuren voor publicatie</button></div>'+(bundle?.review_link?.message?'<div style="margin-top:14px;padding:14px 16px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);font-size:13px;color:var(--text2);">'+escHtml(bundle.review_link.message)+'</div>':'')+'</div>'
+    +(primary?'<div class="card" style="padding:24px;"><div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Primaire variant</div><div style="font-size:20px;font-weight:800;margin-bottom:12px;">'+escHtml(primary.title||'')+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">'+(primary.quality_notes||[]).slice(0,4).map(note=>'<span class="tag tag-grey">'+escHtml(note)+'</span>').join('')+'</div><div style="font-size:14px;line-height:1.85;">'+(primary.content||'')+'</div></div>':'')
+    +'<div class="card" style="padding:22px 24px;"><div style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Feedback</div>'
+    +(comments.length?'<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px;">'+comments.map(comment=>'<div style="padding:12px 14px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);"><div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:6px;"><span class="tag tag-grey">'+escHtml(comment.category||'clarity')+'</span><span style="font-size:11px;color:var(--muted);">'+escHtml(comment.commenter_name||'Reviewer')+'</span></div>'+(comment.quote_text?'<div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-style:italic;">"'+escHtml(comment.quote_text)+'"</div>':'')+'<div style="font-size:13px;line-height:1.6;">'+escHtml(comment.comment||'')+'</div></div>').join('')+'</div>':'<div class="variant-empty" style="margin-bottom:18px;">Nog geen feedback toegevoegd.</div>')
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;"><div><label class="form-label">Categorie</label><select id="publicReviewCategory" class="form-control"><option value="tone">Tone</option><option value="clarity" selected>Clarity</option><option value="accuracy">Accuracy</option><option value="conversion">Conversion</option><option value="structure">Structure</option></select></div><div><label class="form-label">Naam</label><input id="publicReviewName" class="form-control" placeholder="Jouw naam"></div></div>'
+    +'<div class="form-group"><label class="form-label">Quote / ankertekst</label><input id="publicReviewQuote" class="form-control" placeholder="Optioneel: quote uit de tekst"></div>'
+    +'<div class="form-group" style="margin-bottom:12px;"><label class="form-label">Opmerking</label><textarea id="publicReviewComment" class="form-control" placeholder="Waar kan deze copy nog scherper, duidelijker of overtuigender worden?"></textarea></div>'
+    +'<button class="btn btn-primary btn-sm" onclick="submitPublicReviewComment()">Feedback opslaan</button></div>'
+    +'</div></div>';
+}
+async function submitPublicReviewComment(){
+  if(!publicReviewToken)return;
+  const category=(document.getElementById('publicReviewCategory')||{}).value||'clarity';
+  const quote=(document.getElementById('publicReviewQuote')||{}).value||'';
+  const comment=(document.getElementById('publicReviewComment')||{}).value||'';
+  const name=(document.getElementById('publicReviewName')||{}).value||'Reviewer';
+  if(!comment.trim()){alert('Voeg eerst feedback toe.');return;}
+  const resp=await fetch('/.netlify/functions/review-token?token='+encodeURIComponent(publicReviewToken),{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({category,quote_text:quote,anchor_text:quote,comment,commenter_name:name,variant_id:publicReviewBundle?.page?.primary_variant?.id||null})
+  });
+  const data=await resp.json();
+  if(!resp.ok){alert(data.error||'Feedback opslaan mislukt.');return;}
+  publicReviewBundle.comments.push(data.comment);
+  renderPublicReview();
+}
+async function approvePublicReview(){
+  if(!publicReviewToken)return;
+  const resp=await fetch('/.netlify/functions/review-approve',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({token:publicReviewToken})
+  });
+  const data=await resp.json();
+  if(!resp.ok){alert(data.error||'Goedkeuren mislukt.');return;}
+  if(publicReviewBundle&&publicReviewBundle.page){
+    publicReviewBundle.page.review_status='approved';
+    renderPublicReview();
+  }
 }
 
 function showToast(msg){
