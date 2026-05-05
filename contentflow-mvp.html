@@ -1321,7 +1321,13 @@ async function sendLink(){
   }catch(e){
     if(btn){btn.textContent='Stuur magische link';btn.disabled=false;}
     console.warn('Supabase auth fout:', e.message);
-    alert('Inloggen mislukt: '+(e.message||'Onbekende fout')+'. Je bent niet als demo ingelogd. Probeer opnieuw of controleer de Supabase-config.');
+    const msg=String(e.message||'Onbekende fout');
+    const waitMatch=msg.match(/after\s+(\d+)\s+seconds/i);
+    if(waitMatch){
+      alert('Je hebt net al een magic link aangevraagd. Wacht '+waitMatch[1]+' seconden en probeer daarna opnieuw.');
+      return;
+    }
+    alert('Inloggen mislukt: '+msg+'. Je bent niet als demo ingelogd. Probeer opnieuw of controleer de Supabase-config.');
   }
 }
 function doLogin(user){
@@ -1353,6 +1359,15 @@ window.addEventListener('DOMContentLoaded',async()=>{
   document.getElementById('dmLabel').textContent='🌙';
   document.getElementById('loginEmail').value='kajslier@gmail.com';
   renderVoicePanel();
+  if(supa){
+    try{
+      const sessionResult=await supa.auth.getSession();
+      const existingSession=sessionResult?.data?.session||null;
+      if(existingSession?.user)doLogin(existingSession.user);
+    }catch(e){
+      console.warn('Bestaande Supabase sessie ophalen mislukt:',e.message);
+    }
+  }
   try{
     if(supa)supa.auth.onAuthStateChange((event,session)=>{
       // Only auto-login when a magic link is actually being processed (token in URL)
@@ -1906,6 +1921,20 @@ async function triggerGeneration(){
     const el=document.getElementById('pg-create');
     if(el&&genStatus==='loading')buildCreate(el);
   },600);
+  if(currentUser?.is_demo){
+    await new Promise(resolve=>setTimeout(resolve,900));
+    const data=buildSimpleDemoResponse(payload);
+    clearGenerationTimers();
+    genStatus='done';
+    genStage='ready_for_review';
+    genJobId=data?.job?.id||null;
+    genResult=data?.result?data:{status:'ready_for_review',result:data};
+    selectedVariantIndex=getPreferredVariantIndex(getResultVariants(genResult));
+    registerGeneratedPage(data);
+    buildCreate(document.getElementById('pg-create'));
+    showToast('Demo-variant gegenereerd (niet opgeslagen in Supabase).');
+    return;
+  }
   const blockers=getGenerationBlockers(currentUser,workspaceId);
   const shouldUseSimpleDemo=blockers.length>0;
   (async()=>{
@@ -2486,6 +2515,32 @@ function setTrust(idx,el){
 async function loadProfile(){
   if(!supa||!currentUser||currentUser.is_demo)return;
   currentWorkspaceId='';
+  try{
+    const sessionResult=await supa.auth.getSession();
+    const accessToken=sessionResult?.data?.session?.access_token||'';
+    if(accessToken){
+      const resp=await fetch('/.netlify/functions/ensure-user-context',{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'Authorization':'Bearer '+accessToken
+        },
+        body:JSON.stringify({
+          company_name:profile.company_name||'',
+          workspace_name:'ContentFlow workspace'
+        })
+      });
+      const data=await resp.json().catch(()=>null);
+      if(resp.ok&&data?.workspace_id){
+        if(data.profile&&typeof data.profile==='object')profile=data.profile;
+        currentWorkspaceId=data.workspace_id;
+        return;
+      }
+      console.warn('ensure-user-context mislukte:',data?.error||resp.status);
+    }
+  }catch(e){
+    console.warn('ensure-user-context fout:',e.message);
+  }
   try{
     const{data}=await supa.from('profiles').select('*').eq('id',currentUser.id).single();
     if(data)profile=data;
