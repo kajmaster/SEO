@@ -78,18 +78,7 @@ export default async function handler(request: Request): Promise<Response> {
       profile = Array.isArray(createdProfiles) ? createdProfiles[0] || null : null;
     }
 
-    let workspaceId =
-      profile && isUuid(profile.default_workspace_id) ? String(profile.default_workspace_id) : "";
-
     let workspace: UnknownRecord | null = null;
-
-    if (workspaceId) {
-      const workspaceRows = await supabaseFetch<UnknownRecord[]>(
-        `workspaces?id=eq.${encodeURIComponent(workspaceId)}&select=*`,
-        { method: "GET", headers: { Prefer: "return=representation" } },
-      );
-      workspace = Array.isArray(workspaceRows) ? workspaceRows[0] || null : null;
-    }
 
     if (!workspace) {
       const workspaceRows = await supabaseFetch<UnknownRecord[]>(
@@ -121,7 +110,7 @@ export default async function handler(request: Request): Promise<Response> {
       throw new Error("Kon geen workspace ophalen of aanmaken.");
     }
 
-    workspaceId = String(workspace.id);
+    const workspaceId = String(workspace.id);
 
     const membershipRows = await supabaseFetch<UnknownRecord[]>(
       `workspace_members?workspace_id=eq.${encodeURIComponent(workspaceId)}&user_id=eq.${encodeURIComponent(user.id)}&select=*`,
@@ -139,18 +128,12 @@ export default async function handler(request: Request): Promise<Response> {
       });
     }
 
-    const updatedProfiles = await supabaseFetch<UnknownRecord[]>(
-      `profiles?id=eq.${encodeURIComponent(user.id)}`,
-      {
-        method: "PATCH",
-        body: JSON.stringify({
-          default_workspace_id: workspaceId,
-          updated_at: now,
-        }),
-        headers: { Prefer: "return=representation" },
-      },
-    );
-    profile = Array.isArray(updatedProfiles) ? updatedProfiles[0] || profile : profile;
+    profile = {
+      ...(profile || {}),
+      id: user.id,
+      email: user.email,
+      default_workspace_id: workspaceId,
+    };
 
     return jsonResponse({
       ok: true,
