@@ -1,4 +1,6 @@
 import {
+  buildDefaultPlan,
+  buildFallbackVariants,
   buildGenerationResponse,
   createGenerationJob,
   generateVariants,
@@ -6,11 +8,25 @@ import {
   isUuid,
   jsonResponse,
   loadGenerationContext,
-  planContent,
   saveGeneratedContent,
   type GenerateContentRequest,
   updateGenerationJob,
 } from "./_contentflow-generation";
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(label)), ms);
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
+}
 
 function validateRequest(body: unknown): GenerateContentRequest {
   const payload = (body || {}) as Record<string, unknown>;
@@ -64,10 +80,21 @@ export default async function handler(request: Request): Promise<Response> {
 
     await updateGenerationJob(jobId, { status: "drafting" });
     const context = await loadGenerationContext(input);
-    const plan = await planContent(input, context);
+    const plan = buildDefaultPlan(input, context);
 
     await updateGenerationJob(jobId, { status: "drafting" });
-    const variants = await generateVariants(input, context, plan);
+    let variants;
+    let fallbackReason = "";
+    try {
+      variants = await withTimeout(
+        generateVariants(input, context, plan),
+        8000,
+        "OpenAI duurde te lang; fallbackcontent gebruikt.",
+      );
+    } catch (error) {
+      fallbackReason = error instanceof Error ? error.message : "OpenAI gaf geen bruikbaar antwoord.";
+      variants = buildFallbackVariants(input, context, plan, fallbackReason);
+    }
     const saved = await saveGeneratedContent({
       input,
       job,
@@ -89,6 +116,7 @@ export default async function handler(request: Request): Promise<Response> {
       quality_summary: {
         selected_variant_combined_score: saved.primaryVariant.combined_score,
         variant_count: saved.variants.length,
+        fallback_reason: fallbackReason || null,
       },
       result: responsePayload.result,
     });

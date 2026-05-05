@@ -199,6 +199,119 @@ function normalizeContentPlan(raw: UnknownRecord): ContentPlan {
   };
 }
 
+export function buildDefaultPlan(
+  input: GenerateContentRequest,
+  context: Awaited<ReturnType<typeof loadGenerationContext>>,
+): ContentPlan {
+  const brand = context.brandProfile;
+  const customer = context.customerPreferences;
+  const services = sanitizeText(brand.services);
+  const audience = sanitizeText(brand.target_audience || brand.buyer_persona);
+  const cta = sanitizeText(customer.primary_cta) || "Vraag een gesprek of offerte aan";
+
+  return {
+    searchIntent: input.content_goal === "inform" ? "informatief" : "commercieel onderzoekend",
+    pageAngle: `${input.keyword} uitgelegd vanuit aanpak, risicoverlaging en praktische waarde`,
+    targetReader: audience || "B2B-beslisser die aanbieders vergelijkt",
+    recommendedStructure: [
+      `Wat ${input.keyword} betekent`,
+      "Wanneer dit belangrijk is",
+      "Onze aanpak",
+      "Voordelen voor besluitvorming",
+      "Veelgestelde vragen",
+      "Volgende stap",
+    ],
+    keyMessages: [
+      `${input.keyword} vraagt om een duidelijke, betrouwbare aanpak.`,
+      services || "De dienst moet concreet aansluiten op de situatie van de klant.",
+      "Goede content maakt risico's, keuzes en vervolgstappen helder.",
+    ],
+    proofPoints: ["Heldere methode", "Praktische uitleg", "Concrete vervolgstap"],
+    mustInclude: [input.keyword, cta],
+    mustAvoid: ["Absolute claims zonder bewijs", "Vage marketingtaal", "Nietszeggende buzzwords"],
+    ctaDirection: cta,
+    writingNotes: ["Schrijf helder Nederlands", "Maak de tekst menselijk en zakelijk", "Gebruik concrete tussenkoppen"],
+  };
+}
+
+export function buildFallbackVariants(
+  input: GenerateContentRequest,
+  context: Awaited<ReturnType<typeof loadGenerationContext>>,
+  plan: ContentPlan,
+  reason = "OpenAI gaf niet op tijd een bruikbaar antwoord.",
+): GeneratedVariant[] {
+  const brand = context.brandProfile;
+  const companyName = sanitizeText(brand.company_name) || "uw organisatie";
+  const services = sanitizeText(brand.services);
+  const audience = sanitizeText(brand.target_audience || brand.buyer_persona) || "B2B-beslissers";
+  const cta = plan.ctaDirection || "Vraag een gesprek of offerte aan";
+  const keyword = input.keyword;
+  const baseSections = [
+    `<h1>${keyword}</h1>`,
+    `<p>${keyword} is voor ${audience.toLowerCase()} vooral belangrijk wanneer keuzes betrouwbaar, uitlegbaar en praktisch uitvoerbaar moeten zijn. ${companyName} helpt om die afweging helder te maken met een aanpak die past bij de context van de klant.</p>`,
+    `<h2>Waarom ${keyword} belangrijk is</h2>`,
+    `<p>Een goede pagina over ${keyword} moet niet alleen uitleg geven, maar ook laten zien wanneer de dienst relevant is, welke risico's ermee worden verlaagd en welke vervolgstap logisch is.</p>`,
+    services ? `<h2>Relevante expertise</h2><p>De belangrijkste context vanuit de organisatie: ${services}.</p>` : "",
+    `<h2>Aanpak</h2>`,
+    `<p>De aanpak begint met het scherp krijgen van de situatie, de doelgroep en het gewenste resultaat. Daarna wordt de inhoud opgebouwd rond concrete vragen, heldere argumentatie en een duidelijke call-to-action.</p>`,
+    `<h2>Volgende stap</h2>`,
+    `<p>${cta}.</p>`,
+  ].filter(Boolean);
+
+  const variants: GeneratedVariant[] = [
+    {
+      id: "variant-1",
+      variant_index: 1,
+      title: `${keyword}: aanpak, voordelen en vervolgstap`,
+      meta_description: `Lees wat ${keyword} inhoudt, wanneer het relevant is en welke vervolgstap logisch is.`,
+      content: baseSections.join("\n"),
+      word_count: countWords(baseSections.join(" ")),
+      seo_score: 76,
+      quality_score: 74,
+      quality_notes: ["Fallback door backend-timeout", reason],
+      quality_summary: "Werkbare fallbackvariant zodat de flow niet vastloopt.",
+      combined_score: scoreVariant(76, 74),
+      is_primary: true,
+    },
+    {
+      id: "variant-2",
+      variant_index: 2,
+      title: `${keyword} voor zakelijke besluitvorming`,
+      meta_description: `Ontdek hoe ${keyword} zakelijke beslissers helpt om sneller en beter te kiezen.`,
+      content: baseSections
+        .join("\n")
+        .replace("vooral belangrijk", "met name waardevol")
+        .replace("Volgende stap", "Plan een gerichte vervolgstap"),
+      word_count: countWords(baseSections.join(" ")),
+      seo_score: 74,
+      quality_score: 73,
+      quality_notes: ["Fallback door backend-timeout", "Commercielere variant"],
+      quality_summary: "Alternatieve invalshoek met meer nadruk op besluitvorming.",
+      combined_score: scoreVariant(74, 73),
+      is_primary: false,
+    },
+    {
+      id: "variant-3",
+      variant_index: 3,
+      title: `${keyword}: praktische uitleg voor ${audience}`,
+      meta_description: `Praktische uitleg over ${keyword}, inclusief aanpak, aandachtspunten en CTA.`,
+      content: baseSections
+        .join("\n")
+        .replace("Een goede pagina", "Een sterke, inhoudelijke pagina")
+        .replace("De aanpak begint", "Een consultatieve aanpak begint"),
+      word_count: countWords(baseSections.join(" ")),
+      seo_score: 73,
+      quality_score: 75,
+      quality_notes: ["Fallback door backend-timeout", "Inhoudelijkere variant"],
+      quality_summary: "Consultatieve fallbackvariant voor verdere review.",
+      combined_score: scoreVariant(73, 75),
+      is_primary: false,
+    },
+  ];
+
+  return variants;
+}
+
 function cloneVariant(base: GeneratedVariant, index: number, lead: string): GeneratedVariant {
   const title =
     index === 2
@@ -543,30 +656,43 @@ export async function generateVariants(
   plan: ContentPlan,
 ): Promise<GeneratedVariant[]> {
   const env = getBackendEnv();
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.openAiKey}`,
-      "Content-Type": "application/json",
-      ...(env.openAiProjectId ? { "OpenAI-Project": env.openAiProjectId } : {}),
-      ...(env.openAiOrganization ? { "OpenAI-Organization": env.openAiOrganization } : {}),
-    },
-    body: JSON.stringify({
-      model: CONTENT_MODEL,
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content:
-            "Je bent een senior Nederlandse B2B SEO-copywriter. Je schrijft klantwaardige pagina's en retourneert altijd geldig JSON.",
-        },
-        {
-          role: "user",
-          content: buildPrompt(input, context, plan),
-        },
-      ],
-    }),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 7500);
+  let response: Response;
+  try {
+    response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${env.openAiKey}`,
+        "Content-Type": "application/json",
+        ...(env.openAiProjectId ? { "OpenAI-Project": env.openAiProjectId } : {}),
+        ...(env.openAiOrganization ? { "OpenAI-Organization": env.openAiOrganization } : {}),
+      },
+      body: JSON.stringify({
+        model: CONTENT_MODEL,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content:
+              "Je bent een senior Nederlandse B2B SEO-copywriter. Je schrijft klantwaardige pagina's en retourneert altijd geldig JSON.",
+          },
+          {
+            role: "user",
+            content: buildPrompt(input, context, plan),
+          },
+        ],
+      }),
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("OpenAI duurde te lang; fallbackcontent gebruikt.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 
   const payload = await response.text();
   if (!response.ok) {
