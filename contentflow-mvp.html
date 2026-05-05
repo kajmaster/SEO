@@ -1241,7 +1241,7 @@ async function initSupabaseClient(){
     return null;
   }
 }
-let currentUser=null,profile={},currentWorkspaceId='';
+let currentUser=null,profile={},currentWorkspaceId='',lastContextError='';
 
 let ITEMS=[
   {id:1,title:'Tankinspectie voor vloeibare lading',url:'/diensten/tankinspectie',kw:'tankinspectie',status:'live',words:1840,score:91,date:'21 apr'},
@@ -1570,8 +1570,12 @@ function step3Html(){
 }
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function escAttr(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function getWorkspaceId(){return profile.default_workspace_id||currentWorkspaceId||'';}
 function isUuidValue(value){return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value||''));}
+function getWorkspaceId(){
+  if(isUuidValue(profile.default_workspace_id))return profile.default_workspace_id;
+  if(isUuidValue(currentWorkspaceId))return currentWorkspaceId;
+  return '';
+}
 function getGenerationBlockers(currentUserValue,workspaceId){
   const blockers=[];
   const userId=currentUserValue?.id||'';
@@ -1896,8 +1900,24 @@ function goStep3(){
 }
 async function triggerGeneration(){
   const kw=savedKw;
-  const workspaceId=getWorkspaceId();
-  const currentUserId=currentUser?.id||'';
+  let workspaceId=getWorkspaceId();
+  let currentUserId=currentUser?.id||'';
+  genStatus='loading';
+  genStage='drafting';
+  buildCreate(document.getElementById('pg-create'));
+  genRenderTimer=setInterval(()=>{
+    const el=document.getElementById('pg-create');
+    if(el&&genStatus==='loading')buildCreate(el);
+  },600);
+  if(!currentUser?.is_demo&&!isUuidValue(workspaceId)&&supa&&currentUser){
+    genStage='planning';
+    genMessage='Workspace wordt klaargezet...';
+    buildCreate(document.getElementById('pg-create'));
+    await loadProfile();
+    workspaceId=getWorkspaceId();
+    currentUserId=currentUser?.id||'';
+    genMessage='';
+  }
   const brandSnapshot=buildBrandProfileSnapshot();
   const toneProfile=buildToneProfile();
   const customerPreferences=buildCustomerPreferences();
@@ -1914,13 +1934,6 @@ async function triggerGeneration(){
     tone_profile:toneProfile,
     customer_preferences:customerPreferences
   };
-  genStatus='loading';
-  genStage='drafting';
-  buildCreate(document.getElementById('pg-create'));
-  genRenderTimer=setInterval(()=>{
-    const el=document.getElementById('pg-create');
-    if(el&&genStatus==='loading')buildCreate(el);
-  },600);
   if(currentUser?.is_demo){
     await new Promise(resolve=>setTimeout(resolve,900));
     const data=buildSimpleDemoResponse(payload);
@@ -1936,52 +1949,50 @@ async function triggerGeneration(){
     return;
   }
   const blockers=getGenerationBlockers(currentUser,workspaceId);
-  const shouldUseSimpleDemo=blockers.length>0;
-  (async()=>{
-    try{
-      if(shouldUseSimpleDemo){
-        clearGenerationTimers();
-        genStatus='error';
-        genStage='pending';
-        genJobId=null;
-        genResult=null;
-        console.warn('Generation blocked', {
-          blockers,
-          isLocal: IS_LOCAL,
-          currentUser,
-          currentUserId,
-          currentWorkspaceId,
-          workspaceId,
-          profileDefaultWorkspaceId: profile.default_workspace_id||'',
-          supabaseReady: !!supa
-        });
-        genMessage='Genereren is geblokkeerd: '+blockers.join(' ');
-        buildCreate(document.getElementById('pg-create'));
-        showToast(blockers[0]||'Genereren is geblokkeerd.');
-        return;
-      }
-      const resp=await fetch(GENERATE_CONTENT_ENDPOINT,{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify(payload)
-      });
-      const data=await resp.json().catch(()=>null);
-      if(!resp.ok)throw new Error(data?.error||'Content generatie mislukte.');
-      clearGenerationTimers();
-      genStatus='done';
-      genStage=data?.status||'ready_for_review';
-      genJobId=data?.job?.id||null;
-      genResult=data?.result?data:{status:'ready_for_review',result:data};
-      selectedVariantIndex=getPreferredVariantIndex(getResultVariants(genResult));
-      registerGeneratedPage(data);
-      buildCreate(document.getElementById('pg-create'));
-    }catch(e){
-      clearGenerationTimers();
-      genStatus='error';
-      genMessage=e.message||'Content generatie mislukte.';
-      buildCreate(document.getElementById('pg-create'));
-    }
-  })();
+  if(blockers.length>0){
+    clearGenerationTimers();
+    genStatus='error';
+    genStage='pending';
+    genJobId=null;
+    genResult=null;
+    console.warn('Generation blocked', {
+      blockers,
+      lastContextError,
+      isLocal: IS_LOCAL,
+      currentUser,
+      currentUserId,
+      currentWorkspaceId,
+      workspaceId,
+      profileDefaultWorkspaceId: profile.default_workspace_id||'',
+      supabaseReady: !!supa
+    });
+    genMessage='Genereren is geblokkeerd: '+blockers.join(' ')+(lastContextError?' Backend-context: '+lastContextError:'');
+    buildCreate(document.getElementById('pg-create'));
+    showToast(blockers[0]||'Genereren is geblokkeerd.');
+    return;
+  }
+  try{
+    const resp=await fetch(GENERATE_CONTENT_ENDPOINT,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    const data=await resp.json().catch(()=>null);
+    if(!resp.ok)throw new Error(data?.error||'Content generatie mislukte.');
+    clearGenerationTimers();
+    genStatus='done';
+    genStage=data?.status||'ready_for_review';
+    genJobId=data?.job?.id||null;
+    genResult=data?.result?data:{status:'ready_for_review',result:data};
+    selectedVariantIndex=getPreferredVariantIndex(getResultVariants(genResult));
+    registerGeneratedPage(data);
+    buildCreate(document.getElementById('pg-create'));
+  }catch(e){
+    clearGenerationTimers();
+    genStatus='error';
+    genMessage=e.message||'Content generatie mislukte.';
+    buildCreate(document.getElementById('pg-create'));
+  }
 }
 function dzOver(e){e.preventDefault();document.getElementById('dz').classList.add('over');}
 function dzLeave(e){document.getElementById('dz').classList.remove('over');}
@@ -2514,6 +2525,7 @@ function setTrust(idx,el){
 
 async function loadProfile(){
   if(!supa||!currentUser||currentUser.is_demo)return;
+  lastContextError='';
   currentWorkspaceId='';
   try{
     const sessionResult=await supa.auth.getSession();
@@ -2536,9 +2548,11 @@ async function loadProfile(){
         currentWorkspaceId=data.workspace_id;
         return;
       }
-      console.warn('ensure-user-context mislukte:',data?.error||resp.status);
+      lastContextError=String(data?.error||('HTTP '+resp.status));
+      console.warn('ensure-user-context mislukte:',lastContextError);
     }
   }catch(e){
+    lastContextError=e.message||'ensure-user-context fout';
     console.warn('ensure-user-context fout:',e.message);
   }
   try{
