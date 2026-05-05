@@ -62,7 +62,7 @@ export default async function handler(request: Request): Promise<Response> {
     jobId = String(job.id || "");
     if (!jobId) throw new Error("Generation job kon niet worden aangemaakt.");
 
-    await updateGenerationJob(jobId, { status: "planning" });
+    await updateGenerationJob(jobId, { status: "drafting" });
     const context = await loadGenerationContext(input);
     const plan = await planContent(input, context);
 
