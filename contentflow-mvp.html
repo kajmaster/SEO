@@ -1301,6 +1301,10 @@ async function doLogout(){
 async function sendLink(){
   const v=document.getElementById('loginEmail').value.trim();
   if(!v){alert('Vul een e-mailadres in.');return;}
+  if(!supa){
+    showToast('Supabase login is niet beschikbaar. Controleer de publieke Netlify-config.');
+    return;
+  }
   const btn=document.getElementById('sendLinkBtn');
   if(btn){btn.textContent='Bezig...';btn.disabled=true;}
   try{
@@ -1310,8 +1314,8 @@ async function sendLink(){
     document.getElementById('magicSent').classList.remove('hidden');
   }catch(e){
     if(btn){btn.textContent='Stuur magische link';btn.disabled=false;}
-    console.warn('Supabase auth fout (demo modus):', e.message);
-    doLogin({email:v,id:'demo-'+v,is_demo:true});
+    console.warn('Supabase auth fout:', e.message);
+    alert('Inloggen mislukt: '+(e.message||'Onbekende fout')+'. Je bent niet als demo ingelogd. Probeer opnieuw of controleer de Supabase-config.');
   }
 }
 function doLogin(user){
