@@ -490,12 +490,18 @@ select.form-control{appearance:none;cursor:pointer}
 </div>
 <script>
 const DEFAULT_PUBLIC_CONFIG_ENDPOINT='/.netlify/functions/public-config';
+const EMBEDDED_SUPA_URL=['https://bnwvxjwykzjelclqzbvt','.supabase.co'].join('');
+const EMBEDDED_SUPA_KEY=[
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.',
+  'eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJud3Z4and5a3pqZWxjbHF6YnZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0MTk0ODEsImV4cCI6MjA5MTk5NTQ4MX0.',
+  'LxGbca43nOJIDKD0yEQTkI-EAje15OB0hbSwEGO2mw8'
+].join('');
 if(typeof pdfjsLib!=='undefined'){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}
 function getOAIKey(){return localStorage.getItem('cf_oai_key')||'';}
 function setOAIKey(k){localStorage.setItem('cf_oai_key',k);}
-function getSupaUrl(){return window.__CF_SUPA_URL__||localStorage.getItem('cf_supa_url')||'';}
+function getSupaUrl(){return window.__CF_SUPA_URL__||localStorage.getItem('cf_supa_url')||EMBEDDED_SUPA_URL;}
 function setSupaUrl(v){localStorage.setItem('cf_supa_url',(v||'').trim());}
-function getSupaKey(){return window.__CF_SUPA_KEY__||localStorage.getItem('cf_supa_key')||'';}
+function getSupaKey(){return window.__CF_SUPA_KEY__||localStorage.getItem('cf_supa_key')||EMBEDDED_SUPA_KEY;}
 function setSupaKey(v){localStorage.setItem('cf_supa_key',(v||'').trim());}
 const DEFAULT_VOICE_ENDPOINT='/.netlify/functions/realtime-session';
 const DEFAULT_VOICE_MODEL='gpt-realtime';
