@@ -1453,6 +1453,7 @@ function step3Html(){
   if(genStatus==='done'&&genResult){
     const variants=getResultVariants(genResult);
     const activeVariant=variants[selectedVariantIndex]||variants[0]||null;
+    const strategyPlan=getStrategyPlan(genResult);
     const title=activeVariant?.title||'';
     const meta=activeVariant?.meta_description||'';
     const content=activeVariant?.content||'';
@@ -1475,6 +1476,7 @@ function step3Html(){
       +'<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:'+(qualityNotes.length?12:0)+'px;"><span class="tag tag-live">Refine-pass voltooid</span><span class="tag tag-review">Reviewstatus: '+escHtml((genResult.result?.review_status||genResult.review_status||'needs_review').replace(/_/g,' '))+'</span><span class="tag tag-grey">Beste variant automatisch gekozen</span></div>'
       +(qualityNotes.length?'<div style="display:flex;flex-wrap:wrap;gap:8px;">'+qualityNotes.map(note=>'<span class="tag tag-grey">'+escHtml(note)+'</span>').join('')+'</div>':'')
       +'</div>'
+      +renderStrategyPlanCard(strategyPlan)
       +(variants.length?'<div class="card" style="padding:20px 24px;">'
         +'<div class="variant-toolbar" style="margin-bottom:16px;">'
         +'<div class="variant-toolbar-left"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;">Copy varianten</div><p>Kies achteraf welke tekst het sterkst is. De actieve versie is standaard de best scorende variant op kwaliteit en SEO.</p></div>'
@@ -1560,12 +1562,39 @@ function getPreferredVariantIndex(variants){
 function getStageCopy(status){
   const map={
     pending:{title:'Generatie staat in de rij...',desc:'De pipeline wordt klaargezet voor jullie contentjob.'},
+    planning:{title:'Contentstrategie wordt bepaald...',desc:'De planner kiest nu invalshoek, structuur en kernboodschappen voordat er geschreven wordt.'},
     drafting:{title:'Eerste concepten worden geschreven...',desc:'De draft-laag bouwt nu structuur, invalshoek en varianten op.'},
     refining:{title:'Tekst wordt verfijnd...',desc:'De refine-pass maakt de copy vloeiender, menselijker en klantwaardiger.'},
     scored:{title:'Kwaliteit wordt beoordeeld...',desc:'De beste variant wordt nu gekozen op copykwaliteit en SEO-signalen.'},
     ready_for_review:{title:'Klaar voor review',desc:'De output staat klaar om te beoordelen en te delen.'}
   };
   return map[status]||map.pending;
+}
+function getStrategyPlan(result){
+  return result?.result?.strategy_plan||result?.strategy_plan||null;
+}
+function getStrategyHighlights(plan){
+  if(!plan)return [];
+  const items=[];
+  if(plan.searchIntent)items.push({label:'Zoekintentie',value:plan.searchIntent});
+  if(plan.pageAngle)items.push({label:'Invalshoek',value:plan.pageAngle});
+  if(plan.targetReader)items.push({label:'Lezer',value:plan.targetReader});
+  if(plan.ctaDirection)items.push({label:'CTA',value:plan.ctaDirection});
+  return items;
+}
+function renderStrategyPlanCard(plan){
+  if(!plan)return '';
+  const highlights=getStrategyHighlights(plan);
+  const structure=Array.isArray(plan.recommendedStructure)?plan.recommendedStructure.slice(0,6):[];
+  const keyMessages=Array.isArray(plan.keyMessages)?plan.keyMessages.slice(0,4):[];
+  const mustAvoid=Array.isArray(plan.mustAvoid)?plan.mustAvoid.slice(0,3):[];
+  return '<div class="card" style="padding:18px 22px;">'
+    +'<div style="font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;">Strategieplan</div>'
+    +(highlights.length?'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;">'+highlights.map(item=>'<span class="tag tag-grey"><strong>'+escHtml(item.label)+':</strong> '+escHtml(item.value)+'</span>').join('')+'</div>':'')
+    +(structure.length?'<div style="margin-bottom:12px;"><div style="font-size:12px;font-weight:700;margin-bottom:6px;">Aanbevolen structuur</div><div style="display:flex;flex-wrap:wrap;gap:8px;">'+structure.map(item=>'<span class="tag tag-review">'+escHtml(item)+'</span>').join('')+'</div></div>':'')
+    +(keyMessages.length?'<div style="margin-bottom:'+(mustAvoid.length?12:0)+'px;"><div style="font-size:12px;font-weight:700;margin-bottom:6px;">Kernboodschappen</div><div style="display:flex;flex-wrap:wrap;gap:8px;">'+keyMessages.map(item=>'<span class="tag tag-grey">'+escHtml(item)+'</span>').join('')+'</div></div>':'')
+    +(mustAvoid.length?'<div><div style="font-size:12px;font-weight:700;margin-bottom:6px;">Vermijden</div><div style="display:flex;flex-wrap:wrap;gap:8px;">'+mustAvoid.map(item=>'<span class="tag" style="background:#2a1f1f;color:#f5b4b4;border:1px solid rgba(245,180,180,.15);">'+escHtml(item)+'</span>').join('')+'</div></div>':'')
+    +'</div>';
 }
 function getResultVariants(result){
   const r=result||{};
@@ -1688,6 +1717,18 @@ function buildSimpleDemoResponse(payload){
   const companyName=payload.brand_profile_snapshot?.company_name||profile.company_name||'Jullie bedrijf';
   const cta=payload.customer_preferences?.primary_cta||profile.primary_cta||'Vraag een gesprek of offerte aan';
   const titleBase=keyword.charAt(0).toUpperCase()+keyword.slice(1);
+  const strategyPlan={
+    searchIntent:'commercial-investigation',
+    pageAngle:'consultative-b2b-service-page',
+    targetReader:'B2B-beslisser die aanbieders vergelijkt',
+    recommendedStructure:['Intro','Probleem','Aanpak','Voordelen','Bewijs','CTA'],
+    keyMessages:['heldere uitleg','betrouwbare aanpak','snellere besluitvorming'],
+    proofPoints:['concrete werkwijze','B2B-relevantie','geloofwaardige tone of voice'],
+    mustInclude:[keyword,'duidelijke voordelen','concrete CTA'],
+    mustAvoid:['vage marketingclaims','loze superlatieven','AI-achtige clichés'],
+    ctaDirection:cta,
+    writingNotes:['schrijf menselijk','wees concreet','klink consultatief']
+  };
   const rawVariants=[
     {
       title:titleBase+' voor B2B teams',
@@ -1743,6 +1784,7 @@ function buildSimpleDemoResponse(payload){
     },
     primary_variant:primary,
     variants:variants,
+    strategy_plan:strategyPlan,
     seo_metadata:{primary_keyword:keyword,locale:'nl-NL',content_goal:payload.content_goal||'convince'},
     review_status:'needs_review',
     quality_score:primary.quality_score,
@@ -1752,6 +1794,7 @@ function buildSimpleDemoResponse(payload){
       meta_description:primary.meta_description,
       primary_variant:primary,
       variants:variants,
+      strategy_plan:strategyPlan,
       quality_score:primary.quality_score,
       seo_metadata:{primary_keyword:keyword,locale:'nl-NL',content_goal:payload.content_goal||'convince'},
       review_status:'needs_review',

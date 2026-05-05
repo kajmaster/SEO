@@ -40,6 +40,19 @@ export interface GeneratedVariant {
   is_primary: boolean;
 }
 
+export interface ContentPlan {
+  searchIntent: string;
+  pageAngle: string;
+  targetReader: string;
+  recommendedStructure: string[];
+  keyMessages: string[];
+  proofPoints: string[];
+  mustInclude: string[];
+  mustAvoid: string[];
+  ctaDirection: string;
+  writingNotes: string[];
+}
+
 export function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -126,6 +139,12 @@ function sanitizeText(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function normalizeStringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.map((item) => String(item).trim()).filter(Boolean)
+    : [];
+}
+
 function mergeObjects(...parts: Array<UnknownRecord | null | undefined>): UnknownRecord {
   return parts.reduce<UnknownRecord>((acc, part) => {
     if (!part) return acc;
@@ -162,6 +181,22 @@ function extractJsonObject(value: string): UnknownRecord {
 
 function scoreVariant(seoScore: number, qualityScore: number): number {
   return Number((qualityScore * 0.65 + seoScore * 0.35).toFixed(2));
+}
+
+function normalizeContentPlan(raw: UnknownRecord): ContentPlan {
+  return {
+    searchIntent: sanitizeText(raw.searchIntent) || "commercial-investigation",
+    pageAngle: sanitizeText(raw.pageAngle) || "consultative-b2b-service-page",
+    targetReader:
+      sanitizeText(raw.targetReader) || "B2B-beslisser die aanbieders vergelijkt",
+    recommendedStructure: normalizeStringArray(raw.recommendedStructure),
+    keyMessages: normalizeStringArray(raw.keyMessages),
+    proofPoints: normalizeStringArray(raw.proofPoints),
+    mustInclude: normalizeStringArray(raw.mustInclude),
+    mustAvoid: normalizeStringArray(raw.mustAvoid),
+    ctaDirection: sanitizeText(raw.ctaDirection) || "Vraag een gesprek of offerte aan",
+    writingNotes: normalizeStringArray(raw.writingNotes),
+  };
 }
 
 function cloneVariant(base: GeneratedVariant, index: number, lead: string): GeneratedVariant {
@@ -301,9 +336,132 @@ export async function loadGenerationContext(input: GenerateContentRequest): Prom
   };
 }
 
+function buildPlanningPrompt(
+  input: GenerateContentRequest,
+  context: Awaited<ReturnType<typeof loadGenerationContext>>,
+): string {
+  const brand = context.brandProfile;
+  const tone = context.toneProfile;
+  const customer = context.customerPreferences;
+  const xmlTemplate =
+    sanitizeText(input.xml_template) || sanitizeText(context.template?.xml_template);
+  const templateName =
+    sanitizeText(input.xml_template_name) || sanitizeText(context.template?.name);
+  const sourceContent = sanitizeText(input.source_content).slice(0, 3000);
+
+  const lines = [
+    `Maak een contentplan voor een Nederlandse B2B SEO-pagina over het zoekwoord: ${input.keyword}.`,
+    "",
+    "PAGINADOEL",
+    buildGoalInstruction(input.content_goal || "convince"),
+    "",
+    "BEDRIJFSCONTEXT",
+    `Bedrijfsnaam: ${sanitizeText(brand.company_name)}`,
+    `Services: ${sanitizeText(brand.services)}`,
+    `Doelgroep: ${sanitizeText(brand.target_audience)}`,
+    `Buyer persona: ${sanitizeText(brand.buyer_persona)}`,
+    "",
+    "TONE OF VOICE",
+    `Tone label: ${sanitizeText(tone.tone_label || tone.tone_nl)}`,
+    `Voice principles: ${sanitizeText(tone.voice_principles || tone.tone_nl)}`,
+    `Stijlvoorkeuren: ${sanitizeText(brand.style_preferences || tone.style_preferences)}`,
+    `Verboden claims/woorden: ${sanitizeText(brand.prohibited_claims || tone.prohibited_words)}`,
+    "",
+    "CTA",
+    `Gewenste CTA: ${sanitizeText(customer.primary_cta)}`,
+  ];
+
+  if (sourceContent) {
+    lines.push("", "BRONMATERIAAL", sourceContent);
+  }
+
+  if (xmlTemplate) {
+    lines.push(
+      "",
+      `STRUCTUURCONTEXT (${templateName || "template"})`,
+      "Gebruik dit als richting voor de opbouw, maar neem geen XML-tags letterlijk over.",
+      xmlTemplate,
+    );
+  }
+
+  lines.push(
+    "",
+    "Bepaal:",
+    "- de waarschijnlijke zoekintentie",
+    "- de beste invalshoek voor deze pagina",
+    "- voor welk type lezer deze pagina vooral bedoeld is",
+    "- een aanbevolen sectiestructuur",
+    "- de belangrijkste kernboodschappen",
+    "- welke proof points of vertrouwenstriggers belangrijk zijn",
+    "- wat absoluut moet worden opgenomen",
+    "- wat absoluut vermeden moet worden",
+    "- extra schrijfinstructies voor de copywriter",
+    "",
+    "Retourneer exact geldig JSON in dit formaat:",
+    '{"searchIntent":"string","pageAngle":"string","targetReader":"string","recommendedStructure":["string"],"keyMessages":["string"],"proofPoints":["string"],"mustInclude":["string"],"mustAvoid":["string"],"ctaDirection":"string","writingNotes":["string"]}',
+  );
+
+  return lines.join("\n");
+}
+
+export async function planContent(
+  input: GenerateContentRequest,
+  context: Awaited<ReturnType<typeof loadGenerationContext>>,
+): Promise<ContentPlan> {
+  const env = getBackendEnv();
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.openAiKey}`,
+      "Content-Type": "application/json",
+      ...(env.openAiProjectId ? { "OpenAI-Project": env.openAiProjectId } : {}),
+      ...(env.openAiOrganization ? { "OpenAI-Organization": env.openAiOrganization } : {}),
+    },
+    body: JSON.stringify({
+      model: CONTENT_MODEL,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content:
+            "Je bent een senior Nederlandse B2B contentstrateeg. Denk eerst na over zoekintentie, structuur, boodschap en geloofwaardigheid. Retourneer altijd geldig JSON.",
+        },
+        {
+          role: "user",
+          content: buildPlanningPrompt(input, context),
+        },
+      ],
+    }),
+  });
+
+  const payload = await response.text();
+
+  if (!response.ok) {
+    let parsed: UnknownRecord | null = null;
+    try {
+      parsed = JSON.parse(payload) as UnknownRecord;
+    } catch {
+      parsed = null;
+    }
+
+    const message =
+      sanitizeText((parsed?.error as UnknownRecord | undefined)?.message) ||
+      sanitizeText(parsed?.message) ||
+      payload ||
+      `Planning request mislukt met status ${response.status}.`;
+
+    throw new Error(message);
+  }
+
+  const parsed = extractJsonObject(payload);
+  return normalizeContentPlan(parsed);
+}
+
 export function buildPrompt(
   input: GenerateContentRequest,
   context: Awaited<ReturnType<typeof loadGenerationContext>>,
+  plan: ContentPlan,
 ): string {
   const brand = context.brandProfile;
   const tone = context.toneProfile;
@@ -317,6 +475,18 @@ export function buildPrompt(
     "",
     "DOEL",
     buildGoalInstruction(input.content_goal || "convince"),
+    "",
+    "CONTENTPLAN",
+    `Zoekintentie: ${plan.searchIntent}`,
+    `Pagina-invalshoek: ${plan.pageAngle}`,
+    `Primaire lezer: ${plan.targetReader}`,
+    `Aanbevolen structuur: ${plan.recommendedStructure.join(" | ")}`,
+    `Kernboodschappen: ${plan.keyMessages.join(" | ")}`,
+    `Proof points: ${plan.proofPoints.join(" | ")}`,
+    `Moet erin: ${plan.mustInclude.join(" | ")}`,
+    `Moet vermeden worden: ${plan.mustAvoid.join(" | ")}`,
+    `CTA-richting: ${plan.ctaDirection}`,
+    `Extra schrijfinstructies: ${plan.writingNotes.join(" | ")}`,
     "",
     "BEDRIJFSCONTEXT",
     `Bedrijfsnaam: ${sanitizeText(brand.company_name)}`,
@@ -370,6 +540,7 @@ export function buildPrompt(
 export async function generateVariants(
   input: GenerateContentRequest,
   context: Awaited<ReturnType<typeof loadGenerationContext>>,
+  plan: ContentPlan,
 ): Promise<GeneratedVariant[]> {
   const env = getBackendEnv();
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -391,7 +562,7 @@ export async function generateVariants(
         },
         {
           role: "user",
-          content: buildPrompt(input, context),
+          content: buildPrompt(input, context, plan),
         },
       ],
     }),
@@ -560,8 +731,9 @@ export function buildGenerationResponse(args: {
   primaryVariant: GeneratedVariant;
   variants: GeneratedVariant[];
   input: GenerateContentRequest;
+  plan: ContentPlan;
 }) {
-  const { job, page, primaryVariant, variants, input } = args;
+  const { job, page, primaryVariant, variants, input, plan } = args;
   const reviewStatus = "needs_review";
   const seoMetadata = {
     primary_keyword: input.keyword,
@@ -593,6 +765,7 @@ export function buildGenerationResponse(args: {
     },
     primary_variant: primaryVariant,
     variants,
+    strategy_plan: plan,
     seo_metadata: seoMetadata,
     review_status: reviewStatus,
     quality_score: primaryVariant.quality_score,
@@ -602,6 +775,7 @@ export function buildGenerationResponse(args: {
       meta_description: primaryVariant.meta_description,
       primary_variant: primaryVariant,
       variants,
+      strategy_plan: plan,
       quality_score: primaryVariant.quality_score,
       seo_metadata: seoMetadata,
       review_status: reviewStatus,

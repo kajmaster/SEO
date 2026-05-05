@@ -2,9 +2,15 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
+} as const;
 
-function jsonResponse(body, status = 200) {
+interface OpenAiRealtimeErrorShape {
+  error?: {
+    message?: string;
+  };
+}
+
+function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
@@ -14,7 +20,7 @@ function jsonResponse(body, status = 200) {
   });
 }
 
-export default async function handler(request) {
+export default async function handler(request: Request): Promise<Response> {
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: CORS_HEADERS });
   }
@@ -36,14 +42,13 @@ export default async function handler(request) {
     );
   }
 
-  let incomingFormData;
+  let incomingFormData: FormData;
   try {
     incomingFormData = await request.formData();
   } catch (error) {
-    return jsonResponse(
-      { error: "Kon multipart form-data niet uitlezen.", details: error.message },
-      400,
-    );
+    const details =
+      error instanceof Error ? error.message : "Onbekende multipart form-data fout.";
+    return jsonResponse({ error: "Kon multipart form-data niet uitlezen.", details }, 400);
   }
 
   const sdp = incomingFormData.get("sdp");
@@ -72,9 +77,9 @@ export default async function handler(request) {
   const responseText = await realtimeResponse.text();
 
   if (!realtimeResponse.ok) {
-    let parsed = null;
+    let parsed: OpenAiRealtimeErrorShape | null = null;
     try {
-      parsed = JSON.parse(responseText);
+      parsed = JSON.parse(responseText) as OpenAiRealtimeErrorShape;
     } catch {
       parsed = null;
     }

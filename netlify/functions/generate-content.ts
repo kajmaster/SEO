@@ -6,6 +6,7 @@ import {
   isUuid,
   jsonResponse,
   loadGenerationContext,
+  planContent,
   saveGeneratedContent,
   type GenerateContentRequest,
   updateGenerationJob,
@@ -61,10 +62,12 @@ export default async function handler(request: Request): Promise<Response> {
     jobId = String(job.id || "");
     if (!jobId) throw new Error("Generation job kon niet worden aangemaakt.");
 
-    await updateGenerationJob(jobId, { status: "drafting" });
-
+    await updateGenerationJob(jobId, { status: "planning" });
     const context = await loadGenerationContext(input);
-    const variants = await generateVariants(input, context);
+    const plan = await planContent(input, context);
+
+    await updateGenerationJob(jobId, { status: "drafting" });
+    const variants = await generateVariants(input, context, plan);
     const saved = await saveGeneratedContent({
       input,
       job,
@@ -78,6 +81,7 @@ export default async function handler(request: Request): Promise<Response> {
       primaryVariant: saved.primaryVariant,
       variants: saved.variants,
       input,
+      plan,
     });
 
     await updateGenerationJob(jobId, {
