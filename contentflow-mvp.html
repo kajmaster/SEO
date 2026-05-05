@@ -2623,8 +2623,9 @@ function loadDemoProfile(){
 
 async function loadContentItems(){
   if(!supa||!currentUser||currentUser.is_demo)return Promise.resolve();
+  let workspaceId='';
   try{
-    const workspaceId=getWorkspaceId();
+    workspaceId=getWorkspaceId();
     if(!workspaceId)return Promise.resolve();
     const pageResp=await supa.from('content_pages').select('*').eq('workspace_id',workspaceId).order('created_at',{ascending:false});
     if(pageResp.error)throw pageResp.error;
@@ -2643,6 +2644,33 @@ async function loadContentItems(){
       return mapPageToItem(page,primary);
     });
   }catch(e){
+    const msg=e.message||'';
+    if(workspaceId&&/content_pages|schema cache/i.test(msg)){
+      try{
+        const jobResp=await supa.from('generation_jobs').select('*').eq('workspace_id',workspaceId).order('created_at',{ascending:false}).limit(20);
+        if(jobResp.error)throw jobResp.error;
+        ITEMS=(jobResp.data||[]).filter(job=>job.result&&Object.keys(job.result).length).map(job=>{
+          const result=job.result||{};
+          const nested=result.result||{};
+          const page=result.page||{};
+          const primary=result.primary_variant||nested.primary_variant||page.primary_variant||null;
+          return mapPageToItem({
+            id:page.id||job.id,
+            title:page.title||primary?.title||job.keyword||'Gegenereerde pagina',
+            primary_keyword:page.primary_keyword||job.keyword||'',
+            status:page.status||'review',
+            review_status:page.review_status||'needs_review',
+            seo_score:page.seo_score||primary?.seo_score||0,
+            quality_score:page.quality_score||primary?.quality_score||0,
+            created_at:page.created_at||job.created_at,
+            updated_at:page.updated_at||job.updated_at
+          },primary);
+        });
+        return Promise.resolve();
+      }catch(fallbackError){
+        console.warn('Generation jobs laden mislukt:',fallbackError.message);
+      }
+    }
     console.warn('Content items laden mislukt:',e.message);
   }
   return Promise.resolve();

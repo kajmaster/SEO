@@ -646,83 +646,124 @@ export async function saveGeneratedContent(args: {
 }> {
   const { input, job, variants, brandProfile } = args;
   const primaryVariant = variants.find((variant) => variant.is_primary) || variants[0];
-  const pageRows = await supabaseFetch<UnknownRecord[]>("content_pages", {
-    method: "POST",
-    body: JSON.stringify({
-      workspace_id: input.workspace_id,
+
+  try {
+    const pageRows = await supabaseFetch<UnknownRecord[]>("content_pages", {
+      method: "POST",
+      body: JSON.stringify({
+        workspace_id: input.workspace_id,
+        generation_job_id: job.id,
+        created_by: input.user_id,
+        title: primaryVariant.title,
+        slug: toSlug(primaryVariant.title || input.keyword),
+        primary_keyword: input.keyword,
+        content_goal: input.content_goal || "convince",
+        status: "review",
+        review_status: "needs_review",
+        seo_score: primaryVariant.seo_score,
+        quality_score: primaryVariant.quality_score,
+        brand_profile_snapshot: brandProfile,
+      }),
+    });
+
+    const page = Array.isArray(pageRows) ? pageRows[0] || null : null;
+    if (!page || !isUuid(String(page.id))) {
+      throw new Error("Kon content page niet opslaan.");
+    }
+
+    const variantRows = variants.map((variant) => ({
+      page_id: page.id,
       generation_job_id: job.id,
-      created_by: input.user_id,
-      title: primaryVariant.title,
-      slug: toSlug(primaryVariant.title || input.keyword),
-      primary_keyword: input.keyword,
-      content_goal: input.content_goal || "convince",
-      status: "review",
-      review_status: "needs_review",
-      seo_score: primaryVariant.seo_score,
-      quality_score: primaryVariant.quality_score,
-      brand_profile_snapshot: brandProfile,
-    }),
-  });
+      variant_index: variant.variant_index,
+      title: variant.title,
+      meta_description: variant.meta_description,
+      content: variant.content,
+      word_count: variant.word_count,
+      seo_score: variant.seo_score,
+      quality_score: variant.quality_score,
+      quality_notes: variant.quality_notes,
+      quality_summary: variant.quality_summary,
+      is_primary: variant.is_primary,
+    }));
 
-  const page = Array.isArray(pageRows) ? pageRows[0] || null : null;
-  if (!page || !isUuid(String(page.id))) {
-    throw new Error("Kon content page niet opslaan.");
-  }
+    const savedVariants = await supabaseFetch<UnknownRecord[]>("content_variants", {
+      method: "POST",
+      body: JSON.stringify(variantRows),
+    });
 
-  const variantRows = variants.map((variant) => ({
-    page_id: page.id,
-    generation_job_id: job.id,
-    variant_index: variant.variant_index,
-    title: variant.title,
-    meta_description: variant.meta_description,
-    content: variant.content,
-    word_count: variant.word_count,
-    seo_score: variant.seo_score,
-    quality_score: variant.quality_score,
-    quality_notes: variant.quality_notes,
-    quality_summary: variant.quality_summary,
-    is_primary: variant.is_primary,
-  }));
+    const normalizedSavedVariants = (Array.isArray(savedVariants) ? savedVariants : []).map((row) => {
+      const variantIndex = Number(row.variant_index || 1);
+      const match = variants.find((variant) => variant.variant_index === variantIndex);
+      return {
+        ...(match || variants[variantIndex - 1]),
+        id: String(row.id),
+        is_primary: !!row.is_primary,
+      };
+    });
 
-  const savedVariants = await supabaseFetch<UnknownRecord[]>("content_variants", {
-    method: "POST",
-    body: JSON.stringify(variantRows),
-  });
+    const savedPrimary =
+      normalizedSavedVariants.find((variant) => variant.is_primary) || normalizedSavedVariants[0] || primaryVariant;
 
-  const normalizedSavedVariants = (Array.isArray(savedVariants) ? savedVariants : []).map((row) => {
-    const variantIndex = Number(row.variant_index || 1);
-    const match = variants.find((variant) => variant.variant_index === variantIndex);
+    await supabaseFetch<UnknownRecord[]>(
+      `content_pages?id=eq.${encodeURIComponent(String(page.id))}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ selected_variant_id: savedPrimary.id }),
+      },
+    );
+
     return {
-      ...(match || variants[variantIndex - 1]),
-      id: String(row.id),
-      is_primary: !!row.is_primary,
+      page: {
+        ...page,
+        selected_variant_id: savedPrimary.id,
+        primary_variant: savedPrimary,
+        seo_score: savedPrimary.seo_score,
+        quality_score: savedPrimary.quality_score,
+        review_status: "needs_review",
+        status: "review",
+      },
+      primaryVariant: savedPrimary,
+      variants: normalizedSavedVariants,
     };
-  });
+  } catch (error) {
+    const now = new Date().toISOString();
+    const pageId = `job-${String(job.id || Date.now())}`;
+    const memoryVariants = variants.map((variant) => ({
+      ...variant,
+      id: `${pageId}-variant-${variant.variant_index}`,
+    }));
+    const memoryPrimary =
+      memoryVariants.find((variant) => variant.is_primary) || memoryVariants[0] || primaryVariant;
 
-  const savedPrimary =
-    normalizedSavedVariants.find((variant) => variant.is_primary) || normalizedSavedVariants[0] || primaryVariant;
+    console.warn(
+      "Content page opslag overgeslagen; resultaat wordt alleen in generation_jobs.result bewaard.",
+      error instanceof Error ? error.message : error,
+    );
 
-  await supabaseFetch<UnknownRecord[]>(
-    `content_pages?id=eq.${encodeURIComponent(String(page.id))}`,
-    {
-      method: "PATCH",
-      body: JSON.stringify({ selected_variant_id: savedPrimary.id }),
-    },
-  );
-
-  return {
-    page: {
-      ...page,
-      selected_variant_id: savedPrimary.id,
-      primary_variant: savedPrimary,
-      seo_score: savedPrimary.seo_score,
-      quality_score: savedPrimary.quality_score,
-      review_status: "needs_review",
-      status: "review",
-    },
-    primaryVariant: savedPrimary,
-    variants: normalizedSavedVariants,
-  };
+    return {
+      page: {
+        id: pageId,
+        workspace_id: input.workspace_id,
+        generation_job_id: job.id,
+        created_by: input.user_id,
+        title: memoryPrimary.title,
+        slug: toSlug(memoryPrimary.title || input.keyword),
+        primary_keyword: input.keyword,
+        content_goal: input.content_goal || "convince",
+        selected_variant_id: memoryPrimary.id,
+        primary_variant: memoryPrimary,
+        seo_score: memoryPrimary.seo_score,
+        quality_score: memoryPrimary.quality_score,
+        review_status: "needs_review",
+        status: "review",
+        created_at: now,
+        updated_at: now,
+        storage_mode: "generation_job_result_only",
+      },
+      primaryVariant: memoryPrimary,
+      variants: memoryVariants,
+    };
+  }
 }
 
 export function buildGenerationResponse(args: {
