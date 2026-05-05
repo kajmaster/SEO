@@ -46,6 +46,51 @@ function isUuid(value: unknown): value is string {
   );
 }
 
+async function createWorkspace(
+  userId: string,
+  body: UnknownRecord,
+  now: string,
+): Promise<UnknownRecord | null> {
+  const workspaceName =
+    (typeof body.workspace_name === "string" && body.workspace_name) ||
+    (typeof body.company_name === "string" && body.company_name) ||
+    "Nieuwe workspace";
+  const companyName = typeof body.company_name === "string" && body.company_name ? body.company_name : null;
+  const attempts: UnknownRecord[] = [
+    {
+      owner_user_id: userId,
+      name: workspaceName,
+      company_name: companyName,
+      launch_mode: "concierge_beta",
+      updated_at: now,
+    },
+    {
+      owner_user_id: userId,
+      name: workspaceName,
+      updated_at: now,
+    },
+    {
+      owner_user_id: userId,
+      name: workspaceName,
+    },
+  ];
+
+  let lastError: Error | null = null;
+  for (const attempt of attempts) {
+    try {
+      const createdWorkspaces = await supabaseFetch<UnknownRecord[]>("workspaces", {
+        method: "POST",
+        body: JSON.stringify(attempt),
+      });
+      return Array.isArray(createdWorkspaces) ? createdWorkspaces[0] || null : null;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error("Workspace aanmaken mislukte.");
+    }
+  }
+
+  throw lastError || new Error("Workspace aanmaken mislukte.");
+}
+
 export default async function handler(request: Request): Promise<Response> {
   const preflight = handleOptions(request);
   if (preflight) return preflight;
@@ -89,21 +134,7 @@ export default async function handler(request: Request): Promise<Response> {
     }
 
     if (!workspace) {
-      const createdWorkspaces = await supabaseFetch<UnknownRecord[]>("workspaces", {
-        method: "POST",
-        body: JSON.stringify({
-          owner_user_id: user.id,
-          name:
-            (typeof body.workspace_name === "string" && body.workspace_name) ||
-            (typeof body.company_name === "string" && body.company_name) ||
-            "Nieuwe workspace",
-          company_name:
-            (typeof body.company_name === "string" && body.company_name) || null,
-          launch_mode: "concierge_beta",
-          updated_at: now,
-        }),
-      });
-      workspace = Array.isArray(createdWorkspaces) ? createdWorkspaces[0] || null : null;
+      workspace = await createWorkspace(user.id, body, now);
     }
 
     if (!workspace?.id) {
