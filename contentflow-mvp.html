@@ -1547,6 +1547,16 @@ function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function escAttr(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function getWorkspaceId(){return profile.default_workspace_id||currentWorkspaceId||'';}
 function isUuidValue(value){return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value||''));}
+function getGenerationBlockers(currentUserValue,workspaceId){
+  const blockers=[];
+  const userId=currentUserValue?.id||'';
+  if(IS_LOCAL)blockers.push('Je draait lokaal via file:// of localhost.');
+  if(!currentUserValue)blockers.push('Er is geen actieve gebruiker geladen.');
+  if(currentUserValue?.is_demo)blockers.push('Je sessie staat nog in demo-modus.');
+  if(!isUuidValue(userId))blockers.push('De user_id is geen geldige UUID.');
+  if(!isUuidValue(workspaceId))blockers.push('De workspace_id ontbreekt of is geen geldige UUID.');
+  return blockers;
+}
 function buildBrandProfileSnapshot(){
   return {
     company_name:profile.company_name||'',
@@ -1862,13 +1872,14 @@ function goStep3(){
 async function triggerGeneration(){
   const kw=savedKw;
   const workspaceId=getWorkspaceId();
+  const currentUserId=currentUser?.id||'';
   const brandSnapshot=buildBrandProfileSnapshot();
   const toneProfile=buildToneProfile();
   const customerPreferences=buildCustomerPreferences();
   const payload={
     keyword:kw,
     workspace_id:workspaceId,
-    user_id:currentUser.id,
+    user_id:currentUserId,
     content_goal:savedGoal||'convince',
     source_content:getSourceContent(),
     xml_template:getXmlTemplate()||'',
@@ -1885,7 +1896,8 @@ async function triggerGeneration(){
     const el=document.getElementById('pg-create');
     if(el&&genStatus==='loading')buildCreate(el);
   },600);
-  const shouldUseSimpleDemo=IS_LOCAL||!currentUser||currentUser.is_demo||!isUuidValue(workspaceId)||!isUuidValue(currentUser.id);
+  const blockers=getGenerationBlockers(currentUser,workspaceId);
+  const shouldUseSimpleDemo=blockers.length>0;
   (async()=>{
     try{
       if(shouldUseSimpleDemo){
@@ -1894,11 +1906,19 @@ async function triggerGeneration(){
         genStage='pending';
         genJobId=null;
         genResult=null;
-        genMessage=IS_LOCAL
-          ? 'Deze pagina draait nu lokaal via file:// of zonder geldige backendconfig. Daardoor wordt er niets naar Supabase opgeslagen. Gebruik Netlify of een localhost-server met echte backendconfig.'
-          : 'Genereren werkt alleen met een echte gebruiker, workspace en backendconfig. Demo-modus schrijft niets weg.';
+        console.warn('Generation blocked', {
+          blockers,
+          isLocal: IS_LOCAL,
+          currentUser,
+          currentUserId,
+          currentWorkspaceId,
+          workspaceId,
+          profileDefaultWorkspaceId: profile.default_workspace_id||'',
+          supabaseReady: !!supa
+        });
+        genMessage='Genereren is geblokkeerd: '+blockers.join(' ');
         buildCreate(document.getElementById('pg-create'));
-        showToast('Geen backend-opslag actief. Start via Netlify of localhost.');
+        showToast(blockers[0]||'Genereren is geblokkeerd.');
         return;
       }
       const resp=await fetch(GENERATE_CONTENT_ENDPOINT,{
