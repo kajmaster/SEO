@@ -489,17 +489,22 @@ select.form-control{appearance:none;cursor:pointer}
   </div>
 </div>
 <script>
-const SUPA_URL='https://bnwvxjwykzjelclqzbvt.supabase.co';
-const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJud3Z4and5a3pqZWxjbHF6YnZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0MTk0ODEsImV4cCI6MjA5MTk5NTQ4MX0.LxGbca43nOJIDKD0yEQTkI-EAje15OB0hbSwEGO2mw8';
+const DEFAULT_PUBLIC_CONFIG_ENDPOINT='/.netlify/functions/public-config';
 if(typeof pdfjsLib!=='undefined'){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}
 function getOAIKey(){return localStorage.getItem('cf_oai_key')||'';}
 function setOAIKey(k){localStorage.setItem('cf_oai_key',k);}
+function getSupaUrl(){return window.__CF_SUPA_URL__||localStorage.getItem('cf_supa_url')||'';}
+function setSupaUrl(v){localStorage.setItem('cf_supa_url',(v||'').trim());}
+function getSupaKey(){return window.__CF_SUPA_KEY__||localStorage.getItem('cf_supa_key')||'';}
+function setSupaKey(v){localStorage.setItem('cf_supa_key',(v||'').trim());}
 const DEFAULT_VOICE_ENDPOINT='/.netlify/functions/realtime-session';
 const DEFAULT_VOICE_MODEL='gpt-realtime';
 function getVoiceEndpoint(){return localStorage.getItem('cf_voice_endpoint')||DEFAULT_VOICE_ENDPOINT;}
 function setVoiceEndpoint(v){localStorage.setItem('cf_voice_endpoint',(v||DEFAULT_VOICE_ENDPOINT).trim()||DEFAULT_VOICE_ENDPOINT);}
 function getVoiceModel(){return localStorage.getItem('cf_voice_model')||DEFAULT_VOICE_MODEL;}
 function setVoiceModel(v){localStorage.setItem('cf_voice_model',(v||DEFAULT_VOICE_MODEL).trim()||DEFAULT_VOICE_MODEL);}
+// Detect local file:// — Supabase auth can't work without a real HTTP origin
+const IS_LOCAL = window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 const voiceState={
   open:false,status:'idle',statusLabel:'Niet verbonden',connected:false,listening:false,usingDirect:false,mode:'browser',
   log:[{role:'system',text:'Voice beta staat klaar. Open deze panel en start daarna je microfoonverbinding.'}],
@@ -1198,7 +1203,38 @@ function handleXmlUpload(input){
 
 
 let supa=null;
-try{supa=supabase.createClient(SUPA_URL,SUPA_KEY);}catch(e){console.warn('Supabase CDN niet geladen:',e.message);}
+async function loadPublicAppConfig(){
+  if(IS_LOCAL){
+    return {supabaseUrl:getSupaUrl(),supabaseAnonKey:getSupaKey()};
+  }
+  try{
+    const resp=await fetch(DEFAULT_PUBLIC_CONFIG_ENDPOINT,{method:'GET'});
+    const data=await resp.json().catch(()=>null);
+    if(!resp.ok)throw new Error(data?.error||'Kon public-config niet laden.');
+    if(data?.supabaseUrl)setSupaUrl(data.supabaseUrl);
+    if(data?.supabaseAnonKey)setSupaKey(data.supabaseAnonKey);
+    return {supabaseUrl:data?.supabaseUrl||'',supabaseAnonKey:data?.supabaseAnonKey||''};
+  }catch(e){
+    console.warn('Public config fallback:',e.message||e);
+    return {supabaseUrl:getSupaUrl(),supabaseAnonKey:getSupaKey()};
+  }
+}
+async function initSupabaseClient(){
+  const cfg=await loadPublicAppConfig();
+  if(!cfg.supabaseUrl||!cfg.supabaseAnonKey){
+    console.warn('Supabase public config ontbreekt.');
+    supa=null;
+    return null;
+  }
+  try{
+    supa=supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
+    return supa;
+  }catch(e){
+    console.warn('Supabase client init mislukt:',e.message);
+    supa=null;
+    return null;
+  }
+}
 let currentUser=null,profile={},currentWorkspaceId='';
 
 let ITEMS=[
@@ -1249,8 +1285,6 @@ function nav(page,el){
 }
 
 // Detect local file:// — Supabase auth can't work without a real HTTP origin
-const IS_LOCAL = window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-
 function demoLogin(){
   doLogin({email:'demo@contentflow.nl',id:'demo-guest',name:'Demo gebruiker',is_demo:true});
 }
@@ -1299,6 +1333,7 @@ function doLogin(user){
   }
 }
 window.addEventListener('DOMContentLoaded',async()=>{
+  await initSupabaseClient();
   const reviewToken=new URLSearchParams(window.location.search).get('review');
   if(reviewToken){
     await initPublicReviewMode(reviewToken);
@@ -1309,7 +1344,7 @@ window.addEventListener('DOMContentLoaded',async()=>{
   document.getElementById('loginEmail').value='kajslier@gmail.com';
   renderVoicePanel();
   try{
-    supa.auth.onAuthStateChange((event,session)=>{
+    if(supa)supa.auth.onAuthStateChange((event,session)=>{
       // Only auto-login when a magic link is actually being processed (token in URL)
       if(event==='SIGNED_IN'&&session&&!currentUser&&window.location.hash.includes('access_token'))doLogin(session.user);
     });
@@ -1854,17 +1889,16 @@ async function triggerGeneration(){
   (async()=>{
     try{
       if(shouldUseSimpleDemo){
-        await new Promise(resolve=>setTimeout(resolve,900));
-        const data=buildSimpleDemoResponse(payload);
         clearGenerationTimers();
-        genStatus='done';
-        genStage='ready_for_review';
-        genJobId=data?.job?.id||null;
-        genResult=data?.result?data:{status:'ready_for_review',result:data};
-        selectedVariantIndex=getPreferredVariantIndex(getResultVariants(genResult));
-        registerGeneratedPage(data);
+        genStatus='error';
+        genStage='pending';
+        genJobId=null;
+        genResult=null;
+        genMessage=IS_LOCAL
+          ? 'Deze pagina draait nu lokaal via file:// of zonder geldige backendconfig. Daardoor wordt er niets naar Supabase opgeslagen. Gebruik Netlify of een localhost-server met echte backendconfig.'
+          : 'Genereren werkt alleen met een echte gebruiker, workspace en backendconfig. Demo-modus schrijft niets weg.';
         buildCreate(document.getElementById('pg-create'));
-        showToast('Demo-variant gegenereerd zonder backend');
+        showToast('Geen backend-opslag actief. Start via Netlify of localhost.');
         return;
       }
       const resp=await fetch(GENERATE_CONTENT_ENDPOINT,{
@@ -2356,6 +2390,8 @@ function settingsHtml(){
       +'</div><div class="switch'+(i.on?' on':'')+'" onclick="this.classList.toggle(\'on\')"></div></div>'
     ).join('');
     const oaiKey=getOAIKey();
+    const supaUrl=getSupaUrl();
+    const supaKey=getSupaKey();
     const voiceEndpoint=getVoiceEndpoint();
     const voiceModel=getVoiceModel();
     return '<div class="card">'
@@ -2371,6 +2407,16 @@ function settingsHtml(){
       +'<div class="form-group"><label class="form-label">Content generatie endpoint</label>'
       +'<input class="form-control" value="/.netlify/functions/generate-content" readonly>'
       +'<div class="form-hint">De frontend praat nu direct met 1 TypeScript Netlify function. n8n is geen runtime-afhankelijkheid meer.</div></div>'
+      +'<div class="form-group"><label class="form-label">Supabase URL (lokaal)</label>'
+      +'<div style="display:flex;gap:8px;">'
+      +'<input id="supaUrlInput" class="form-control" placeholder="https://project.supabase.co" value="'+escAttr(supaUrl)+'" style="flex:1;">'
+      +'<button class="btn btn-secondary btn-sm" onclick="setSupaUrl(document.getElementById(\'supaUrlInput\').value);showToast(\'Supabase URL lokaal opgeslagen\')">Opslaan</button>'
+      +'</div><div class="form-hint">Alleen voor lokale tests. In Netlify hoort deze uit <code>SUPABASE_URL</code> te komen via <code>/.netlify/functions/public-config</code>.</div></div>'
+      +'<div class="form-group"><label class="form-label">Supabase anon key (lokaal)</label>'
+      +'<div style="display:flex;gap:8px;">'
+      +'<input id="supaKeyInput" class="form-control" type="password" placeholder="eyJ..." value="'+escAttr(supaKey)+'" style="flex:1;">'
+      +'<button class="btn btn-secondary btn-sm" onclick="setSupaKey(document.getElementById(\'supaKeyInput\').value);showToast(\'Supabase anon key lokaal opgeslagen\')">Opslaan</button>'
+      +'</div><div class="form-hint">Gebruik hier alleen de publieke anon key. Nooit een service role key in de frontend zetten.</div></div>'
       +'<div class="settings-block" style="margin-top:18px;"><h3>Realtime voice beta</h3>'
       +'<p>Voice gebruikt een session-endpoint op Netlify, volgens het patroon uit OpenAI\'s realtime voice component.</p>'
       +'<div class="form-group"><label class="form-label">Session endpoint</label>'
