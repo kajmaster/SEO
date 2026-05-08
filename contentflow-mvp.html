@@ -1770,13 +1770,19 @@ function extractForbiddenWordsClient(text){
   });
   return Array.from(words);
 }
+function pickSafeReplacementClient(words){
+  const forbidden=new Set((words||[]).map(word=>String(word).toLowerCase()));
+  const candidates=['gericht','helder','specifiek','toepasbaar','zorgvuldig','passend'];
+  return candidates.find(candidate=>!forbidden.has(candidate))||'';
+}
 function replaceForbiddenWordsClient(text,words){
   let output=String(text||'');
+  const replacement=pickSafeReplacementClient(words);
   words.filter(Boolean).forEach(word=>{
     const escaped=word.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-    output=output.replace(new RegExp('\\b'+escaped+'\\b','gi'),'concreet');
+    output=output.replace(new RegExp('\\b'+escaped+'\\b','gi'),replacement);
   });
-  return output;
+  return output.replace(/\s{2,}/g,' ').replace(/\s+([.,;:!?])/g,'$1').trim();
 }
 function applyForbiddenWordsToCurrentResult(words){
   if(!genResult||!words?.length)return;

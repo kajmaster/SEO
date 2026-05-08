@@ -196,13 +196,20 @@ function uniqueRules(rules: string[], max = 12): string[] {
   return output;
 }
 
+function pickSafeReplacement(forbiddenWords: string[]): string {
+  const forbidden = new Set(forbiddenWords.map((word) => word.toLowerCase()));
+  const candidates = ["gericht", "helder", "specifiek", "toepasbaar", "zorgvuldig", "passend"];
+  return candidates.find((candidate) => !forbidden.has(candidate)) || "";
+}
+
 function replaceForbiddenWords(text: string, forbiddenWords: string[]): string {
   let output = text;
-  for (const word of forbiddenWords.filter(Boolean)) {
+  const replacement = pickSafeReplacement(forbiddenWords);
+  for (const word of forbiddenWords.map((item) => item.trim()).filter(Boolean)) {
     const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    output = output.replace(new RegExp(`\\b${escaped}\\b`, "gi"), "concreet");
+    output = output.replace(new RegExp(`\\b${escaped}\\b`, "gi"), replacement);
   }
-  return output;
+  return output.replace(/\s{2,}/g, " ").replace(/\s+([.,;:!?])/g, "$1").trim();
 }
 
 function enforceForbiddenWords(variant: GeneratedVariant, forbiddenWords: string[]): GeneratedVariant {
@@ -753,7 +760,7 @@ export function buildPrompt(
     lines.push(
       "",
       "HARDE VERBODEN WOORDEN",
-      "Gebruik deze woorden nergens in titel, meta description of content:",
+      "Gebruik deze woorden nergens in titel, meta description of content. Ook niet als voorbeeld, synoniemlabel of tussenkop:",
       ...context.forbiddenWords.map((word) => `- ${word}`),
     );
   }

@@ -54,6 +54,57 @@ function unique(values: string[], max = 20): string[] {
   return output;
 }
 
+function pickSafeReplacement(forbiddenWords: string[]): string {
+  const forbidden = new Set(forbiddenWords.map((word) => word.toLowerCase()));
+  const candidates = ["gericht", "helder", "specifiek", "toepasbaar", "zorgvuldig", "passend"];
+  return candidates.find((candidate) => !forbidden.has(candidate)) || "";
+}
+
+function replaceForbiddenWords(text: unknown, forbiddenWords: string[]): string {
+  let output = typeof text === "string" ? text : "";
+  const replacement = pickSafeReplacement(forbiddenWords);
+  for (const word of forbiddenWords.map((item) => item.trim()).filter(Boolean)) {
+    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    output = output.replace(new RegExp(`\\b${escaped}\\b`, "gi"), replacement);
+  }
+  return output.replace(/\s{2,}/g, " ").replace(/\s+([.,;:!?])/g, "$1").trim();
+}
+
+function cleanVariant(variant: unknown, forbiddenWords: string[]): unknown {
+  if (!variant || typeof variant !== "object" || Array.isArray(variant)) return variant;
+  const row = variant as UnknownRecord;
+  return {
+    ...row,
+    title: replaceForbiddenWords(row.title, forbiddenWords),
+    meta_description: replaceForbiddenWords(row.meta_description, forbiddenWords),
+    content: replaceForbiddenWords(row.content, forbiddenWords),
+  };
+}
+
+function cleanGeneratedResult(result: UnknownRecord, forbiddenWords: string[]): UnknownRecord {
+  if (!forbiddenWords.length) return result;
+  const page = result.page && typeof result.page === "object" && !Array.isArray(result.page)
+    ? (result.page as UnknownRecord)
+    : null;
+  return {
+    ...result,
+    title: replaceForbiddenWords(result.title, forbiddenWords),
+    meta_description: replaceForbiddenWords(result.meta_description, forbiddenWords),
+    content: replaceForbiddenWords(result.content, forbiddenWords),
+    primary_variant: cleanVariant(result.primary_variant, forbiddenWords),
+    variants: Array.isArray(result.variants)
+      ? result.variants.map((variant) => cleanVariant(variant, forbiddenWords))
+      : result.variants,
+    page: page
+      ? {
+          ...page,
+          title: replaceForbiddenWords(page.title, forbiddenWords),
+          primary_variant: cleanVariant(page.primary_variant, forbiddenWords),
+        }
+      : result.page,
+  };
+}
+
 export default async function handler(request: Request): Promise<Response> {
   const preflight = handleOptions(request);
   if (preflight) return preflight;
@@ -115,8 +166,9 @@ export default async function handler(request: Request): Promise<Response> {
     const forbiddenWords = unique([...extractForbiddenWords(event.feedback_text), ...existingForbiddenWords], 30);
     const hardRules = forbiddenWords.map((word) => `Gebruik nooit het woord "${word}".`);
     const nextRules = unique([...hardRules, makeRule(verdict, category, event.feedback_text), ...existingRules]);
+    const cleanedResult = cleanGeneratedResult(currentResult, forbiddenWords);
     const nextResult = {
-      ...currentResult,
+      ...cleanedResult,
       feedback_events: [event, ...existingEvents].slice(0, 50),
       learning_rules: nextRules,
       forbidden_words: forbiddenWords,
