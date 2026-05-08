@@ -1671,13 +1671,15 @@ function renderFeedbackLearningCard(activeVariant){
     +'<p style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:6px;">Jouw feedback wordt opgeslagen bij deze job en automatisch meegenomen in de volgende generatie voor deze workspace.</p></div>'
     +(rules.length?'<span class="tag tag-live">'+rules.length+' leerregels actief</span>':'<span class="tag tag-grey">Nog geen leerregels</span>')
     +'</div>'
-    +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">'
+    +'<textarea id="generationFeedbackText" placeholder="Bijv. minder Amerikaans, meer concreet, certificering eerder noemen..." style="width:100%;min-height:76px;border-radius:12px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);padding:12px;font-size:13px;resize:vertical;"></textarea>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">'
     +'<button class="btn btn-secondary btn-sm" onclick="submitGenerationFeedback(\'approved\',\'toon\',\''+escAttr(variantId)+'\')">Goed, onthouden</button>'
-    +'<button class="btn btn-secondary btn-sm" onclick="submitGenerationFeedback(\'improve\',\'kwaliteit\',\''+escAttr(variantId)+'\')">Moet beter</button>'
+    +'<button class="btn btn-primary btn-sm" onclick="submitGenerationFeedback(\'improve\',\'kwaliteit\',\''+escAttr(variantId)+'\')">Feedback opslaan</button>'
     +'<button class="btn btn-secondary btn-sm" onclick="submitGenerationFeedback(\'rejected\',\'richting\',\''+escAttr(variantId)+'\')">Absoluut fout</button>'
     +'</div>'
-    +'<textarea id="generationFeedbackText" placeholder="Bijv. minder Amerikaans, meer concreet, certificering eerder noemen..." style="width:100%;min-height:76px;border-radius:12px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);padding:12px;font-size:13px;resize:vertical;"></textarea>'
+    +'<div style="margin-top:8px;font-size:12px;color:var(--muted);">Typ je feedback en klik daarna op <strong>Feedback opslaan</strong>. Alleen typen slaat nog niets op.</div>'
     +(latest?'<div style="margin-top:10px;font-size:12px;color:var(--muted);">Laatste feedback: <strong>'+escHtml(latest.verdict||'feedback')+'</strong> - '+escHtml(latest.feedback_text||'')+'</div>':'')
+    +(rules.length?'<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;">'+rules.slice(0,4).map(rule=>'<span class="tag tag-grey">'+escHtml(rule)+'</span>').join('')+'</div>':'')
     +'</div>';
 }
 function renderStrategyPlanCard(plan){
@@ -1730,7 +1732,7 @@ function buildDisplayVariants(base){
 function createVariantFromBase(base,mode){
   if(!base)return null;
   const variantConfigs=[
-    { titleSuffix:'Voor bedrijven', metaPrefix:'Krijg snel inzicht in', lead:'Voor organisaties die snel duidelijkheid willen, zet deze versie de kern, voordelen en praktische impact direct vooraan.' },
+    { titleSuffix:'Voor bedrijven', metaPrefix:'Krijg snel inzicht in', lead:'Voor organisaties die snel duidelijkheid willen, zet deze versie de kern, voordelen en concrete impact direct vooraan.' },
     { titleSuffix:'Uitleg, voordelen en aanpak', metaPrefix:'Lees hoe', lead:'Deze variant kiest een meer uitleggerichte invalshoek, met nadruk op betrouwbaarheid, context en een heldere aanpak.' }
   ];
   const cfg=variantConfigs[mode-1]||variantConfigs[0];
@@ -1749,6 +1751,54 @@ function injectLeadParagraph(content,lead){
     return content.slice(0,idx)+para+content.slice(idx);
   }
   return para+content;
+}
+function extractForbiddenWordsClient(text){
+  const compact=String(text||'').toLowerCase().replace(/[“”"']/g,' ').replace(/\s+/g,' ').trim();
+  const patterns=[
+    /gebruik\s+nooit\s+(?:het\s+woord\s+)?([a-z0-9à-ÿ-]{3,})/gi,
+    /gebruik\s+(?:het\s+woord\s+)?([a-z0-9à-ÿ-]{3,})\s+niet/gi,
+    /vermijd\s+(?:het\s+woord\s+)?([a-z0-9à-ÿ-]{3,})/gi,
+    /nooit\s+(?:het\s+woord\s+)?([a-z0-9à-ÿ-]{3,})/gi
+  ];
+  const words=new Set();
+  patterns.forEach(pattern=>{
+    let match;
+    while((match=pattern.exec(compact))){
+      const word=(match[1]||'').replace(/[^a-z0-9à-ÿ-]/gi,'').trim();
+      if(word&&!['woord','woorden','meer','nooit','niet'].includes(word))words.add(word);
+    }
+  });
+  return Array.from(words);
+}
+function replaceForbiddenWordsClient(text,words){
+  let output=String(text||'');
+  words.filter(Boolean).forEach(word=>{
+    const escaped=word.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    output=output.replace(new RegExp('\\b'+escaped+'\\b','gi'),'concreet');
+  });
+  return output;
+}
+function applyForbiddenWordsToCurrentResult(words){
+  if(!genResult||!words?.length)return;
+  const updateVariant=variant=>{
+    if(!variant||typeof variant!=='object')return variant;
+    return {
+      ...variant,
+      title:replaceForbiddenWordsClient(variant.title,words),
+      meta_description:replaceForbiddenWordsClient(variant.meta_description,words),
+      content:replaceForbiddenWordsClient(variant.content,words)
+    };
+  };
+  if(Array.isArray(genResult.variants))genResult.variants=genResult.variants.map(updateVariant);
+  if(genResult.primary_variant)genResult.primary_variant=updateVariant(genResult.primary_variant);
+  if(genResult.page?.primary_variant)genResult.page.primary_variant=updateVariant(genResult.page.primary_variant);
+  if(genResult.result){
+    if(Array.isArray(genResult.result.variants))genResult.result.variants=genResult.result.variants.map(updateVariant);
+    if(genResult.result.primary_variant)genResult.result.primary_variant=updateVariant(genResult.result.primary_variant);
+    genResult.result.title=replaceForbiddenWordsClient(genResult.result.title,words);
+    genResult.result.content=replaceForbiddenWordsClient(genResult.result.content,words);
+    genResult.result.meta_description=replaceForbiddenWordsClient(genResult.result.meta_description,words);
+  }
 }
 function selectVariant(idx){
   selectedVariantIndex=idx;
@@ -1779,13 +1829,16 @@ async function submitGenerationFeedback(verdict,category,variantId){
     });
     const data=await resp.json().catch(()=>null);
     if(!resp.ok)throw new Error(data?.error||'Feedback opslaan mislukt.');
+    const forbiddenWords=data?.forbidden_words||extractForbiddenWordsClient(feedbackText);
     if(data?.job?.result){
       genResult={...genResult,result:data.job.result};
     }else if(data?.learning_rules){
       const current=genResult.result||genResult;
       current.learning_rules=data.learning_rules;
+      current.forbidden_words=forbiddenWords;
       current.feedback_events=[data.event,...(current.feedback_events||[])];
     }
+    applyForbiddenWordsToCurrentResult(forbiddenWords);
     if(feedbackEl)feedbackEl.value='';
     buildCreate(document.getElementById('pg-create'));
     showToast('Feedback opgeslagen. Volgende generatie leert hiervan.');

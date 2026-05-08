@@ -171,6 +171,18 @@ function feedbackEventToRule(event: UnknownRecord): string {
   return `Verbeter voortaan${category ? ` rond ${category}` : ""}: ${text}`;
 }
 
+function extractForbiddenWordsFromRule(rule: string): string[] {
+  const words = new Set<string>();
+  const quoted = [...rule.matchAll(/"([^"]{3,})"/g)].map((match) => match[1]);
+  for (const word of quoted) words.add(word.toLowerCase().trim());
+  const plain = [...rule.toLowerCase().matchAll(/gebruik\s+nooit\s+(?:het\s+woord\s+)?([a-z0-9à-ÿ-]{3,})/gi)];
+  for (const match of plain) {
+    const word = match[1]?.replace(/[^a-z0-9à-ÿ-]/gi, "").trim();
+    if (word) words.add(word);
+  }
+  return [...words].filter(Boolean);
+}
+
 function uniqueRules(rules: string[], max = 12): string[] {
   const seen = new Set<string>();
   const output: string[] = [];
@@ -182,6 +194,29 @@ function uniqueRules(rules: string[], max = 12): string[] {
     if (output.length >= max) break;
   }
   return output;
+}
+
+function replaceForbiddenWords(text: string, forbiddenWords: string[]): string {
+  let output = text;
+  for (const word of forbiddenWords.filter(Boolean)) {
+    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    output = output.replace(new RegExp(`\\b${escaped}\\b`, "gi"), "concreet");
+  }
+  return output;
+}
+
+function enforceForbiddenWords(variant: GeneratedVariant, forbiddenWords: string[]): GeneratedVariant {
+  if (!forbiddenWords.length) return variant;
+  const title = replaceForbiddenWords(variant.title, forbiddenWords);
+  const meta = replaceForbiddenWords(variant.meta_description, forbiddenWords);
+  const content = replaceForbiddenWords(variant.content, forbiddenWords);
+  return {
+    ...variant,
+    title,
+    meta_description: meta,
+    content,
+    word_count: countWords(content),
+  };
 }
 
 function mergeObjects(...parts: Array<UnknownRecord | null | undefined>): UnknownRecord {
@@ -250,7 +285,7 @@ export function buildDefaultPlan(
 
   return {
     searchIntent: input.content_goal === "inform" ? "informatief" : "commercieel onderzoekend",
-    pageAngle: `${input.keyword} uitgelegd vanuit aanpak, risicoverlaging en praktische waarde`,
+    pageAngle: `${input.keyword} uitgelegd vanuit aanpak, risicoverlaging en concrete waarde`,
     targetReader: audience || "B2B-beslisser die aanbieders vergelijkt",
     recommendedStructure: [
       `Wat ${input.keyword} betekent`,
@@ -265,7 +300,7 @@ export function buildDefaultPlan(
       services || "De dienst moet concreet aansluiten op de situatie van de klant.",
       "Goede content maakt risico's, keuzes en vervolgstappen helder.",
     ],
-    proofPoints: ["Heldere methode", "Praktische uitleg", "Concrete vervolgstap"],
+    proofPoints: ["Heldere methode", "Concrete uitleg", "Duidelijke vervolgstap"],
     mustInclude: [input.keyword, cta],
     mustAvoid: ["Absolute claims zonder bewijs", "Vage marketingtaal", "Nietszeggende buzzwords"],
     ctaDirection: cta,
@@ -292,7 +327,7 @@ export function buildFallbackVariants(
   const keyword = input.keyword;
   const baseSections = [
     `<h1>${keyword}</h1>`,
-    `<p>${keyword} is voor ${audience.toLowerCase()} vooral belangrijk wanneer keuzes betrouwbaar, uitlegbaar en praktisch uitvoerbaar moeten zijn. ${companyName} helpt om die afweging helder te maken met een aanpak die past bij de context van de klant.</p>`,
+    `<p>${keyword} is voor ${audience.toLowerCase()} vooral belangrijk wanneer keuzes betrouwbaar, uitlegbaar en concreet uitvoerbaar moeten zijn. ${companyName} helpt om die afweging helder te maken met een aanpak die past bij de context van de klant.</p>`,
     `<h2>Waarom ${keyword} belangrijk is</h2>`,
     `<p>Een goede pagina over ${keyword} moet niet alleen uitleg geven, maar ook laten zien wanneer de dienst relevant is, welke risico's ermee worden verlaagd en welke vervolgstap logisch is.</p>`,
     services ? `<h2>Relevante expertise</h2><p>De belangrijkste context vanuit de organisatie: ${services}.</p>` : "",
@@ -337,8 +372,8 @@ export function buildFallbackVariants(
     {
       id: "variant-3",
       variant_index: 3,
-      title: `${keyword}: praktische uitleg voor ${audience}`,
-      meta_description: `Praktische uitleg over ${keyword}, inclusief aanpak, aandachtspunten en CTA.`,
+      title: `${keyword}: concrete uitleg voor ${audience}`,
+      meta_description: `Concrete uitleg over ${keyword}, inclusief aanpak, aandachtspunten en CTA.`,
       content: baseSections
         .join("\n")
         .replace("Een goede pagina", "Een sterke, inhoudelijke pagina")
@@ -353,7 +388,7 @@ export function buildFallbackVariants(
     },
   ];
 
-  return variants;
+  return variants.map((variant) => enforceForbiddenWords(variant, context.forbiddenWords));
 }
 
 function cloneVariant(base: GeneratedVariant, index: number, lead: string): GeneratedVariant {
@@ -468,6 +503,7 @@ export async function loadGenerationContext(input: GenerateContentRequest): Prom
   customerPreferences: UnknownRecord;
   template: UnknownRecord | null;
   learningMemory: string[];
+  forbiddenWords: string[];
 }> {
   const profile = await safeFirstRow(`profiles?id=eq.${encodeURIComponent(input.user_id)}&select=*`);
   const workspace = await safeFirstRow(
@@ -496,6 +532,15 @@ export async function loadGenerationContext(input: GenerateContentRequest): Prom
       return [...events.map(feedbackEventToRule), ...storedRules];
     }),
   );
+  const forbiddenWords = uniqueRules(
+    previousJobs.flatMap((job) => {
+      const result = (job.result && typeof job.result === "object" ? job.result : {}) as UnknownRecord;
+      const storedForbiddenWords = normalizeStringArray(result.forbidden_words);
+      const storedRules = normalizeStringArray(result.learning_rules);
+      return [...storedForbiddenWords, ...storedRules.flatMap(extractForbiddenWordsFromRule)];
+    }),
+    30,
+  );
 
   return {
     brandProfile: mergeObjects(workspace, profile, brandProfile, input.brand_profile_snapshot),
@@ -503,6 +548,7 @@ export async function loadGenerationContext(input: GenerateContentRequest): Prom
     customerPreferences: mergeObjects(profile, customerPreferences, input.customer_preferences),
     template,
     learningMemory,
+    forbiddenWords,
   };
 }
 
@@ -684,7 +730,7 @@ export function buildPrompt(
     "KWALITEITSEISEN",
     "- Schrijf natuurlijk, vloeiend en menselijk Nederlands.",
     "- Gebruik concrete alinea-overgangen en vermijd generieke marketingtaal.",
-    "- Schrijf voor B2B-beslissers, dus helder, geloofwaardig en praktisch.",
+    "- Schrijf voor B2B-beslissers, dus helder, geloofwaardig en concreet.",
     "- Gebruik HTML in de content met <h1>, <h2>, <h3>, <p> en waar passend <ul>/<li>.",
     "- Geen placeholders, geen meta-uitleg en geen template-tags in de output.",
     "",
@@ -700,6 +746,15 @@ export function buildPrompt(
       "GELEERDE FEEDBACKREGELS VAN DEZE WORKSPACE",
       "Pas deze feedback verplicht toe op deze generatie:",
       ...context.learningMemory.map((rule) => `- ${rule}`),
+    );
+  }
+
+  if (context.forbiddenWords.length) {
+    lines.push(
+      "",
+      "HARDE VERBODEN WOORDEN",
+      "Gebruik deze woorden nergens in titel, meta description of content:",
+      ...context.forbiddenWords.map((word) => `- ${word}`),
     );
   }
 
@@ -789,9 +844,10 @@ export async function generateVariants(
   const rawVariants = Array.isArray(parsed.variants) ? parsed.variants : [];
   const normalized = rawVariants.map((variant, idx) => normalizeVariant(variant as UnknownRecord, idx + 1));
   const variants = ensureThreeVariants(normalized);
-  variants.sort((a, b) => b.combined_score - a.combined_score);
-  if (variants[0]) variants[0].is_primary = true;
-  return variants;
+  const cleanedVariants = variants.map((variant) => enforceForbiddenWords(variant, context.forbiddenWords));
+  cleanedVariants.sort((a, b) => b.combined_score - a.combined_score);
+  if (cleanedVariants[0]) cleanedVariants[0].is_primary = true;
+  return cleanedVariants;
 }
 
 export async function createGenerationJob(input: GenerateContentRequest): Promise<UnknownRecord> {

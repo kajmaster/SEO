@@ -22,6 +22,25 @@ function makeRule(verdict: string, category: string, text: string): string {
   return `Verbeter voortaan${category ? ` rond ${category}` : ""}: ${compact}`;
 }
 
+function extractForbiddenWords(text: string): string[] {
+  const compact = text.toLowerCase().replace(/[“”"']/g, " ").replace(/\s+/g, " ").trim();
+  const patterns = [
+    /gebruik\s+nooit\s+(?:het\s+woord\s+)?([a-z0-9à-ÿ-]{3,})/gi,
+    /gebruik\s+(?:het\s+woord\s+)?([a-z0-9à-ÿ-]{3,})\s+niet/gi,
+    /vermijd\s+(?:het\s+woord\s+)?([a-z0-9à-ÿ-]{3,})/gi,
+    /nooit\s+(?:het\s+woord\s+)?([a-z0-9à-ÿ-]{3,})/gi,
+  ];
+  const words = new Set<string>();
+  for (const pattern of patterns) {
+    let match: RegExpExecArray | null;
+    while ((match = pattern.exec(compact))) {
+      const word = match[1]?.replace(/[^a-z0-9à-ÿ-]/gi, "").trim();
+      if (word && !["woord", "woorden", "meer", "nooit", "niet"].includes(word)) words.add(word);
+    }
+  }
+  return [...words].slice(0, 20);
+}
+
 function unique(values: string[], max = 20): string[] {
   const seen = new Set<string>();
   const output: string[] = [];
@@ -79,6 +98,9 @@ export default async function handler(request: Request): Promise<Response> {
     const existingRules = Array.isArray(currentResult.learning_rules)
       ? (currentResult.learning_rules as string[])
       : [];
+    const existingForbiddenWords = Array.isArray(currentResult.forbidden_words)
+      ? (currentResult.forbidden_words as string[])
+      : [];
     const event = {
       id: crypto.randomUUID(),
       workspace_id: workspaceId,
@@ -90,11 +112,14 @@ export default async function handler(request: Request): Promise<Response> {
       feedback_text: feedbackText || (verdict === "approved" ? "Goedgekeurd zonder extra opmerkingen." : ""),
       created_at: new Date().toISOString(),
     };
-    const nextRules = unique([makeRule(verdict, category, event.feedback_text), ...existingRules]);
+    const forbiddenWords = unique([...extractForbiddenWords(event.feedback_text), ...existingForbiddenWords], 30);
+    const hardRules = forbiddenWords.map((word) => `Gebruik nooit het woord "${word}".`);
+    const nextRules = unique([...hardRules, makeRule(verdict, category, event.feedback_text), ...existingRules]);
     const nextResult = {
       ...currentResult,
       feedback_events: [event, ...existingEvents].slice(0, 50),
       learning_rules: nextRules,
+      forbidden_words: forbiddenWords,
       learning_summary: nextRules.slice(0, 8).join("\n"),
     };
 
@@ -111,6 +136,7 @@ export default async function handler(request: Request): Promise<Response> {
       ok: true,
       event,
       learning_rules: nextRules,
+      forbidden_words: forbiddenWords,
       job: updated,
     });
   } catch (error) {
