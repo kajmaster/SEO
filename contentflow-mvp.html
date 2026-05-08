@@ -489,7 +489,12 @@ select.form-control{appearance:none;cursor:pointer}
   </div>
 </div>
 <script>
-const DEFAULT_PUBLIC_CONFIG_ENDPOINT='/.netlify/functions/public-config';
+const LIVE_FUNCTION_ORIGIN='https://splendid-ganache-01f6c2.netlify.app';
+function netlifyFunctionPath(path){
+  const cleanPath=path.startsWith('/')?path:'/'+path;
+  return window.location.protocol==='file:' ? LIVE_FUNCTION_ORIGIN+cleanPath : cleanPath;
+}
+const DEFAULT_PUBLIC_CONFIG_ENDPOINT=netlifyFunctionPath('/.netlify/functions/public-config');
 const EMBEDDED_SUPA_URL=['https://bnwvxjwykzjelclqzbvt','.supabase.co'].join('');
 const EMBEDDED_SUPA_KEY=[
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.',
@@ -1188,8 +1193,8 @@ async function handleVoiceServerEvent(event){
 }
 
 // ── Webhook config ──
-const GENERATE_CONTENT_ENDPOINT='/.netlify/functions/generate-content';
-const SAVE_FEEDBACK_ENDPOINT='/.netlify/functions/save-feedback';
+const GENERATE_CONTENT_ENDPOINT=netlifyFunctionPath('/.netlify/functions/generate-content');
+const SAVE_FEEDBACK_ENDPOINT=netlifyFunctionPath('/.netlify/functions/save-feedback');
 function getSourceContent(){var el=document.getElementById('dzPreview');return el?(el.innerText||el.textContent||'').substring(0,3000):'';}
 function getXmlTemplate(){return localStorage.getItem('cf_xml_template')||'';}
 function getXmlTemplateName(){return localStorage.getItem('cf_xml_template_name')||'';}
@@ -1390,7 +1395,7 @@ function renderPage(p){
   else if(p==='settings')buildSettings(el);
 }
 
-let genStatus='idle',genMessage='',genJobId=null,genResult=null;
+let genStatus='idle',genMessage='',genJobId=null,genResult=null,feedbackSaveMessage='',feedbackSaveTone='muted';
 let savedKw='';
 
 function buildCreate(el){
@@ -1672,6 +1677,7 @@ function renderFeedbackLearningCard(activeVariant){
     +(rules.length?'<span class="tag tag-live">'+rules.length+' leerregels actief</span>':'<span class="tag tag-grey">Nog geen leerregels</span>')
     +'</div>'
     +'<textarea id="generationFeedbackText" placeholder="Bijv. minder Amerikaans, meer concreet, certificering eerder noemen..." style="width:100%;min-height:76px;border-radius:12px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);padding:12px;font-size:13px;resize:vertical;"></textarea>'
+    +'<div id="generationFeedbackStatus" style="'+(feedbackSaveMessage?'':'display:none;')+'margin-top:10px;font-size:12px;color:'+(feedbackSaveTone==='ok'?'var(--accent)':feedbackSaveTone==='error'?'#f87171':'var(--muted)')+';">'+escHtml(feedbackSaveMessage)+'</div>'
     +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">'
     +'<button class="btn btn-secondary btn-sm" onclick="submitGenerationFeedback(\'approved\',\'toon\',\''+escAttr(variantId)+'\')">Goed, onthouden</button>'
     +'<button class="btn btn-primary btn-sm" onclick="submitGenerationFeedback(\'improve\',\'kwaliteit\',\''+escAttr(variantId)+'\')">Feedback opslaan</button>'
@@ -1815,11 +1821,19 @@ async function submitGenerationFeedback(verdict,category,variantId){
   const workspaceId=getWorkspaceId();
   const jobId=genResult?.job?.id||genJobId||genResult?.result?.job_id||'';
   const feedbackEl=document.getElementById('generationFeedbackText');
+  const statusEl=document.getElementById('generationFeedbackStatus');
   const feedbackText=(feedbackEl?.value||'').trim();
   if(!jobId||!isUuidValue(jobId)){showToast('Geen geldige job gevonden om feedback op te slaan.');return;}
   if(!workspaceId||!isUuidValue(workspaceId)){showToast('Geen geldige workspace gevonden.');return;}
   if(verdict!=='approved'&&feedbackText.length<3){showToast('Schrijf kort wat er beter moet, dan kan ContentFlow ervan leren.');return;}
   try{
+    feedbackSaveMessage='Feedback wordt opgeslagen...';
+    feedbackSaveTone='muted';
+    if(statusEl){
+      statusEl.style.display='block';
+      statusEl.style.color='var(--muted)';
+      statusEl.textContent='Feedback wordt opgeslagen...';
+    }
     const resp=await fetch(SAVE_FEEDBACK_ENDPOINT,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
@@ -1846,9 +1860,23 @@ async function submitGenerationFeedback(verdict,category,variantId){
     }
     applyForbiddenWordsToCurrentResult(forbiddenWords);
     if(feedbackEl)feedbackEl.value='';
+    feedbackSaveMessage='Feedback opgeslagen in Supabase. Leerregels actief: '+((data?.learning_rules||[]).length||0)+'.';
+    feedbackSaveTone='ok';
+    if(statusEl){
+      statusEl.style.display='block';
+      statusEl.style.color='var(--accent)';
+      statusEl.textContent=feedbackSaveMessage;
+    }
     buildCreate(document.getElementById('pg-create'));
     showToast('Feedback opgeslagen. Volgende generatie leert hiervan.');
   }catch(e){
+    feedbackSaveMessage='Feedback opslaan mislukt: '+(e.message||'onbekende fout');
+    feedbackSaveTone='error';
+    if(statusEl){
+      statusEl.style.display='block';
+      statusEl.style.color='#f87171';
+      statusEl.textContent=feedbackSaveMessage;
+    }
     showToast('Feedback opslaan mislukt: '+(e.message||'onbekende fout'));
   }
 }
