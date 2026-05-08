@@ -1189,6 +1189,7 @@ async function handleVoiceServerEvent(event){
 
 // ── Webhook config ──
 const GENERATE_CONTENT_ENDPOINT='/.netlify/functions/generate-content';
+const SAVE_FEEDBACK_ENDPOINT='/.netlify/functions/save-feedback';
 function getSourceContent(){var el=document.getElementById('dzPreview');return el?(el.innerText||el.textContent||'').substring(0,3000):'';}
 function getXmlTemplate(){return localStorage.getItem('cf_xml_template')||'';}
 function getXmlTemplateName(){return localStorage.getItem('cf_xml_template_name')||'';}
@@ -1536,6 +1537,7 @@ function step3Html(){
       +'<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:'+(qualityNotes.length?12:0)+'px;"><span class="tag tag-live">Refine-pass voltooid</span><span class="tag tag-review">Reviewstatus: '+escHtml((genResult.result?.review_status||genResult.review_status||'needs_review').replace(/_/g,' '))+'</span><span class="tag tag-grey">Beste variant automatisch gekozen</span></div>'
       +(qualityNotes.length?'<div style="display:flex;flex-wrap:wrap;gap:8px;">'+qualityNotes.map(note=>'<span class="tag tag-grey">'+escHtml(note)+'</span>').join('')+'</div>':'')
       +'</div>'
+      +renderFeedbackLearningCard(activeVariant)
       +renderStrategyPlanCard(strategyPlan)
       +(variants.length?'<div class="card" style="padding:20px 24px;">'
         +'<div class="variant-toolbar" style="margin-bottom:16px;">'
@@ -1656,6 +1658,28 @@ function getStrategyHighlights(plan){
   if(plan.ctaDirection)items.push({label:'CTA',value:plan.ctaDirection});
   return items;
 }
+function renderFeedbackLearningCard(activeVariant){
+  const result=genResult?.result||genResult||{};
+  const events=Array.isArray(result.feedback_events)?result.feedback_events:[];
+  const rules=Array.isArray(result.learning_rules)?result.learning_rules:[];
+  const latest=events[0];
+  const variantId=activeVariant?.id||'';
+  return '<div class="card" style="padding:20px 24px;border:1px solid rgba(0,198,122,.22);background:linear-gradient(135deg,rgba(0,198,122,.08),rgba(255,255,255,0));">'
+    +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px;">'
+    +'<div><div style="font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--accent);text-transform:uppercase;margin-bottom:6px;">Zelflerende feedback</div>'
+    +'<div style="font-size:18px;font-weight:800;">Moet ContentFlow hiervan leren?</div>'
+    +'<p style="font-size:13px;color:var(--muted);line-height:1.5;margin-top:6px;">Jouw feedback wordt opgeslagen bij deze job en automatisch meegenomen in de volgende generatie voor deze workspace.</p></div>'
+    +(rules.length?'<span class="tag tag-live">'+rules.length+' leerregels actief</span>':'<span class="tag tag-grey">Nog geen leerregels</span>')
+    +'</div>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">'
+    +'<button class="btn btn-secondary btn-sm" onclick="submitGenerationFeedback(\'approved\',\'toon\',\''+escAttr(variantId)+'\')">Goed, onthouden</button>'
+    +'<button class="btn btn-secondary btn-sm" onclick="submitGenerationFeedback(\'improve\',\'kwaliteit\',\''+escAttr(variantId)+'\')">Moet beter</button>'
+    +'<button class="btn btn-secondary btn-sm" onclick="submitGenerationFeedback(\'rejected\',\'richting\',\''+escAttr(variantId)+'\')">Absoluut fout</button>'
+    +'</div>'
+    +'<textarea id="generationFeedbackText" placeholder="Bijv. minder Amerikaans, meer concreet, certificering eerder noemen..." style="width:100%;min-height:76px;border-radius:12px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);padding:12px;font-size:13px;resize:vertical;"></textarea>'
+    +(latest?'<div style="margin-top:10px;font-size:12px;color:var(--muted);">Laatste feedback: <strong>'+escHtml(latest.verdict||'feedback')+'</strong> - '+escHtml(latest.feedback_text||'')+'</div>':'')
+    +'</div>';
+}
 function renderStrategyPlanCard(plan){
   if(!plan)return '';
   const highlights=getStrategyHighlights(plan);
@@ -1729,6 +1753,45 @@ function injectLeadParagraph(content,lead){
 function selectVariant(idx){
   selectedVariantIndex=idx;
   buildCreate(document.getElementById('pg-create'));
+}
+async function submitGenerationFeedback(verdict,category,variantId){
+  if(currentUser?.is_demo){showToast('Feedback leren werkt alleen met een echte Supabase sessie.');return;}
+  const workspaceId=getWorkspaceId();
+  const jobId=genResult?.job?.id||genJobId||genResult?.result?.job_id||'';
+  const feedbackEl=document.getElementById('generationFeedbackText');
+  const feedbackText=(feedbackEl?.value||'').trim();
+  if(!jobId||!isUuidValue(jobId)){showToast('Geen geldige job gevonden om feedback op te slaan.');return;}
+  if(!workspaceId||!isUuidValue(workspaceId)){showToast('Geen geldige workspace gevonden.');return;}
+  if(verdict!=='approved'&&feedbackText.length<3){showToast('Schrijf kort wat er beter moet, dan kan ContentFlow ervan leren.');return;}
+  try{
+    const resp=await fetch(SAVE_FEEDBACK_ENDPOINT,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        workspace_id:workspaceId,
+        user_id:currentUser?.id||'',
+        job_id:jobId,
+        verdict:verdict,
+        category:category||'algemeen',
+        variant_id:variantId||'',
+        feedback_text:feedbackText
+      })
+    });
+    const data=await resp.json().catch(()=>null);
+    if(!resp.ok)throw new Error(data?.error||'Feedback opslaan mislukt.');
+    if(data?.job?.result){
+      genResult={...genResult,result:data.job.result};
+    }else if(data?.learning_rules){
+      const current=genResult.result||genResult;
+      current.learning_rules=data.learning_rules;
+      current.feedback_events=[data.event,...(current.feedback_events||[])];
+    }
+    if(feedbackEl)feedbackEl.value='';
+    buildCreate(document.getElementById('pg-create'));
+    showToast('Feedback opgeslagen. Volgende generatie leert hiervan.');
+  }catch(e){
+    showToast('Feedback opslaan mislukt: '+(e.message||'onbekende fout'));
+  }
 }
 function copyResult(){
   if(!genResult)return;

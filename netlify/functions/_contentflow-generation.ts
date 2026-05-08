@@ -135,6 +135,18 @@ async function safeFirstRow(path: string): Promise<UnknownRecord | null> {
   }
 }
 
+async function safeRows(path: string): Promise<UnknownRecord[]> {
+  try {
+    const rows = await supabaseFetch<UnknownRecord[]>(path, {
+      method: "GET",
+      headers: { Prefer: "return=representation" },
+    });
+    return Array.isArray(rows) ? rows : [];
+  } catch {
+    return [];
+  }
+}
+
 function sanitizeText(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -143,6 +155,33 @@ function normalizeStringArray(value: unknown): string[] {
   return Array.isArray(value)
     ? value.map((item) => String(item).trim()).filter(Boolean)
     : [];
+}
+
+function compactRule(value: string): string {
+  return value.replace(/\s+/g, " ").trim().slice(0, 220);
+}
+
+function feedbackEventToRule(event: UnknownRecord): string {
+  const verdict = sanitizeText(event.verdict);
+  const category = sanitizeText(event.category);
+  const text = compactRule(sanitizeText(event.feedback_text));
+  if (!text) return "";
+  if (verdict === "approved") return `Herhaal wat werkte${category ? ` rond ${category}` : ""}: ${text}`;
+  if (verdict === "rejected") return `Vermijd dit voortaan${category ? ` rond ${category}` : ""}: ${text}`;
+  return `Verbeter voortaan${category ? ` rond ${category}` : ""}: ${text}`;
+}
+
+function uniqueRules(rules: string[], max = 12): string[] {
+  const seen = new Set<string>();
+  const output: string[] = [];
+  for (const rule of rules.map(compactRule).filter(Boolean)) {
+    const key = rule.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    output.push(rule);
+    if (output.length >= max) break;
+  }
+  return output;
 }
 
 function mergeObjects(...parts: Array<UnknownRecord | null | undefined>): UnknownRecord {
@@ -230,7 +269,12 @@ export function buildDefaultPlan(
     mustInclude: [input.keyword, cta],
     mustAvoid: ["Absolute claims zonder bewijs", "Vage marketingtaal", "Nietszeggende buzzwords"],
     ctaDirection: cta,
-    writingNotes: ["Schrijf helder Nederlands", "Maak de tekst menselijk en zakelijk", "Gebruik concrete tussenkoppen"],
+    writingNotes: [
+      "Schrijf helder Nederlands",
+      "Maak de tekst menselijk en zakelijk",
+      "Gebruik concrete tussenkoppen",
+      ...context.learningMemory,
+    ],
   };
 }
 
@@ -423,6 +467,7 @@ export async function loadGenerationContext(input: GenerateContentRequest): Prom
   toneProfile: UnknownRecord;
   customerPreferences: UnknownRecord;
   template: UnknownRecord | null;
+  learningMemory: string[];
 }> {
   const profile = await safeFirstRow(`profiles?id=eq.${encodeURIComponent(input.user_id)}&select=*`);
   const workspace = await safeFirstRow(
@@ -440,12 +485,24 @@ export async function loadGenerationContext(input: GenerateContentRequest): Prom
   const template = isUuid(input.template_id || null)
     ? await safeFirstRow(`template_library?id=eq.${encodeURIComponent(input.template_id!)}&select=*`)
     : null;
+  const previousJobs = await safeRows(
+    `generation_jobs?workspace_id=eq.${encodeURIComponent(input.workspace_id)}&select=result,quality_summary,keyword,updated_at&order=updated_at.desc&limit=15`,
+  );
+  const learningMemory = uniqueRules(
+    previousJobs.flatMap((job) => {
+      const result = (job.result && typeof job.result === "object" ? job.result : {}) as UnknownRecord;
+      const events = Array.isArray(result.feedback_events) ? (result.feedback_events as UnknownRecord[]) : [];
+      const storedRules = normalizeStringArray(result.learning_rules);
+      return [...events.map(feedbackEventToRule), ...storedRules];
+    }),
+  );
 
   return {
     brandProfile: mergeObjects(workspace, profile, brandProfile, input.brand_profile_snapshot),
     toneProfile: mergeObjects(profile, toneProfile, input.tone_profile),
     customerPreferences: mergeObjects(profile, customerPreferences, input.customer_preferences),
     template,
+    learningMemory,
   };
 }
 
@@ -513,6 +570,15 @@ function buildPlanningPrompt(
     "Retourneer exact geldig JSON in dit formaat:",
     '{"searchIntent":"string","pageAngle":"string","targetReader":"string","recommendedStructure":["string"],"keyMessages":["string"],"proofPoints":["string"],"mustInclude":["string"],"mustAvoid":["string"],"ctaDirection":"string","writingNotes":["string"]}',
   );
+
+  if (context.learningMemory.length) {
+    lines.push(
+      "",
+      "GELEERDE FEEDBACKREGELS",
+      "Deze regels komen uit eerdere feedback en zijn belangrijker dan generieke voorkeuren:",
+      ...context.learningMemory.map((rule) => `- ${rule}`),
+    );
+  }
 
   return lines.join("\n");
 }
@@ -627,6 +693,15 @@ export function buildPrompt(
     "- Variant 2: directer en commerciëler.",
     "- Variant 3: inhoudelijker en consultatiever.",
   ];
+
+  if (context.learningMemory.length) {
+    lines.push(
+      "",
+      "GELEERDE FEEDBACKREGELS VAN DEZE WORKSPACE",
+      "Pas deze feedback verplicht toe op deze generatie:",
+      ...context.learningMemory.map((rule) => `- ${rule}`),
+    );
+  }
 
   if (sourceContent) {
     lines.push("", "BRONMATERIAAL", sourceContent);
