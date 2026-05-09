@@ -1,6 +1,5 @@
 import {
   buildDefaultPlan,
-  buildFallbackVariants,
   buildGenerationResponse,
   createGenerationJob,
   generateVariants,
@@ -8,6 +7,7 @@ import {
   isUuid,
   jsonResponse,
   loadGenerationContext,
+  planContent,
   saveGeneratedContent,
   type GenerateContentRequest,
   updateGenerationJob,
@@ -80,21 +80,25 @@ export default async function handler(request: Request): Promise<Response> {
 
     await updateGenerationJob(jobId, { status: "drafting" });
     const context = await loadGenerationContext(input);
-    const plan = buildDefaultPlan(input, context);
-
-    await updateGenerationJob(jobId, { status: "drafting" });
-    let variants;
-    let fallbackReason = "";
+    let plan = buildDefaultPlan(input, context);
+    let planningFallbackReason = "";
     try {
-      variants = await withTimeout(
-        generateVariants(input, context, plan),
-        8000,
-        "OpenAI duurde te lang; fallbackcontent gebruikt.",
+      plan = await withTimeout(
+        planContent(input, context),
+        12000,
+        "Strategielaag duurde te lang; basisplan gebruikt.",
       );
     } catch (error) {
-      fallbackReason = error instanceof Error ? error.message : "OpenAI gaf geen bruikbaar antwoord.";
-      variants = buildFallbackVariants(input, context, plan, fallbackReason);
+      planningFallbackReason =
+        error instanceof Error ? error.message : "Strategielaag gaf geen bruikbaar plan.";
     }
+
+    await updateGenerationJob(jobId, { status: "drafting" });
+    const variants = await withTimeout(
+      generateVariants(input, context, plan),
+      42000,
+      "OpenAI duurde te lang. Er is geen fallbacktekst opgeslagen, zodat je geen nepkwaliteit krijgt.",
+    );
     const saved = await saveGeneratedContent({
       input,
       job,
@@ -116,7 +120,8 @@ export default async function handler(request: Request): Promise<Response> {
       quality_summary: {
         selected_variant_combined_score: saved.primaryVariant.combined_score,
         variant_count: saved.variants.length,
-        fallback_reason: fallbackReason || null,
+        fallback_reason: null,
+        planning_fallback_reason: planningFallbackReason || null,
       },
       result: responsePayload.result,
     });

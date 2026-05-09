@@ -7,7 +7,7 @@ const CORS_HEADERS = {
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-const CONTENT_MODEL = process.env.OPENAI_CONTENT_MODEL || "gpt-4o-mini";
+const CONTENT_MODEL = process.env.OPENAI_CONTENT_MODEL || "gpt-4o";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -462,6 +462,39 @@ function normalizeVariant(raw: UnknownRecord, index: number): GeneratedVariant {
   };
 }
 
+function looksLikePublishableArticle(variant: GeneratedVariant): boolean {
+  const content = sanitizeText(variant.content);
+  const wordCount = countWords(content);
+  const headingCount = (content.match(/<h2[\s>]/gi) || []).length;
+  const paragraphCount = (content.match(/<p[\s>]/gi) || []).length;
+  return (
+    wordCount >= 650 &&
+    headingCount >= 4 &&
+    paragraphCount >= 6 &&
+    !/geen content ontvangen|fallback|placeholder|lorem ipsum/i.test(content)
+  );
+}
+
+function ensurePublishableVariants(variants: GeneratedVariant[]): GeneratedVariant[] {
+  const publishable = variants.filter(looksLikePublishableArticle);
+  if (!publishable.length) {
+    throw new Error("OpenAI gaf geen publiceerbare tekst terug. Probeer opnieuw met meer bedrijfscontext of bronmateriaal.");
+  }
+  return variants.map((variant) => ({
+    ...variant,
+    seo_score: looksLikePublishableArticle(variant) ? variant.seo_score : Math.min(variant.seo_score, 62),
+    quality_score: looksLikePublishableArticle(variant)
+      ? variant.quality_score
+      : Math.min(variant.quality_score, 58),
+    combined_score: looksLikePublishableArticle(variant)
+      ? variant.combined_score
+      : scoreVariant(Math.min(variant.seo_score, 62), Math.min(variant.quality_score, 58)),
+    quality_notes: looksLikePublishableArticle(variant)
+      ? variant.quality_notes
+      : [...variant.quality_notes, "Let op: deze variant is korter dan de productiekwaliteitslat."],
+  }));
+}
+
 function ensureThreeVariants(variants: GeneratedVariant[]): GeneratedVariant[] {
   if (!variants.length) {
     return [
@@ -714,6 +747,8 @@ export async function planContent(
     body: JSON.stringify({
       model: CONTENT_MODEL,
       response_format: { type: "json_object" },
+      temperature: 0.35,
+      max_tokens: 1800,
       messages: [
         {
           role: "system",
@@ -796,16 +831,20 @@ export function buildPrompt(
     `Gewenste CTA: ${sanitizeText(customer.primary_cta)}`,
     "",
     "KWALITEITSEISEN",
-    "- Schrijf natuurlijk, vloeiend en menselijk Nederlands.",
-    "- Gebruik concrete alinea-overgangen en vermijd generieke marketingtaal.",
-    "- Schrijf voor B2B-beslissers, dus helder, geloofwaardig en concreet.",
-    "- Gebruik HTML in de content met <h1>, <h2>, <h3>, <p> en waar passend <ul>/<li>.",
-    "- Geen placeholders, geen meta-uitleg en geen template-tags in de output.",
+    "- Schrijf als een ervaren menselijke copywriter, niet als een standaard AI-assistent.",
+    "- Lever per variant een volledige, publiceerbare pagina op van ongeveer 750-1100 woorden.",
+    "- Schrijf specifiek op basis van de opgegeven website, diensten, tone-of-voice scan, feedbackregels en bronmateriaal.",
+    "- Vermijd generieke B2B-zinnen zoals 'in een wereld waarin', 'het draait om' en lege containerwoorden.",
+    "- Maak elke alinea inhoudelijk nuttig: uitleg, keuzehulp, nuance, bewijs, risicoverlaging of vervolgstap.",
+    "- Gebruik HTML in de content met exact een <h1>, meerdere <h2>/<h3>, <p> en waar passend <ul>/<li>.",
+    "- Schrijf geen placeholders, geen meta-uitleg, geen template-tags en geen opmerkingen over AI.",
+    "- Gebruik geen verzonnen certificeringen, cijfers, klanten of garanties. Als bewijs ontbreekt, formuleer zorgvuldig.",
+    "- Laat de CTA natuurlijk voelen en passend bij het bedrijf, niet als agressieve salescopy.",
     "",
     "VARIANTRICHTINGEN",
-    "- Variant 1: gebalanceerd en allround.",
-    "- Variant 2: directer en commerciëler.",
-    "- Variant 3: inhoudelijker en consultatiever.",
+    "- Variant 1: beste publicatievariant, gebalanceerd, geloofwaardig en compleet.",
+    "- Variant 2: directer en commerciëler, zonder schreeuwerige claims.",
+    "- Variant 3: inhoudelijker en consultatiever, met meer uitleg en nuance.",
   ];
 
   if (context.learningMemory.length) {
@@ -841,6 +880,7 @@ export function buildPrompt(
 
   lines.push(
     "",
+    "Laat elke variant echt anders voelen in invalshoek en ritme, maar houd dezelfde bedrijfsstijl aan.",
     "Geef exact geldig JSON terug in dit formaat:",
     '{"variants":[{"title":"string","meta_description":"string","content":"string","seo_score":80,"quality_score":85,"quality_notes":["string"],"quality_summary":"string"}]}',
   );
@@ -855,7 +895,7 @@ export async function generateVariants(
 ): Promise<GeneratedVariant[]> {
   const env = getBackendEnv();
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 7500);
+  const timeout = setTimeout(() => controller.abort(), 40000);
   let response: Response;
   try {
     response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -870,11 +910,13 @@ export async function generateVariants(
       body: JSON.stringify({
         model: CONTENT_MODEL,
         response_format: { type: "json_object" },
+        temperature: 0.72,
+        max_tokens: 7000,
         messages: [
           {
             role: "system",
             content:
-              "Je bent een senior Nederlandse B2B SEO-copywriter. Je schrijft klantwaardige pagina's en retourneert altijd geldig JSON.",
+              "Je bent een senior Nederlandse B2B SEO-copywriter en eindredacteur. Je levert publiceerbare, merkvaste, niet-generieke webpagina's. Je weigert middelmatige filler en retourneert altijd geldig JSON.",
           },
           {
             role: "user",
@@ -885,7 +927,7 @@ export async function generateVariants(
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("OpenAI duurde te lang; fallbackcontent gebruikt.");
+      throw new Error("OpenAI duurde te lang. Er is geen fallbacktekst opgeslagen.");
     }
     throw error;
   } finally {
@@ -911,7 +953,7 @@ export async function generateVariants(
   const parsed = extractJsonObject(payload);
   const rawVariants = Array.isArray(parsed.variants) ? parsed.variants : [];
   const normalized = rawVariants.map((variant, idx) => normalizeVariant(variant as UnknownRecord, idx + 1));
-  const variants = ensureThreeVariants(normalized);
+  const variants = ensurePublishableVariants(ensureThreeVariants(normalized));
   const cleanedVariants = variants.map((variant) => enforceForbiddenWords(variant, context.forbiddenWords));
   cleanedVariants.sort((a, b) => b.combined_score - a.combined_score);
   if (cleanedVariants[0]) cleanedVariants[0].is_primary = true;
