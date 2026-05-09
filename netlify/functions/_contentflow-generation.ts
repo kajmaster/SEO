@@ -80,7 +80,7 @@ function getRequiredEnv(name: string): string {
   return value;
 }
 
-function getBackendEnv() {
+export function getBackendEnv() {
   return {
     openAiKey: getRequiredEnv("OPENAI_API_KEY"),
     openAiProjectId: process.env.OPENAI_PROJECT_ID || "",
@@ -155,6 +155,12 @@ function normalizeStringArray(value: unknown): string[] {
   return Array.isArray(value)
     ? value.map((item) => String(item).trim()).filter(Boolean)
     : [];
+}
+
+function asRecord(value: unknown): UnknownRecord | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as UnknownRecord)
+    : null;
 }
 
 function compactRule(value: string): string {
@@ -531,13 +537,34 @@ export async function loadGenerationContext(input: GenerateContentRequest): Prom
   const previousJobs = await safeRows(
     `generation_jobs?workspace_id=eq.${encodeURIComponent(input.workspace_id)}&select=result,quality_summary,keyword,updated_at&order=updated_at.desc&limit=15`,
   );
+  const profileAlgoSettings = asRecord(profile?.algo_settings);
+  const websiteToneAnalysis = asRecord(profileAlgoSettings?.website_tone_analysis);
+  const websiteToneRules = websiteToneAnalysis
+    ? uniqueRules(
+        [
+          ...normalizeStringArray(websiteToneAnalysis.style_principles).map(
+            (rule) => `Volg websitestijl: ${rule}`,
+          ),
+          ...normalizeStringArray(websiteToneAnalysis.writing_rules).map(
+            (rule) => `Schrijfregel uit websitescan: ${rule}`,
+          ),
+          ...normalizeStringArray(websiteToneAnalysis.avoid).map(
+            (rule) => `Vermijd volgens websitescan: ${rule}`,
+          ),
+        ],
+        12,
+      )
+    : [];
   const learningMemory = uniqueRules(
-    previousJobs.flatMap((job) => {
-      const result = (job.result && typeof job.result === "object" ? job.result : {}) as UnknownRecord;
-      const events = Array.isArray(result.feedback_events) ? (result.feedback_events as UnknownRecord[]) : [];
-      const storedRules = normalizeStringArray(result.learning_rules);
-      return [...events.map(feedbackEventToRule), ...storedRules];
-    }),
+    [
+      ...websiteToneRules,
+      ...previousJobs.flatMap((job) => {
+        const result = (job.result && typeof job.result === "object" ? job.result : {}) as UnknownRecord;
+        const events = Array.isArray(result.feedback_events) ? (result.feedback_events as UnknownRecord[]) : [];
+        const storedRules = normalizeStringArray(result.learning_rules);
+        return [...events.map(feedbackEventToRule), ...storedRules];
+      }),
+    ],
   );
   const forbiddenWords = uniqueRules(
     previousJobs.flatMap((job) => {
@@ -550,8 +577,42 @@ export async function loadGenerationContext(input: GenerateContentRequest): Prom
   );
 
   return {
-    brandProfile: mergeObjects(workspace, profile, brandProfile, input.brand_profile_snapshot),
-    toneProfile: mergeObjects(profile, toneProfile, input.tone_profile),
+    brandProfile: mergeObjects(
+      workspace,
+      profile,
+      brandProfile,
+      websiteToneAnalysis
+        ? {
+            services: websiteToneAnalysis.services,
+            style_preferences: [
+              sanitizeText(profile?.style_preferences),
+              ...normalizeStringArray(websiteToneAnalysis.style_principles),
+            ]
+              .filter(Boolean)
+              .join("\n"),
+            prohibited_claims: [
+              sanitizeText(profile?.prohibited_claims),
+              ...normalizeStringArray(websiteToneAnalysis.avoid),
+            ]
+              .filter(Boolean)
+              .join("\n"),
+          }
+        : null,
+      input.brand_profile_snapshot,
+    ),
+    toneProfile: mergeObjects(
+      profile,
+      toneProfile,
+      websiteToneAnalysis
+        ? {
+            tone_label: websiteToneAnalysis.tone_label,
+            tone_nl: websiteToneAnalysis.tone_nl,
+            voice_principles: normalizeStringArray(websiteToneAnalysis.writing_rules).join("\n"),
+            style_preferences: normalizeStringArray(websiteToneAnalysis.style_principles).join("\n"),
+          }
+        : null,
+      input.tone_profile,
+    ),
     customerPreferences: mergeObjects(profile, customerPreferences, input.customer_preferences),
     template,
     learningMemory,

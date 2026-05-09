@@ -1195,6 +1195,8 @@ async function handleVoiceServerEvent(event){
 // ── Webhook config ──
 const GENERATE_CONTENT_ENDPOINT=netlifyFunctionPath('/.netlify/functions/generate-content');
 const SAVE_FEEDBACK_ENDPOINT=netlifyFunctionPath('/.netlify/functions/save-feedback');
+const ANALYZE_WEBSITE_TONE_ENDPOINT=netlifyFunctionPath('/.netlify/functions/analyze-website-tone');
+const ENSURE_USER_CONTEXT_ENDPOINT=netlifyFunctionPath('/.netlify/functions/ensure-user-context');
 function getSourceContent(){var el=document.getElementById('dzPreview');return el?(el.innerText||el.textContent||'').substring(0,3000):'';}
 function getXmlTemplate(){return localStorage.getItem('cf_xml_template')||'';}
 function getXmlTemplateName(){return localStorage.getItem('cf_xml_template_name')||'';}
@@ -1395,7 +1397,7 @@ function renderPage(p){
   else if(p==='settings')buildSettings(el);
 }
 
-let genStatus='idle',genMessage='',genJobId=null,genResult=null,feedbackSaveMessage='',feedbackSaveTone='muted';
+let genStatus='idle',genMessage='',genJobId=null,genResult=null,feedbackSaveMessage='',feedbackSaveTone='muted',websiteToneScanStatus='',websiteToneScanTone='muted';
 let savedKw='';
 
 function buildCreate(el){
@@ -2525,11 +2527,38 @@ function buildSettings(el){
     +'<div class="settings-tabs">'+tabs.map(t=>'<button class="settings-tab'+(stab===t.id?' active':'')+'" onclick="stab=\''+t.id+'\';buildSettings(document.getElementById(\'pg-settings\'))">'+t.l+'</button>').join('')+'</div>'
     +'<div id="stab-content">'+settingsHtml()+'</div>';
 }
+function getWebsiteToneAnalysis(){
+  const algo=profile&&typeof profile.algo_settings==='object'&&!Array.isArray(profile.algo_settings)?profile.algo_settings:{};
+  const analysis=algo&&typeof algo.website_tone_analysis==='object'&&!Array.isArray(algo.website_tone_analysis)?algo.website_tone_analysis:null;
+  return analysis||null;
+}
+function websiteToneSummaryHtml(){
+  const analysis=getWebsiteToneAnalysis();
+  const status=websiteToneScanStatus
+    ? '<div style="margin-top:10px;font-size:12.5px;color:'+(websiteToneScanTone==='error'?'#ff6b6b':websiteToneScanTone==='ok'?'var(--accent)':'var(--muted)')+';">'+escHtml(websiteToneScanStatus)+'</div>'
+    : '';
+  const rules=analysis&&Array.isArray(analysis.writing_rules)?analysis.writing_rules.slice(0,4):[];
+  return '<div style="margin-top:10px;padding:14px 16px;border:1px solid rgba(0,198,122,.25);background:linear-gradient(135deg,var(--accent-subtle),rgba(0,168,255,.06));border-radius:var(--radius-sm);">'
+    +'<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">'
+    +'<div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);font-weight:800;margin-bottom:4px;">Website stijlscan</div>'
+    +'<div style="font-size:13px;color:var(--text2);line-height:1.55;">Vul een website in en ContentFlow haalt daar tone of voice, stijlregels en schrijfvoorkeuren uit. Die worden opgeslagen in Supabase en automatisch meegenomen bij de volgende generatie.</div></div>'
+    +'<button id="websiteToneScanBtn" class="btn btn-secondary btn-sm" onclick="analyzeWebsiteTone()">Scan websitestijl</button>'
+    +'</div>'
+    +(analysis
+      ? '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);"><div style="font-size:12.5px;font-weight:700;margin-bottom:6px;">Actieve stijl: '+escHtml(analysis.tone_label||'Websitestijl')+'</div>'
+        +'<div style="font-size:12.5px;color:var(--muted);line-height:1.55;margin-bottom:8px;">'+escHtml(analysis.source_summary||analysis.tone_nl||'Stijl is opgeslagen.')+'</div>'
+        +(rules.length?'<div style="display:flex;gap:6px;flex-wrap:wrap;">'+rules.map(rule=>'<span class="tag tag-grey">'+escHtml(rule)+'</span>').join('')+'</div>':'')
+        +'</div>'
+      : '<div style="margin-top:12px;font-size:12.5px;color:var(--muted);">Nog geen websitescan opgeslagen.</div>')
+    +status
+    +'</div>';
+}
 function settingsHtml(){
   if(stab==='bedrijf'){
     return '<div class="card"><div class="settings-block"><h3>Bedrijfsprofiel</h3>'
       +'<div class="form-group"><label class="form-label">Bedrijfsnaam</label><input id="companyName" class="form-control" value="'+(profile.company_name||'')+'"></div>'
       +'<div class="form-group"><label class="form-label">Website</label><input id="companyWebsite" class="form-control" value="'+(profile.website||'')+'"></div>'
+      +websiteToneSummaryHtml()
       +'<div class="form-group"><label class="form-label">KVK-nummer</label><input id="companyKvk" class="form-control" value="'+(profile.kvk||'')+'"></div>'
       +'<div class="form-group"><label class="form-label">Tone of voice</label><textarea id="companyTone" class="form-control">'+(profile.tone_nl||'')+'</textarea></div>'
       +'<div class="form-group"><label class="form-label">Doelgroep / ICP</label><textarea id="companyAudience" class="form-control">'+(profile.target_audience||'')+'</textarea></div>'
@@ -2681,7 +2710,7 @@ async function loadProfile(){
     const sessionResult=await supa.auth.getSession();
     const accessToken=sessionResult?.data?.session?.access_token||'';
     if(accessToken){
-      const resp=await fetch('/.netlify/functions/ensure-user-context',{
+      const resp=await fetch(ENSURE_USER_CONTEXT_ENDPOINT,{
         method:'POST',
         headers:{
           'Content-Type':'application/json',
@@ -2731,6 +2760,84 @@ async function saveProfile(updates){
     if(r.error)throw r.error;
     Object.assign(profile,updates);showToast('Opgeslagen!');
   }catch(e){alert('Fout bij opslaan: '+e.message);}
+}
+function applyWebsiteToneAnalysisToForm(analysis){
+  if(!analysis)return;
+  const stylePrefs=[
+    ...(Array.isArray(analysis.style_principles)?analysis.style_principles:[]),
+    ...(Array.isArray(analysis.writing_rules)?analysis.writing_rules:[])
+  ].filter(Boolean).join('\n');
+  const prohibited=(Array.isArray(analysis.avoid)?analysis.avoid:[]).filter(Boolean).join('\n');
+  const fields={
+    companyWebsite:analysis.website_url||profile.website||'',
+    companyTone:analysis.tone_nl||profile.tone_nl||'',
+    companyServices:analysis.services||profile.services||'',
+    companyStylePrefs:stylePrefs||profile.style_preferences||'',
+    companyProhibitedClaims:prohibited||profile.prohibited_claims||'',
+    companyPrimaryCta:analysis.cta_style||profile.primary_cta||'Vraag een gesprek of offerte aan'
+  };
+  Object.entries(fields).forEach(([id,val])=>{const el=document.getElementById(id);if(el&&val)el.value=val;});
+}
+async function analyzeWebsiteTone(){
+  const websiteEl=document.getElementById('companyWebsite');
+  const website=(websiteEl?.value||profile.website||'').trim();
+  if(!website){showToast('Vul eerst een website in.');return;}
+  if(!currentUser||currentUser.is_demo){showToast('Website stijlscan werkt met een echte Supabase gebruiker.');return;}
+  let workspaceId=getWorkspaceId();
+  if(!isUuidValue(workspaceId)){
+    websiteToneScanStatus='Workspace ophalen...';
+    websiteToneScanTone='muted';
+    buildSettings(document.getElementById('pg-settings'));
+    await loadProfile();
+    workspaceId=getWorkspaceId();
+  }
+  if(!isUuidValue(workspaceId)){
+    websiteToneScanStatus='Geen geldige workspace gevonden. Log opnieuw in via de Netlify-versie.';
+    websiteToneScanTone='error';
+    buildSettings(document.getElementById('pg-settings'));
+    showToast('Geen geldige workspace gevonden.');
+    return;
+  }
+
+  const btn=document.getElementById('websiteToneScanBtn');
+  if(btn){btn.disabled=true;btn.textContent='Scannen...';}
+  websiteToneScanStatus='Website wordt gelezen en geanalyseerd...';
+  websiteToneScanTone='muted';
+  buildSettings(document.getElementById('pg-settings'));
+
+  try{
+    const resp=await fetch(ANALYZE_WEBSITE_TONE_ENDPOINT,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        website_url:website,
+        workspace_id:workspaceId,
+        user_id:currentUser.id
+      })
+    });
+    const data=await resp.json().catch(()=>null);
+    if(!resp.ok)throw new Error(data?.error||'Websitestijl analyseren mislukte.');
+    const analysis=data.analysis||{};
+    const nextAlgo=Object.assign({},profile.algo_settings||{},{
+      website_tone_analysis:analysis
+    });
+    Object.assign(profile,data.profile||{},{
+      website:analysis.website_url||website,
+      tone_nl:analysis.tone_nl||profile.tone_nl||'',
+      services:analysis.services||profile.services||'',
+      algo_settings:nextAlgo
+    });
+    applyWebsiteToneAnalysisToForm(analysis);
+    websiteToneScanStatus='Stijlscan opgeslagen. Volgende generatie gebruikt deze tone of voice automatisch.';
+    websiteToneScanTone='ok';
+    showToast('Websitestijl opgeslagen in Supabase.');
+  }catch(e){
+    websiteToneScanStatus=e.message||'Website stijlscan mislukte.';
+    websiteToneScanTone='error';
+    showToast('Stijlscan mislukt: '+websiteToneScanStatus);
+  }finally{
+    buildSettings(document.getElementById('pg-settings'));
+  }
 }
 function saveCompany(){
   saveProfile({
