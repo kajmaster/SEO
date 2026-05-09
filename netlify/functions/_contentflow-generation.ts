@@ -475,10 +475,19 @@ function looksLikePublishableArticle(variant: GeneratedVariant): boolean {
   );
 }
 
-function ensurePublishableVariants(variants: GeneratedVariant[]): GeneratedVariant[] {
-  const publishable = variants.filter(looksLikePublishableArticle);
-  if (!publishable.length) {
-    throw new Error("OpenAI gaf geen bruikbare tekst terug. Vul in stap 2 extra context in: doelgroep, aanbod, invalshoek, bewijs en CTA.");
+function looksUsableForReview(variant: GeneratedVariant): boolean {
+  const content = sanitizeText(variant.content);
+  const wordCount = countWords(content);
+  return (
+    wordCount >= 120 &&
+    /<(h1|h2|p)[\s>]/i.test(content) &&
+    !/geen content ontvangen|fallback|placeholder|lorem ipsum/i.test(content)
+  );
+}
+
+function markVariantQuality(variants: GeneratedVariant[]): GeneratedVariant[] {
+  if (!variants.some(looksUsableForReview)) {
+    throw new Error("OpenAI gaf geen tekstinhoud terug. Probeer opnieuw of voeg bronmateriaal toe.");
   }
   return variants.map((variant) => ({
     ...variant,
@@ -491,7 +500,10 @@ function ensurePublishableVariants(variants: GeneratedVariant[]): GeneratedVaria
       : scoreVariant(Math.min(variant.seo_score, 62), Math.min(variant.quality_score, 58)),
     quality_notes: looksLikePublishableArticle(variant)
       ? variant.quality_notes
-      : [...variant.quality_notes, "Let op: deze variant is korter dan de productiekwaliteitslat."],
+      : [
+          ...variant.quality_notes,
+          "Kwaliteitswaarschuwing: bruikbaar voor review, maar nog niet sterk genoeg als eindversie.",
+        ],
   }));
 }
 
@@ -953,7 +965,7 @@ export async function generateVariants(
   const parsed = extractJsonObject(payload);
   const rawVariants = Array.isArray(parsed.variants) ? parsed.variants : [];
   const normalized = rawVariants.map((variant, idx) => normalizeVariant(variant as UnknownRecord, idx + 1));
-  const variants = ensurePublishableVariants(ensureThreeVariants(normalized));
+  const variants = markVariantQuality(ensureThreeVariants(normalized));
   const cleanedVariants = variants.map((variant) => enforceForbiddenWords(variant, context.forbiddenWords));
   cleanedVariants.sort((a, b) => b.combined_score - a.combined_score);
   if (cleanedVariants[0]) cleanedVariants[0].is_primary = true;
