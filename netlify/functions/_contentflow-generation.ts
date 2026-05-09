@@ -436,9 +436,9 @@ function cloneVariant(base: GeneratedVariant, index: number, lead: string): Gene
 }
 
 function normalizeVariant(raw: UnknownRecord, index: number): GeneratedVariant {
-  const title = sanitizeText(raw.title) || `Variant ${index}`;
-  const metaDescription = sanitizeText(raw.meta_description);
-  const content = sanitizeText(raw.content);
+  const title = sanitizeText(raw.title || raw.heading || raw.h1 || raw.name) || `Variant ${index}`;
+  const metaDescription = sanitizeText(raw.meta_description || raw.metaDescription || raw.seo_description);
+  const content = sanitizeText(raw.content || raw.article || raw.html || raw.body || raw.text || raw.copy);
   const seoScore = Number(raw.seo_score || 78) || 78;
   const qualityScore = Number(raw.quality_score || 82) || 82;
   const qualityNotes = Array.isArray(raw.quality_notes)
@@ -462,6 +462,54 @@ function normalizeVariant(raw: UnknownRecord, index: number): GeneratedVariant {
   };
 }
 
+function collectVariantRecords(parsed: UnknownRecord): UnknownRecord[] {
+  const candidates = [
+    parsed.variants,
+    parsed.drafts,
+    parsed.articles,
+    parsed.pages,
+    parsed.outputs,
+    parsed.results,
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      const records = candidate.filter(
+        (item): item is UnknownRecord => !!item && typeof item === "object" && !Array.isArray(item),
+      );
+      if (records.length) return records;
+    }
+  }
+
+  const nestedRecords = ["variant_1", "variant_2", "variant_3", "primary_variant", "article", "draft", "page"]
+    .map((key) => parsed[key])
+    .filter((item): item is UnknownRecord => !!item && typeof item === "object" && !Array.isArray(item));
+  if (nestedRecords.length) return nestedRecords;
+
+  if (
+    sanitizeText(parsed.content || parsed.article || parsed.html || parsed.body || parsed.text || parsed.copy)
+  ) {
+    return [parsed];
+  }
+
+  return [];
+}
+
+function htmlFromPlainText(value: string, title: string): string {
+  const cleaned = sanitizeText(value);
+  if (!cleaned) return "";
+  if (/<(h1|h2|p|ul|ol|li)[\s>]/i.test(cleaned)) return cleaned;
+  const paragraphs = cleaned
+    .split(/\n{2,}/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (!paragraphs.length) return "";
+  return [
+    `<h1>${title}</h1>`,
+    ...paragraphs.map((paragraph) => `<p>${paragraph}</p>`),
+  ].join("\n");
+}
+
 function looksLikePublishableArticle(variant: GeneratedVariant): boolean {
   const content = sanitizeText(variant.content);
   const wordCount = countWords(content);
@@ -479,7 +527,7 @@ function looksUsableForReview(variant: GeneratedVariant): boolean {
   const content = sanitizeText(variant.content);
   const wordCount = countWords(content);
   return (
-    wordCount >= 120 &&
+    wordCount >= 80 &&
     /<(h1|h2|p)[\s>]/i.test(content) &&
     !/geen content ontvangen|fallback|placeholder|lorem ipsum/i.test(content)
   );
@@ -963,8 +1011,16 @@ export async function generateVariants(
   }
 
   const parsed = extractJsonObject(payload);
-  const rawVariants = Array.isArray(parsed.variants) ? parsed.variants : [];
-  const normalized = rawVariants.map((variant, idx) => normalizeVariant(variant as UnknownRecord, idx + 1));
+  const rawVariants = collectVariantRecords(parsed);
+  const normalized = rawVariants.map((variant, idx) => {
+    const normalizedVariant = normalizeVariant(variant, idx + 1);
+    const content = htmlFromPlainText(normalizedVariant.content, normalizedVariant.title);
+    return {
+      ...normalizedVariant,
+      content,
+      word_count: countWords(content),
+    };
+  });
   const variants = markVariantQuality(ensureThreeVariants(normalized));
   const cleanedVariants = variants.map((variant) => enforceForbiddenWords(variant, context.forbiddenWords));
   cleanedVariants.sort((a, b) => b.combined_score - a.combined_score);
