@@ -468,9 +468,9 @@ function looksLikePublishableArticle(variant: GeneratedVariant): boolean {
   const headingCount = (content.match(/<h2[\s>]/gi) || []).length;
   const paragraphCount = (content.match(/<p[\s>]/gi) || []).length;
   return (
-    wordCount >= 650 &&
-    headingCount >= 4 &&
-    paragraphCount >= 6 &&
+    wordCount >= 420 &&
+    headingCount >= 3 &&
+    paragraphCount >= 4 &&
     !/geen content ontvangen|fallback|placeholder|lorem ipsum/i.test(content)
   );
 }
@@ -478,7 +478,7 @@ function looksLikePublishableArticle(variant: GeneratedVariant): boolean {
 function ensurePublishableVariants(variants: GeneratedVariant[]): GeneratedVariant[] {
   const publishable = variants.filter(looksLikePublishableArticle);
   if (!publishable.length) {
-    throw new Error("OpenAI gaf geen publiceerbare tekst terug. Probeer opnieuw met meer bedrijfscontext of bronmateriaal.");
+    throw new Error("OpenAI gaf geen bruikbare tekst terug. Vul in stap 2 extra context in: doelgroep, aanbod, invalshoek, bewijs en CTA.");
   }
   return variants.map((variant) => ({
     ...variant,
@@ -832,7 +832,7 @@ export function buildPrompt(
     "",
     "KWALITEITSEISEN",
     "- Schrijf als een ervaren menselijke copywriter, niet als een standaard AI-assistent.",
-    "- Lever per variant een volledige, publiceerbare pagina op van ongeveer 750-1100 woorden.",
+    "- Lever per variant een volledige, publiceerbare pagina op van ongeveer 600-900 woorden.",
     "- Schrijf specifiek op basis van de opgegeven website, diensten, tone-of-voice scan, feedbackregels en bronmateriaal.",
     "- Vermijd generieke B2B-zinnen zoals 'in een wereld waarin', 'het draait om' en lege containerwoorden.",
     "- Maak elke alinea inhoudelijk nuttig: uitleg, keuzehulp, nuance, bewijs, risicoverlaging of vervolgstap.",

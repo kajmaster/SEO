@@ -1204,7 +1204,40 @@ const GENERATE_CONTENT_ENDPOINT=netlifyFunctionPath('/.netlify/functions/generat
 const SAVE_FEEDBACK_ENDPOINT=netlifyFunctionPath('/.netlify/functions/save-feedback');
 const ANALYZE_WEBSITE_TONE_ENDPOINT=netlifyFunctionPath('/.netlify/functions/analyze-website-tone');
 const ENSURE_USER_CONTEXT_ENDPOINT=netlifyFunctionPath('/.netlify/functions/ensure-user-context');
-function getSourceContent(){var el=document.getElementById('dzPreview');return el?(el.innerText||el.textContent||'').substring(0,3000):'';}
+function cleanBriefValue(value){return String(value||'').replace(/\s+/g,' ').trim();}
+function saveBriefFields(){
+  const audience=document.getElementById('briefAudience');
+  const offer=document.getElementById('briefOffer');
+  const angle=document.getElementById('briefAngle');
+  const proof=document.getElementById('briefProof');
+  const mustInclude=document.getElementById('briefMustInclude');
+  const cta=document.getElementById('briefCta');
+  if(audience)savedBriefAudience=audience.value||'';
+  if(offer)savedBriefOffer=offer.value||'';
+  if(angle)savedBriefAngle=angle.value||'';
+  if(proof)savedBriefProof=proof.value||'';
+  if(mustInclude)savedBriefMustInclude=mustInclude.value||'';
+  if(cta)savedBriefCta=cta.value||'';
+}
+function getManualBriefContent(){
+  saveBriefFields();
+  const rows=[
+    ['Doelgroep',savedBriefAudience],
+    ['Aanbod/dienst',savedBriefOffer],
+    ['Gewenste invalshoek',savedBriefAngle],
+    ['Bewijs, voorbeelden of USPs',savedBriefProof],
+    ['Moet absoluut in de tekst',savedBriefMustInclude],
+    ['Gewenste CTA',savedBriefCta]
+  ].map(([label,value])=>[label,cleanBriefValue(value)]).filter(([,value])=>value);
+  return rows.length
+    ? 'CONTENT BRIEFING VAN GEBRUIKER\n'+rows.map(([label,value])=>label+': '+value).join('\n')
+    : '';
+}
+function getSourceContent(){
+  var el=document.getElementById('dzPreview');
+  const uploaded=el?(el.innerText||el.textContent||'').trim():'';
+  return [getManualBriefContent(),uploaded].filter(Boolean).join('\n\n').substring(0,6000);
+}
 function getXmlTemplate(){return localStorage.getItem('cf_xml_template')||'';}
 function getXmlTemplateName(){return localStorage.getItem('cf_xml_template_name')||'';}
 function setXmlTemplate(name,content){localStorage.setItem('cf_xml_template_name',name);localStorage.setItem('cf_xml_template',content);}
@@ -1405,7 +1438,7 @@ function renderPage(p){
 }
 
 let genStatus='idle',genMessage='',genJobId=null,genResult=null,feedbackSaveMessage='',feedbackSaveTone='muted',websiteToneScanStatus='',websiteToneScanTone='muted';
-let savedKw='';
+let savedKw='',savedBriefAudience='',savedBriefOffer='',savedBriefAngle='',savedBriefProof='',savedBriefMustInclude='',savedBriefCta='';
 
 function buildCreate(el){
   el.innerHTML='<div class="page-header"><div><h2>Nieuwe content maken</h2><p>In 3 stappen naar een volledig SEO-artikel.</p></div></div>'
@@ -1499,6 +1532,23 @@ function step2Html(){
         +'</div>';
     }).join('')
     +'</div></div>'
+    +'<div style="margin:2px 0 24px;padding:18px;border:1px solid rgba(0,198,122,.22);background:linear-gradient(135deg,rgba(0,198,122,.08),rgba(0,168,255,.04));border-radius:var(--radius);">'
+    +'<div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;margin-bottom:14px;">'
+    +'<div><div style="font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);font-weight:800;margin-bottom:4px;">Content briefing</div>'
+    +'<h3 style="font-size:17px;font-weight:800;margin-bottom:4px;">Geef de AI munitie</h3>'
+    +'<p style="font-size:13px;color:var(--muted);line-height:1.5;margin:0;">Een zoekwoord alleen is te dun. Vul hieronder in wat de pagina echt moet zeggen; dit gaat mee naar de TypeScript-generator.</p></div>'
+    +'<span class="tag tag-grey">Aanbevolen</span>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">'
+    +'<div class="form-group"><label class="form-label">Voor wie is deze pagina?</label><textarea id="briefAudience" class="form-control" oninput="savedBriefAudience=this.value" placeholder="Bijv. marketing managers bij B2B-bedrijven die betere SEO-content willen">'+escHtml(savedBriefAudience||profile.target_audience||'')+'</textarea></div>'
+    +'<div class="form-group"><label class="form-label">Wat verkoop of bied je aan?</label><textarea id="briefOffer" class="form-control" oninput="savedBriefOffer=this.value" placeholder="Bijv. SEO-content, technische SEO audits, linkbuilding, contentstrategie">'+escHtml(savedBriefOffer||profile.services||'')+'</textarea></div>'
+    +'<div class="form-group"><label class="form-label">Welke invalshoek moet de tekst hebben?</label><textarea id="briefAngle" class="form-control" oninput="savedBriefAngle=this.value" placeholder="Bijv. praktisch, kritisch, premium, educatief, gericht op conversie">'+escHtml(savedBriefAngle)+'</textarea></div>'
+    +'<div class="form-group"><label class="form-label">Bewijs, voorbeelden of USP&apos;s</label><textarea id="briefProof" class="form-control" oninput="savedBriefProof=this.value" placeholder="Bijv. eigen werkwijze, cases, certificering, ervaring, garanties die echt waar zijn">'+escHtml(savedBriefProof)+'</textarea></div>'
+    +'<div class="form-group"><label class="form-label">Wat moet er absoluut in?</label><textarea id="briefMustInclude" class="form-control" oninput="savedBriefMustInclude=this.value" placeholder="Bijv. bepaalde dienstnamen, bezwaren, FAQ&apos;s, regio, vergelijking, stappenplan">'+escHtml(savedBriefMustInclude)+'</textarea></div>'
+    +'<div class="form-group"><label class="form-label">Gewenste call-to-action</label><input id="briefCta" class="form-control" oninput="savedBriefCta=this.value" placeholder="Bijv. Plan een kennismaking" value="'+escAttr(savedBriefCta||profile.primary_cta||'')+'"></div>'
+    +'</div>'
+    +'<div style="font-size:12px;color:var(--muted);line-height:1.5;">Tip: hoe specifieker dit is, hoe minder de tekst klinkt als standaard ChatGPT-output.</div>'
+    +'</div>'
     +'<div class="voice-card">'
     +'<h3>Voice beta voor deze flow</h3>'
     +'<p>Je kunt deze stap nu ook handsfree bedienen. Open rechtsboven <strong>Voice beta</strong> en zeg bijvoorbeeld welk zoekwoord je wilt, welk paginadoel past, of dat de generator moet starten.</p>'
@@ -1606,8 +1656,8 @@ function buildBrandProfileSnapshot(){
   return {
     company_name:profile.company_name||'',
     website:profile.website||'',
-    services:profile.services||'',
-    target_audience:profile.target_audience||'',
+    services:savedBriefOffer||profile.services||'',
+    target_audience:savedBriefAudience||profile.target_audience||'',
     buyer_persona:profile.buyer_persona||'',
     prohibited_claims:profile.prohibited_claims||'',
     style_preferences:profile.style_preferences||'',
@@ -1624,7 +1674,7 @@ function buildToneProfile(){
 }
 function buildCustomerPreferences(){
   return {
-    primary_cta:profile.primary_cta||'Vraag een gesprek of offerte aan',
+    primary_cta:savedBriefCta||profile.primary_cta||'Vraag een gesprek of offerte aan',
     preferred_length:profile.preferred_length||profile.paragraph_length||'medium',
     locale:'nl-NL',
     include_case_style:true,
@@ -2049,6 +2099,7 @@ function goStep2(){
 }
 function goStep3(){
   savedKw=savedKw||(document.getElementById('kwInput2')||{}).value||'';
+  saveBriefFields();
   selectedVariantIndex=0;
   genPageId=null;genStage='pending';
   genStatus='loading';genMessage='';genJobId=null;genResult=null;
