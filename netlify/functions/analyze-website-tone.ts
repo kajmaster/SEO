@@ -1,4 +1,5 @@
 import {
+  extractOpenAiMessageContent,
   getBackendEnv,
   handleOptions,
   isUuid,
@@ -238,7 +239,7 @@ async function analyzeWithOpenAi(url: string, source: ReturnType<typeof extractW
     const message = clean(asRecord(parsed?.error)?.message) || payload || `OpenAI gaf HTTP ${response.status}.`;
     throw new Error(message);
   }
-  const parsed = parseOpenAiJson(payload);
+  const parsed = parseOpenAiJson(extractOpenAiMessageContent(payload));
   return normalizeAnalysis(parsed, url, source);
 }
 

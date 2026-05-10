@@ -266,6 +266,39 @@ function extractJsonObject(value: string): UnknownRecord {
   return JSON.parse(cleaned.slice(start, end + 1)) as UnknownRecord;
 }
 
+export function extractOpenAiMessageContent(payload: string): string {
+  let parsed: UnknownRecord | null = null;
+  try {
+    parsed = JSON.parse(payload) as UnknownRecord;
+  } catch {
+    return payload;
+  }
+
+  const choices = Array.isArray(parsed.choices) ? parsed.choices : [];
+  const firstChoice = choices[0] as UnknownRecord | undefined;
+  const message = firstChoice?.message as UnknownRecord | undefined;
+  const content = message?.content;
+  if (typeof content === "string" && content.trim()) return content;
+
+  if (Array.isArray(content)) {
+    const text = content
+      .map((part) => {
+        if (typeof part === "string") return part;
+        if (!part || typeof part !== "object" || Array.isArray(part)) return "";
+        const row = part as UnknownRecord;
+        return sanitizeText(row.text || row.content || row.value);
+      })
+      .filter(Boolean)
+      .join("\n");
+    if (text.trim()) return text;
+  }
+
+  if (typeof firstChoice?.text === "string" && firstChoice.text.trim()) return firstChoice.text;
+  if (typeof parsed.output_text === "string" && parsed.output_text.trim()) return parsed.output_text;
+
+  return payload;
+}
+
 function scoreVariant(seoScore: number, qualityScore: number): number {
   return Number((qualityScore * 0.65 + seoScore * 0.35).toFixed(2));
 }
@@ -916,7 +949,7 @@ export async function planContent(
     throw new Error(message);
   }
 
-  const parsed = extractJsonObject(payload);
+  const parsed = extractJsonObject(extractOpenAiMessageContent(payload));
   return normalizeContentPlan(parsed);
 }
 
@@ -1084,7 +1117,7 @@ export async function generateVariants(
     throw new Error(message);
   }
 
-  const parsed = extractJsonObject(payload);
+  const parsed = extractJsonObject(extractOpenAiMessageContent(payload));
   const rawVariants = collectVariantRecords(parsed);
   const normalized = rawVariants.map((variant, idx) => {
     const normalizedVariant = normalizeVariant(variant, idx + 1);
