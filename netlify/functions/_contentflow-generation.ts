@@ -435,10 +435,94 @@ function cloneVariant(base: GeneratedVariant, index: number, lead: string): Gene
   };
 }
 
+function stringifyLongText(value: unknown): string {
+  return typeof value === "string" && countWords(value) >= 20 ? value.trim() : "";
+}
+
+function textFromSections(value: unknown): string {
+  if (!Array.isArray(value)) return "";
+  const parts = value
+    .map((section) => {
+      if (typeof section === "string") return section.trim();
+      if (!section || typeof section !== "object" || Array.isArray(section)) return "";
+      const row = section as UnknownRecord;
+      const heading = sanitizeText(row.heading || row.title || row.h2 || row.h3);
+      const bodyValue = row.body || row.content || row.text || row.paragraph || row.copy;
+      const body = Array.isArray(bodyValue)
+        ? bodyValue.map((item) => String(item || "").trim()).filter(Boolean).join("\n\n")
+        : sanitizeText(bodyValue);
+      if (heading && body) return `## ${heading}\n\n${body}`;
+      return heading || body;
+    })
+    .filter(Boolean);
+  return parts.join("\n\n");
+}
+
+function markdownToHtml(value: string, title: string): string {
+  const cleaned = sanitizeText(value);
+  if (!cleaned) return "";
+  if (/<(h1|h2|p|ul|ol|li)[\s>]/i.test(cleaned)) return cleaned;
+  const blocks = cleaned.split(/\n{2,}/).map((block) => block.trim()).filter(Boolean);
+  const html = blocks.map((block) => {
+    if (/^#\s+/.test(block)) return `<h1>${block.replace(/^#\s+/, "").trim()}</h1>`;
+    if (/^##\s+/.test(block)) return `<h2>${block.replace(/^##\s+/, "").trim()}</h2>`;
+    if (/^###\s+/.test(block)) return `<h3>${block.replace(/^###\s+/, "").trim()}</h3>`;
+    if (/^[-*]\s+/m.test(block)) {
+      const items = block
+        .split(/\n+/)
+        .map((line) => line.replace(/^[-*]\s+/, "").trim())
+        .filter(Boolean);
+      return `<ul>${items.map((item) => `<li>${item}</li>`).join("")}</ul>`;
+    }
+    return `<p>${block}</p>`;
+  });
+  return html.some((block) => block.startsWith("<h1>"))
+    ? html.join("\n")
+    : [`<h1>${title}</h1>`, ...html].join("\n");
+}
+
+function extractContentFromRecord(raw: UnknownRecord): string {
+  const directKeys = [
+    "content",
+    "content_html",
+    "html_content",
+    "article",
+    "article_content",
+    "article_html",
+    "html",
+    "body",
+    "body_html",
+    "text",
+    "copy",
+    "draft",
+    "output",
+    "markdown",
+    "final",
+  ];
+
+  for (const key of directKeys) {
+    const value = raw[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      const nested = extractContentFromRecord(value as UnknownRecord);
+      if (nested) return nested;
+    }
+  }
+
+  const sections = textFromSections(raw.sections || raw.outline || raw.blocks);
+  if (sections) return sections;
+
+  const longStrings = Object.values(raw)
+    .map(stringifyLongText)
+    .filter(Boolean)
+    .sort((a, b) => countWords(b) - countWords(a));
+  return longStrings[0] || "";
+}
+
 function normalizeVariant(raw: UnknownRecord, index: number): GeneratedVariant {
   const title = sanitizeText(raw.title || raw.heading || raw.h1 || raw.name) || `Variant ${index}`;
   const metaDescription = sanitizeText(raw.meta_description || raw.metaDescription || raw.seo_description);
-  const content = sanitizeText(raw.content || raw.article || raw.html || raw.body || raw.text || raw.copy);
+  const content = extractContentFromRecord(raw);
   const seoScore = Number(raw.seo_score || 78) || 78;
   const qualityScore = Number(raw.quality_score || 82) || 82;
   const qualityNotes = Array.isArray(raw.quality_notes)
@@ -474,9 +558,12 @@ function collectVariantRecords(parsed: UnknownRecord): UnknownRecord[] {
 
   for (const candidate of candidates) {
     if (Array.isArray(candidate)) {
-      const records = candidate.filter(
-        (item): item is UnknownRecord => !!item && typeof item === "object" && !Array.isArray(item),
-      );
+      const records = candidate
+        .map((item) => {
+          if (typeof item === "string") return { content: item };
+          return item;
+        })
+        .filter((item): item is UnknownRecord => !!item && typeof item === "object" && !Array.isArray(item));
       if (records.length) return records;
     }
   }
@@ -486,9 +573,7 @@ function collectVariantRecords(parsed: UnknownRecord): UnknownRecord[] {
     .filter((item): item is UnknownRecord => !!item && typeof item === "object" && !Array.isArray(item));
   if (nestedRecords.length) return nestedRecords;
 
-  if (
-    sanitizeText(parsed.content || parsed.article || parsed.html || parsed.body || parsed.text || parsed.copy)
-  ) {
+  if (extractContentFromRecord(parsed)) {
     return [parsed];
   }
 
@@ -496,18 +581,7 @@ function collectVariantRecords(parsed: UnknownRecord): UnknownRecord[] {
 }
 
 function htmlFromPlainText(value: string, title: string): string {
-  const cleaned = sanitizeText(value);
-  if (!cleaned) return "";
-  if (/<(h1|h2|p|ul|ol|li)[\s>]/i.test(cleaned)) return cleaned;
-  const paragraphs = cleaned
-    .split(/\n{2,}/)
-    .map((part) => part.trim())
-    .filter(Boolean);
-  if (!paragraphs.length) return "";
-  return [
-    `<h1>${title}</h1>`,
-    ...paragraphs.map((paragraph) => `<p>${paragraph}</p>`),
-  ].join("\n");
+  return markdownToHtml(value, title);
 }
 
 function looksLikePublishableArticle(variant: GeneratedVariant): boolean {
