@@ -23,6 +23,7 @@ function normalizeItem(row: UnknownRecord): UnknownRecord {
   return {
     id: row.id,
     workspace_id: row.workspace_id,
+    user_id: row.user_id,
     created_by: row.created_by,
     type: row.type || "source",
     title: row.title || "Kennisitem",
@@ -34,7 +35,7 @@ function normalizeItem(row: UnknownRecord): UnknownRecord {
 
 function isWorkspaceColumnError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error || "");
-  return /workspace_id|created_by|schema cache|column .* does not exist|PGRST204/i.test(message);
+  return /workspace_id|created_by|user_id|schema cache|column .* does not exist|PGRST204/i.test(message);
 }
 
 async function fetchKnowledgeRows(workspaceId: string): Promise<{
@@ -76,11 +77,15 @@ async function insertKnowledgeRow(payload: UnknownRecord): Promise<UnknownRecord
   const attempts = [
     payload,
     Object.fromEntries(Object.entries(payload).filter(([key]) => key !== "created_by")),
+    Object.fromEntries(Object.entries(payload).filter(([key]) => key !== "user_id")),
     Object.fromEntries(
       Object.entries(payload).filter(([key]) => !["workspace_id", "created_by"].includes(key)),
     ),
     Object.fromEntries(
-      Object.entries(payload).filter(([key]) => !["workspace_id", "created_by", "tags"].includes(key)),
+      Object.entries(payload).filter(([key]) => !["workspace_id", "user_id"].includes(key)),
+    ),
+    Object.fromEntries(
+      Object.entries(payload).filter(([key]) => !["workspace_id", "created_by", "user_id", "tags"].includes(key)),
     ),
   ];
 
@@ -143,6 +148,7 @@ async function createKnowledgeItem(body: UnknownRecord): Promise<UnknownRecord> 
 
   const row = await insertKnowledgeRow({
     workspace_id: workspaceId,
+    user_id: userId,
     created_by: userId,
     type,
     title,
