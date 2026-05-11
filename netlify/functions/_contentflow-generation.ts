@@ -202,6 +202,30 @@ function uniqueRules(rules: string[], max = 12): string[] {
   return output;
 }
 
+function formatKnowledgeRows(rows: UnknownRecord[], maxChars = 7000): string {
+  const parts: string[] = [];
+  let total = 0;
+
+  for (const row of rows) {
+    const title = sanitizeText(row.title) || "Kennisitem";
+    const type = sanitizeText(row.type) || "source";
+    const content = sanitizeText(row.content);
+    const tags = normalizeStringArray(row.tags);
+    if (!content) continue;
+
+    const block = [
+      `- ${title} (${type}${tags.length ? `, tags: ${tags.join(", ")}` : ""})`,
+      content.slice(0, 900),
+    ].join("\n");
+
+    if (total + block.length > maxChars) break;
+    parts.push(block);
+    total += block.length;
+  }
+
+  return parts.join("\n\n");
+}
+
 function pickSafeReplacement(forbiddenWords: string[]): string {
   const forbidden = new Set(forbiddenWords.map((word) => word.toLowerCase()));
   const candidates = ["gericht", "helder", "specifiek", "toepasbaar", "zorgvuldig", "passend"];
@@ -715,6 +739,7 @@ export async function loadGenerationContext(input: GenerateContentRequest): Prom
   toneProfile: UnknownRecord;
   customerPreferences: UnknownRecord;
   template: UnknownRecord | null;
+  knowledgeContext: string;
   learningMemory: string[];
   forbiddenWords: string[];
 }> {
@@ -737,6 +762,10 @@ export async function loadGenerationContext(input: GenerateContentRequest): Prom
   const previousJobs = await safeRows(
     `generation_jobs?workspace_id=eq.${encodeURIComponent(input.workspace_id)}&select=result,quality_summary,keyword,updated_at&order=updated_at.desc&limit=15`,
   );
+  const knowledgeRows = await safeRows(
+    `knowledge_base?workspace_id=eq.${encodeURIComponent(input.workspace_id)}&select=*&order=created_at.desc&limit=25`,
+  );
+  const knowledgeContext = formatKnowledgeRows(knowledgeRows);
   const profileAlgoSettings = asRecord(profile?.algo_settings);
   const websiteToneAnalysis = asRecord(profileAlgoSettings?.website_tone_analysis);
   const websiteToneRules = websiteToneAnalysis
@@ -815,6 +844,7 @@ export async function loadGenerationContext(input: GenerateContentRequest): Prom
     ),
     customerPreferences: mergeObjects(profile, customerPreferences, input.customer_preferences),
     template,
+    knowledgeContext,
     learningMemory,
     forbiddenWords,
   };
@@ -832,6 +862,7 @@ function buildPlanningPrompt(
   const templateName =
     sanitizeText(input.xml_template_name) || sanitizeText(context.template?.name);
   const sourceContent = sanitizeText(input.source_content).slice(0, 3000);
+  const knowledgeContext = sanitizeText(context.knowledgeContext).slice(0, 5000);
 
   const lines = [
     `Maak een contentplan voor een Nederlandse B2B SEO-pagina over het zoekwoord: ${input.keyword}.`,
@@ -857,6 +888,15 @@ function buildPlanningPrompt(
 
   if (sourceContent) {
     lines.push("", "BRONMATERIAAL", sourceContent);
+  }
+
+  if (knowledgeContext) {
+    lines.push(
+      "",
+      "KENNISBANK VAN DE WORKSPACE",
+      "Gebruik deze opgeslagen bedrijfskennis als feitelijke context. Niet alles hoeft letterlijk terug te komen, maar negeer dit niet.",
+      knowledgeContext,
+    );
   }
 
   if (xmlTemplate) {
@@ -964,6 +1004,7 @@ export function buildPrompt(
   const xmlTemplate = sanitizeText(input.xml_template) || sanitizeText(context.template?.xml_template);
   const templateName = sanitizeText(input.xml_template_name) || sanitizeText(context.template?.name);
   const sourceContent = sanitizeText(input.source_content).slice(0, 5000);
+  const knowledgeContext = sanitizeText(context.knowledgeContext).slice(0, 6500);
 
   const lines = [
     `Schrijf 3 verschillende SEO-varianten in het Nederlands voor het zoekwoord: ${input.keyword}.`,
@@ -1029,6 +1070,15 @@ export function buildPrompt(
       "HARDE VERBODEN WOORDEN",
       "Gebruik deze woorden nergens in titel, meta description of content. Ook niet als voorbeeld, synoniemlabel of tussenkop:",
       ...context.forbiddenWords.map((word) => `- ${word}`),
+    );
+  }
+
+  if (knowledgeContext) {
+    lines.push(
+      "",
+      "KENNISBANK VAN DE WORKSPACE",
+      "Dit is opgeslagen klant- en bedrijfskennis. Gebruik dit als belangrijkste feitelijke basis naast de briefing:",
+      knowledgeContext,
     );
   }
 

@@ -1204,6 +1204,7 @@ const GENERATE_CONTENT_ENDPOINT=netlifyFunctionPath('/.netlify/functions/generat
 const SAVE_FEEDBACK_ENDPOINT=netlifyFunctionPath('/.netlify/functions/save-feedback');
 const ANALYZE_WEBSITE_TONE_ENDPOINT=netlifyFunctionPath('/.netlify/functions/analyze-website-tone');
 const ENSURE_USER_CONTEXT_ENDPOINT=netlifyFunctionPath('/.netlify/functions/ensure-user-context');
+const KNOWLEDGE_ITEMS_ENDPOINT=netlifyFunctionPath('/.netlify/functions/knowledge-items');
 function cleanBriefValue(value){return String(value||'').replace(/\s+/g,' ').trim();}
 function saveBriefFields(){
   const audience=document.getElementById('briefAudience');
@@ -1391,9 +1392,13 @@ function doLogin(user){
   document.getElementById('voiceDock').style.display='block';
   renderVoicePanel();
   if(user.is_demo){
+    if(!KB_ITEMS.length)KB_ITEMS=getDemoKnowledgeItems();
     renderPage('dashboard');
   } else {
-    loadProfile().then(()=>loadContentItems()).catch(()=>{}).then(()=>renderPage('dashboard'));
+    loadProfile()
+      .then(()=>Promise.all([loadContentItems(),loadKnowledgeItems({silent:true})]))
+      .catch(()=>{})
+      .then(()=>renderPage('dashboard'));
   }
 }
 window.addEventListener('DOMContentLoaded',async()=>{
@@ -1438,6 +1443,7 @@ function renderPage(p){
 }
 
 let genStatus='idle',genMessage='',genJobId=null,genResult=null,feedbackSaveMessage='',feedbackSaveTone='muted',websiteToneScanStatus='',websiteToneScanTone='muted';
+let KB_ITEMS=[],kbStatus='',kbStatusTone='muted',kbLoading=false,kbLoaded=false;
 let savedKw='',savedBriefAudience='',savedBriefOffer='',savedBriefAngle='',savedBriefProof='',savedBriefMustInclude='',savedBriefCta='';
 
 function buildCreate(el){
@@ -2571,9 +2577,170 @@ function buildReview(el){
       :'<div class="card"><p style="color:var(--muted);">Klik op een artikel om het te openen.</p></div>')
     +'</div></div>';
 }
+function getDemoKnowledgeItems(){
+  return [
+    {id:'demo-kb-1',type:'guide',title:'Schrijfregel demo',content:'Schrijf helder, zakelijk en menselijk. Vermijd lege marketingtaal en maak elke alinea nuttig voor de beslisser.',tags:['stijl','demo'],created_at:new Date().toISOString()},
+    {id:'demo-kb-2',type:'persona',title:'B2B beslisser',content:'De lezer wil snel begrijpen wat het oplevert, welke risico s lager worden en welke volgende stap logisch is.',tags:['persona'],created_at:new Date().toISOString()}
+  ];
+}
+function knowledgeTypeLabel(type){
+  return ({persona:'Persona',tone:'Tone of voice',topical_map:'Topical map',source:'Bron',guide:'Richtlijn'})[type]||'Bron';
+}
+function knowledgeTypeIcon(type){
+  return ({persona:'P',tone:'T',topical_map:'M',source:'B',guide:'R'})[type]||'K';
+}
+function buildKnowledgeStatus(){
+  if(kbLoading)return '<div style="margin-top:10px;font-size:12.5px;color:var(--muted);">Kennisbank wordt geladen...</div>';
+  if(!kbStatus)return '';
+  const color=kbStatusTone==='error'?'#f87171':kbStatusTone==='ok'?'var(--accent)':'var(--muted)';
+  return '<div style="margin-top:10px;font-size:12.5px;color:'+color+';">'+escHtml(kbStatus)+'</div>';
+}
 function buildKnowledge(el){
-  el.innerHTML='<div class="page-header"><div><h2>Kennisbank</h2><p>Bronnen en bedrijfsinformatie.</p></div></div>'
-    +'<div class="card"><p style="color:var(--muted);">Kennisbank is nog in ontwikkeling.</p></div>';
+  if(currentUser?.is_demo&&!KB_ITEMS.length)KB_ITEMS=getDemoKnowledgeItems();
+  const workspaceId=getWorkspaceId();
+  const canUseBackend=!currentUser?.is_demo&&isUuidValue(currentUser?.id)&&isUuidValue(workspaceId);
+  if(!currentUser?.is_demo&&!kbLoading&&!kbLoaded&&isUuidValue(workspaceId)){
+    setTimeout(()=>loadKnowledgeItems({silent:true}),0);
+  }
+  const items=KB_ITEMS||[];
+  const cards=items.length
+    ? '<div class="knowledge-grid">'+items.map(item=>{
+        const tags=Array.isArray(item.tags)?item.tags:[];
+        return '<div class="kb-card" style="cursor:default;">'
+          +'<div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:10px;">'
+          +'<div class="kb-card-icon" style="width:34px;height:34px;border-radius:12px;background:var(--accent-subtle);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;">'+escHtml(knowledgeTypeIcon(item.type))+'</div>'
+          +'<span class="tag tag-grey">'+escHtml(knowledgeTypeLabel(item.type))+'</span>'
+          +'</div>'
+          +'<div class="kb-card-title">'+escHtml(item.title||'Kennisitem')+'</div>'
+          +'<div class="kb-card-sub" style="line-height:1.55;margin-top:8px;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;">'+escHtml(item.content||'')+'</div>'
+          +(tags.length?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;">'+tags.slice(0,4).map(tag=>'<span class="chip">'+escHtml(tag)+'</span>').join('')+'</div>':'')
+          +'<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">'
+          +'<span style="font-size:11px;color:var(--muted);">Wordt meegenomen bij generatie</span>'
+          +(String(item.id||'').startsWith('demo-')?'' : '<button class="btn btn-ghost btn-sm" onclick="deleteKnowledgeItem(\''+escAttr(item.id||'')+'\')" style="color:#f87171;">Verwijder</button>')
+          +'</div>'
+          +'</div>';
+      }).join('')+'</div>'
+    : '<div class="card" style="text-align:center;padding:34px 24px;"><div style="font-size:28px;margin-bottom:10px;">KB</div><h3 style="font-size:16px;margin-bottom:6px;">Nog geen kennis opgeslagen</h3><p style="color:var(--muted);font-size:13px;">Voeg klantinformatie, bewijs, stijlregels of bronnen toe. De volgende generatie gebruikt dit automatisch.</p></div>';
+
+  el.innerHTML='<div class="page-header"><div><h2>Kennisbank</h2><p>Bedrijfskennis die automatisch wordt meegenomen bij nieuwe content.</p></div>'
+    +'<button class="btn btn-secondary btn-sm" onclick="loadKnowledgeItems()">Ververs</button></div>'
+    +'<div style="display:grid;grid-template-columns:minmax(280px,380px) 1fr;gap:16px;align-items:start;">'
+    +'<div class="card"><div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;">Nieuw kennisitem</div>'
+    +'<p style="font-size:13px;color:var(--muted);line-height:1.55;margin-bottom:14px;">Denk aan klantdetails, tone-of-voice regels, bewijs, diensten, doelgroep of woorden die juist wel/niet passen.</p>'
+    +'<div class="form-group"><label class="form-label">Type</label><select id="kbType" class="form-control"><option value="source">Bron</option><option value="guide">Richtlijn</option><option value="tone">Tone of voice</option><option value="persona">Persona</option><option value="topical_map">Topical map</option></select></div>'
+    +'<div class="form-group"><label class="form-label">Titel</label><input id="kbTitle" class="form-control" placeholder="Bijv. Belangrijkste klantbewijs"></div>'
+    +'<div class="form-group"><label class="form-label">Inhoud</label><textarea id="kbContent" class="form-control" style="min-height:150px;" placeholder="Plak hier kennis die ContentFlow moet onthouden..."></textarea></div>'
+    +'<div class="form-group"><label class="form-label">Tags</label><input id="kbTags" class="form-control" placeholder="seo, bewijs, stijl"></div>'
+    +'<button class="btn btn-primary btn-w" onclick="saveKnowledgeItem()">Opslaan in kennisbank</button>'
+    +(!canUseBackend&&!currentUser?.is_demo?'<p style="font-size:12px;color:#f87171;margin-top:10px;line-height:1.5;">Log in met een echte Supabase gebruiker en workspace om op te slaan.</p>':'')
+    +buildKnowledgeStatus()
+    +'</div>'
+    +'<div>'
+    +'<div class="card" style="margin-bottom:16px;background:linear-gradient(135deg,var(--accent-subtle),rgba(0,168,255,.06));border-color:rgba(0,198,122,.22);">'
+    +'<div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;"><div><div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;">Slim geheugen</div>'
+    +'<h3 style="font-size:17px;margin-bottom:6px;">'+items.length+' kennisitems actief</h3>'
+    +'<p style="font-size:13px;color:var(--muted);line-height:1.6;">Tijdens genereren leest de TypeScript backend deze kennis uit Supabase en zet die in de prompt. Dus: wat je hier opslaat, stuurt de volgende tekst.</p></div>'
+    +'<span class="tag tag-live">'+(currentUser?.is_demo?'Demo geheugen':'Supabase actief')+'</span></div></div>'
+    +cards
+    +'</div></div>';
+}
+async function loadKnowledgeItems(options){
+  const opts=options||{};
+  if(currentUser?.is_demo){
+    KB_ITEMS=getDemoKnowledgeItems();
+    kbLoaded=true;
+    if(curPage==='knowledge')buildKnowledge(document.getElementById('pg-knowledge'));
+    return;
+  }
+  if(!currentUser){return;}
+  kbLoading=true;
+  if(!opts.silent){kbStatus='Kennisbank wordt geladen...';kbStatusTone='muted';}
+  if(curPage==='knowledge')buildKnowledge(document.getElementById('pg-knowledge'));
+  try{
+    if(!isUuidValue(getWorkspaceId()))await loadProfile();
+    const workspaceId=getWorkspaceId();
+    if(!isUuidValue(workspaceId))throw new Error('Geen geldige workspace gevonden.');
+    const resp=await fetch(KNOWLEDGE_ITEMS_ENDPOINT,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'list',workspace_id:workspaceId})
+    });
+    const data=await resp.json().catch(()=>null);
+    if(!resp.ok)throw new Error(data?.error||'Kennisbank laden mislukt.');
+    KB_ITEMS=Array.isArray(data?.items)?data.items:[];
+    kbLoaded=true;
+    kbStatus=opts.silent?'':'Kennisbank geladen.';
+    kbStatusTone='ok';
+  }catch(e){
+    kbStatus='Kennisbank laden mislukt: '+(e.message||'onbekende fout');
+    kbStatusTone='error';
+  }finally{
+    kbLoading=false;
+    if(curPage==='knowledge')buildKnowledge(document.getElementById('pg-knowledge'));
+  }
+}
+async function saveKnowledgeItem(){
+  const type=(document.getElementById('kbType')||{}).value||'source';
+  const title=((document.getElementById('kbTitle')||{}).value||'').trim();
+  const content=((document.getElementById('kbContent')||{}).value||'').trim();
+  const tags=((document.getElementById('kbTags')||{}).value||'').trim();
+  if(!title||content.length<10){showToast('Vul een titel en minimaal 10 tekens inhoud in.');return;}
+  if(currentUser?.is_demo){
+    KB_ITEMS=[{id:'demo-'+Date.now(),type,title,content,tags:tags.split(',').map(t=>t.trim()).filter(Boolean),created_at:new Date().toISOString()},...KB_ITEMS];
+    buildKnowledge(document.getElementById('pg-knowledge'));
+    showToast('Demo kennisitem toegevoegd.');
+    return;
+  }
+  try{
+    if(!isUuidValue(getWorkspaceId()))await loadProfile();
+    const workspaceId=getWorkspaceId();
+    if(!isUuidValue(workspaceId)||!isUuidValue(currentUser?.id))throw new Error('Geen geldige gebruiker of workspace.');
+    kbLoading=true;
+    kbStatus='Kennisitem wordt opgeslagen...';
+    kbStatusTone='muted';
+    buildKnowledge(document.getElementById('pg-knowledge'));
+    const resp=await fetch(KNOWLEDGE_ITEMS_ENDPOINT,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'create',workspace_id:workspaceId,user_id:currentUser.id,type,title,content,tags})
+    });
+    const data=await resp.json().catch(()=>null);
+    if(!resp.ok)throw new Error(data?.error||'Kennisitem opslaan mislukt.');
+    KB_ITEMS=Array.isArray(data?.items)?data.items:[data.item,...KB_ITEMS].filter(Boolean);
+    kbLoaded=true;
+    kbStatus='Kennisitem opgeslagen. Volgende generatie gebruikt dit automatisch.';
+    kbStatusTone='ok';
+    showToast('Kennis opgeslagen in Supabase.');
+  }catch(e){
+    kbStatus='Opslaan mislukt: '+(e.message||'onbekende fout');
+    kbStatusTone='error';
+    showToast(kbStatus);
+  }finally{
+    kbLoading=false;
+    buildKnowledge(document.getElementById('pg-knowledge'));
+  }
+}
+async function deleteKnowledgeItem(id){
+  if(!id||!confirm('Kennisitem verwijderen?'))return;
+  try{
+    const workspaceId=getWorkspaceId();
+    if(!isUuidValue(workspaceId))throw new Error('Geen geldige workspace gevonden.');
+    const resp=await fetch(KNOWLEDGE_ITEMS_ENDPOINT,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'delete',workspace_id:workspaceId,id})
+    });
+    const data=await resp.json().catch(()=>null);
+    if(!resp.ok)throw new Error(data?.error||'Verwijderen mislukt.');
+    KB_ITEMS=Array.isArray(data?.items)?data.items:KB_ITEMS.filter(item=>item.id!==id);
+    kbLoaded=true;
+    kbStatus='Kennisitem verwijderd.';
+    kbStatusTone='ok';
+    buildKnowledge(document.getElementById('pg-knowledge'));
+    showToast('Kennisitem verwijderd.');
+  }catch(e){
+    showToast('Verwijderen mislukt: '+(e.message||'onbekende fout'));
+  }
 }
 function buildSettings(el){
   const tabs=[{id:'bedrijf',l:'Bedrijf'},{id:'algo',l:'Algoritme'},{id:'users',l:'Gebruikers'},{id:'integraties',l:'Integraties'},{id:'vertrouwen',l:'Vertrouwen'}];
