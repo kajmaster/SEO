@@ -1443,7 +1443,7 @@ function renderPage(p){
 }
 
 let genStatus='idle',genMessage='',genJobId=null,genResult=null,feedbackSaveMessage='',feedbackSaveTone='muted',websiteToneScanStatus='',websiteToneScanTone='muted';
-let KB_ITEMS=[],kbStatus='',kbStatusTone='muted',kbLoading=false,kbLoaded=false;
+let KB_ITEMS=[],kbStatus='',kbStatusTone='muted',kbLoading=false,kbLoaded=false,kbSelectedType='source';
 let savedKw='',savedBriefAudience='',savedBriefOffer='',savedBriefAngle='',savedBriefProof='',savedBriefMustInclude='',savedBriefCta='';
 
 function buildCreate(el){
@@ -2589,6 +2589,22 @@ function knowledgeTypeLabel(type){
 function knowledgeTypeIcon(type){
   return ({persona:'P',tone:'T',topical_map:'M',source:'B',guide:'R'})[type]||'K';
 }
+function setKnowledgeType(type){
+  kbSelectedType=type||'source';
+  if(curPage==='knowledge')buildKnowledge(document.getElementById('pg-knowledge'));
+}
+function knowledgeTypePickerHtml(){
+  const types=[
+    {id:'source',label:'Bron'},
+    {id:'guide',label:'Richtlijn'},
+    {id:'tone',label:'Tone of voice'},
+    {id:'persona',label:'Persona'},
+    {id:'topical_map',label:'Topical map'}
+  ];
+  return '<div style="display:flex;gap:7px;flex-wrap:wrap;">'
+    +types.map(type=>'<button type="button" class="btn btn-sm '+(kbSelectedType===type.id?'btn-primary':'btn-secondary')+'" onclick="setKnowledgeType(\''+type.id+'\')">'+escHtml(type.label)+'</button>').join('')
+    +'</div>';
+}
 function buildKnowledgeStatus(){
   if(kbLoading)return '<div style="margin-top:10px;font-size:12.5px;color:var(--muted);">Kennisbank wordt geladen...</div>';
   if(!kbStatus)return '';
@@ -2627,7 +2643,7 @@ function buildKnowledge(el){
     +'<div style="display:grid;grid-template-columns:minmax(280px,380px) 1fr;gap:16px;align-items:start;">'
     +'<div class="card"><div style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;">Nieuw kennisitem</div>'
     +'<p style="font-size:13px;color:var(--muted);line-height:1.55;margin-bottom:14px;">Denk aan klantdetails, tone-of-voice regels, bewijs, diensten, doelgroep of woorden die juist wel/niet passen.</p>'
-    +'<div class="form-group"><label class="form-label">Type</label><select id="kbType" class="form-control"><option value="source">Bron</option><option value="guide">Richtlijn</option><option value="tone">Tone of voice</option><option value="persona">Persona</option><option value="topical_map">Topical map</option></select></div>'
+    +'<div class="form-group"><label class="form-label">Type</label>'+knowledgeTypePickerHtml()+'</div>'
     +'<div class="form-group"><label class="form-label">Titel</label><input id="kbTitle" class="form-control" placeholder="Bijv. Belangrijkste klantbewijs"></div>'
     +'<div class="form-group"><label class="form-label">Inhoud</label><textarea id="kbContent" class="form-control" style="min-height:150px;" placeholder="Plak hier kennis die ContentFlow moet onthouden..."></textarea></div>'
     +'<div class="form-group"><label class="form-label">Tags</label><input id="kbTags" class="form-control" placeholder="seo, bewijs, stijl"></div>'
@@ -2680,7 +2696,7 @@ async function loadKnowledgeItems(options){
   }
 }
 async function saveKnowledgeItem(){
-  const type=(document.getElementById('kbType')||{}).value||'source';
+  const type=kbSelectedType||'source';
   const title=((document.getElementById('kbTitle')||{}).value||'').trim();
   const content=((document.getElementById('kbContent')||{}).value||'').trim();
   const tags=((document.getElementById('kbTags')||{}).value||'').trim();
