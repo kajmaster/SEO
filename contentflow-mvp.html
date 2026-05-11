@@ -1443,7 +1443,7 @@ function renderPage(p){
 }
 
 let genStatus='idle',genMessage='',genJobId=null,genResult=null,feedbackSaveMessage='',feedbackSaveTone='muted',websiteToneScanStatus='',websiteToneScanTone='muted';
-let KB_ITEMS=[],kbStatus='',kbStatusTone='muted',kbLoading=false,kbLoaded=false,kbSelectedType='source';
+let KB_ITEMS=[],kbStatus='',kbStatusTone='muted',kbLoading=false,kbLoaded=false,kbLoadAttempted=false,kbSelectedType='source';
 let savedKw='',savedBriefAudience='',savedBriefOffer='',savedBriefAngle='',savedBriefProof='',savedBriefMustInclude='',savedBriefCta='';
 
 function buildCreate(el){
@@ -2611,11 +2611,15 @@ function buildKnowledgeStatus(){
   const color=kbStatusTone==='error'?'#f87171':kbStatusTone==='ok'?'var(--accent)':'var(--muted)';
   return '<div style="margin-top:10px;font-size:12.5px;color:'+color+';">'+escHtml(kbStatus)+'</div>';
 }
+function isKnowledgeFormFocused(){
+  const activeId=document.activeElement&&document.activeElement.id;
+  return ['kbTitle','kbContent','kbTags'].includes(activeId);
+}
 function buildKnowledge(el){
   if(currentUser?.is_demo&&!KB_ITEMS.length)KB_ITEMS=getDemoKnowledgeItems();
   const workspaceId=getWorkspaceId();
   const canUseBackend=!currentUser?.is_demo&&isUuidValue(currentUser?.id)&&isUuidValue(workspaceId);
-  if(!currentUser?.is_demo&&!kbLoading&&!kbLoaded&&isUuidValue(workspaceId)){
+  if(!currentUser?.is_demo&&!kbLoading&&!kbLoadAttempted&&isUuidValue(workspaceId)){
     setTimeout(()=>loadKnowledgeItems({silent:true}),0);
   }
   const items=KB_ITEMS||[];
@@ -2665,13 +2669,16 @@ async function loadKnowledgeItems(options){
   if(currentUser?.is_demo){
     KB_ITEMS=getDemoKnowledgeItems();
     kbLoaded=true;
+    kbLoadAttempted=true;
     if(curPage==='knowledge')buildKnowledge(document.getElementById('pg-knowledge'));
     return;
   }
   if(!currentUser){return;}
+  if(kbLoading)return;
+  kbLoadAttempted=true;
   kbLoading=true;
   if(!opts.silent){kbStatus='Kennisbank wordt geladen...';kbStatusTone='muted';}
-  if(curPage==='knowledge')buildKnowledge(document.getElementById('pg-knowledge'));
+  if(curPage==='knowledge'&&!opts.silent)buildKnowledge(document.getElementById('pg-knowledge'));
   try{
     if(!isUuidValue(getWorkspaceId()))await loadProfile();
     const workspaceId=getWorkspaceId();
@@ -2685,14 +2692,15 @@ async function loadKnowledgeItems(options){
     if(!resp.ok)throw new Error(data?.error||'Kennisbank laden mislukt.');
     KB_ITEMS=Array.isArray(data?.items)?data.items:[];
     kbLoaded=true;
-    kbStatus=opts.silent?'':'Kennisbank geladen.';
+    kbStatus=opts.silent?'':(data?.schema_warning||'Kennisbank geladen.');
     kbStatusTone='ok';
   }catch(e){
-    kbStatus='Kennisbank laden mislukt: '+(e.message||'onbekende fout');
-    kbStatusTone='error';
+    kbLoaded=true;
+    kbStatus=opts.silent?'':('Kennisbank laden mislukt: '+(e.message||'onbekende fout'));
+    kbStatusTone=opts.silent?'muted':'error';
   }finally{
     kbLoading=false;
-    if(curPage==='knowledge')buildKnowledge(document.getElementById('pg-knowledge'));
+    if(curPage==='knowledge'&&(!opts.silent||!isKnowledgeFormFocused()))buildKnowledge(document.getElementById('pg-knowledge'));
   }
 }
 async function saveKnowledgeItem(){

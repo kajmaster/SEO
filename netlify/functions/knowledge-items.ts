@@ -32,12 +32,95 @@ function normalizeItem(row: UnknownRecord): UnknownRecord {
   };
 }
 
-async function listKnowledgeItems(workspaceId: string): Promise<UnknownRecord[]> {
-  const rows = await supabaseFetch<UnknownRecord[]>(
-    `knowledge_base?workspace_id=eq.${encodeURIComponent(workspaceId)}&select=*&order=created_at.desc&limit=100`,
-    { method: "GET", headers: { Prefer: "return=representation" } },
-  );
-  return Array.isArray(rows) ? rows.map(normalizeItem) : [];
+function isWorkspaceColumnError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error || "");
+  return /workspace_id|created_by|schema cache|column .* does not exist|PGRST204/i.test(message);
+}
+
+async function fetchKnowledgeRows(workspaceId: string): Promise<{
+  rows: UnknownRecord[];
+  schemaWarning: string;
+}> {
+  try {
+    const rows = await supabaseFetch<UnknownRecord[]>(
+      `knowledge_base?workspace_id=eq.${encodeURIComponent(workspaceId)}&select=*&order=created_at.desc&limit=100`,
+      { method: "GET", headers: { Prefer: "return=representation" } },
+    );
+    return { rows: Array.isArray(rows) ? rows : [], schemaWarning: "" };
+  } catch (error) {
+    if (!isWorkspaceColumnError(error)) throw error;
+    const rows = await supabaseFetch<UnknownRecord[]>(
+      "knowledge_base?select=*&order=created_at.desc&limit=100",
+      { method: "GET", headers: { Prefer: "return=representation" } },
+    );
+    return {
+      rows: Array.isArray(rows) ? rows : [],
+      schemaWarning:
+        "Kennisbank geladen, maar Supabase mist workspace_id op knowledge_base. Voeg die kolom later toe voor echte multi-tenant scheiding.",
+    };
+  }
+}
+
+async function listKnowledgeItems(workspaceId: string): Promise<{
+  items: UnknownRecord[];
+  schemaWarning: string;
+}> {
+  const { rows, schemaWarning } = await fetchKnowledgeRows(workspaceId);
+  return {
+    items: rows.map(normalizeItem),
+    schemaWarning,
+  };
+}
+
+async function insertKnowledgeRow(payload: UnknownRecord): Promise<UnknownRecord> {
+  const attempts = [
+    payload,
+    Object.fromEntries(Object.entries(payload).filter(([key]) => key !== "created_by")),
+    Object.fromEntries(
+      Object.entries(payload).filter(([key]) => !["workspace_id", "created_by"].includes(key)),
+    ),
+    Object.fromEntries(
+      Object.entries(payload).filter(([key]) => !["workspace_id", "created_by", "tags"].includes(key)),
+    ),
+  ];
+
+  let lastError: unknown = null;
+  for (const attempt of attempts) {
+    try {
+      const rows = await supabaseFetch<UnknownRecord[]>("knowledge_base", {
+        method: "POST",
+        body: JSON.stringify(attempt),
+      });
+      return Array.isArray(rows) ? rows[0] || {} : {};
+    } catch (error) {
+      lastError = error;
+      if (!isWorkspaceColumnError(error)) throw error;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("Kennisitem opslaan mislukt.");
+}
+
+async function deleteKnowledgeRow(id: string, workspaceId: string): Promise<void> {
+  try {
+    await supabaseFetch<UnknownRecord[]>(
+      `knowledge_base?id=eq.${encodeURIComponent(id)}&workspace_id=eq.${encodeURIComponent(workspaceId)}`,
+      { method: "DELETE", headers: { Prefer: "return=minimal" } },
+    );
+  } catch (error) {
+    if (!isWorkspaceColumnError(error)) throw error;
+    await supabaseFetch<UnknownRecord[]>(
+      `knowledge_base?id=eq.${encodeURIComponent(id)}`,
+      { method: "DELETE", headers: { Prefer: "return=minimal" } },
+    );
+  }
+}
+
+async function listKnowledgePayload(workspaceId: string): Promise<UnknownRecord> {
+  const result = await listKnowledgeItems(workspaceId);
+  return {
+    items: result.items,
+    schema_warning: result.schemaWarning,
+  };
 }
 
 async function createKnowledgeItem(body: UnknownRecord): Promise<UnknownRecord> {
@@ -58,19 +141,16 @@ async function createKnowledgeItem(body: UnknownRecord): Promise<UnknownRecord> 
     throw new Error("Titel en inhoud zijn verplicht. Inhoud moet minimaal 10 tekens zijn.");
   }
 
-  const rows = await supabaseFetch<UnknownRecord[]>("knowledge_base", {
-    method: "POST",
-    body: JSON.stringify({
-      workspace_id: workspaceId,
-      created_by: userId,
-      type,
-      title,
-      content,
-      tags,
-    }),
+  const row = await insertKnowledgeRow({
+    workspace_id: workspaceId,
+    created_by: userId,
+    type,
+    title,
+    content,
+    tags,
   });
 
-  return normalizeItem(Array.isArray(rows) ? rows[0] || {} : {});
+  return normalizeItem(row);
 }
 
 async function deleteKnowledgeItem(body: UnknownRecord): Promise<{ deleted: boolean }> {
@@ -81,10 +161,7 @@ async function deleteKnowledgeItem(body: UnknownRecord): Promise<{ deleted: bool
     throw new Error("workspace_id en id moeten geldige UUIDs zijn.");
   }
 
-  await supabaseFetch<UnknownRecord[]>(
-    `knowledge_base?id=eq.${encodeURIComponent(id)}&workspace_id=eq.${encodeURIComponent(workspaceId)}`,
-    { method: "DELETE", headers: { Prefer: "return=minimal" } },
-  );
+  await deleteKnowledgeRow(id, workspaceId);
 
   return { deleted: true };
 }
@@ -107,15 +184,17 @@ export default async function handler(request: Request): Promise<Response> {
     }
 
     if (action === "list") {
-      return jsonResponse({ items: await listKnowledgeItems(workspaceId) });
+      return jsonResponse(await listKnowledgePayload(workspaceId));
     }
     if (action === "create") {
       const item = await createKnowledgeItem(body);
-      return jsonResponse({ item, items: await listKnowledgeItems(workspaceId) }, 201);
+      const list = await listKnowledgePayload(workspaceId);
+      return jsonResponse({ item, ...list }, 201);
     }
     if (action === "delete") {
       const result = await deleteKnowledgeItem(body);
-      return jsonResponse({ ...result, items: await listKnowledgeItems(workspaceId) });
+      const list = await listKnowledgePayload(workspaceId);
+      return jsonResponse({ ...result, ...list });
     }
 
     return jsonResponse({ error: "Onbekende kennisbankactie." }, 400);

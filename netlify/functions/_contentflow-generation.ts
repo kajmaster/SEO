@@ -147,6 +147,28 @@ async function safeRows(path: string): Promise<UnknownRecord[]> {
   }
 }
 
+async function safeKnowledgeRows(workspaceId: string): Promise<UnknownRecord[]> {
+  try {
+    const rows = await supabaseFetch<UnknownRecord[]>(
+      `knowledge_base?workspace_id=eq.${encodeURIComponent(workspaceId)}&select=*&order=created_at.desc&limit=25`,
+      { method: "GET", headers: { Prefer: "return=representation" } },
+    );
+    return Array.isArray(rows) ? rows : [];
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error || "");
+    if (!/workspace_id|schema cache|column .* does not exist|PGRST204/i.test(message)) return [];
+    try {
+      const rows = await supabaseFetch<UnknownRecord[]>(
+        "knowledge_base?select=*&order=created_at.desc&limit=25",
+        { method: "GET", headers: { Prefer: "return=representation" } },
+      );
+      return Array.isArray(rows) ? rows : [];
+    } catch {
+      return [];
+    }
+  }
+}
+
 function sanitizeText(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -762,9 +784,7 @@ export async function loadGenerationContext(input: GenerateContentRequest): Prom
   const previousJobs = await safeRows(
     `generation_jobs?workspace_id=eq.${encodeURIComponent(input.workspace_id)}&select=result,quality_summary,keyword,updated_at&order=updated_at.desc&limit=15`,
   );
-  const knowledgeRows = await safeRows(
-    `knowledge_base?workspace_id=eq.${encodeURIComponent(input.workspace_id)}&select=*&order=created_at.desc&limit=25`,
-  );
+  const knowledgeRows = await safeKnowledgeRows(input.workspace_id);
   const knowledgeContext = formatKnowledgeRows(knowledgeRows);
   const profileAlgoSettings = asRecord(profile?.algo_settings);
   const websiteToneAnalysis = asRecord(profileAlgoSettings?.website_tone_analysis);
