@@ -1403,12 +1403,38 @@ function buildContentQualityReport(args: {
   plan: ContentPlan;
   input: GenerateContentRequest;
 }): ContentQualityReport {
-  const { primaryVariant, variants, plan, input } = args;
+  const { input } = args;
+  const primaryVariant = args.primaryVariant || args.variants[0];
+  const variants = Array.isArray(args.variants) ? args.variants : [];
+  const planRecord = asRecord(args.plan) || {};
+  const keyMessages = normalizeStringArray(planRecord.keyMessages);
+  const proofPoints = normalizeStringArray(planRecord.proofPoints);
+  const mustAvoid = normalizeStringArray(planRecord.mustAvoid);
+  const ctaDirection = sanitizeText(planRecord.ctaDirection);
+  const searchIntent = sanitizeText(planRecord.searchIntent) || "onbekend";
+
+  if (!primaryVariant) {
+    return {
+      overall_score: 0,
+      verdict: "Geen bruikbare variant gevonden.",
+      dimensions: [
+        {
+          label: "Generatie",
+          score: 0,
+          note: "De backend kreeg geen primaire variant terug om te beoordelen.",
+        },
+      ],
+      strengths: [],
+      risks: ["Er is geen primaire contentvariant beschikbaar."],
+      next_actions: ["Probeer opnieuw met meer briefing of controleer de OpenAI-response."],
+    };
+  }
+
   const content = sanitizeText(primaryVariant.content);
   const wordCount = primaryVariant.word_count || countWords(content);
   const headingCount = (content.match(/<h[23][\s>]/gi) || []).length;
   const paragraphCount = (content.match(/<p[\s>]/gi) || []).length;
-  const cta = sanitizeText(plan.ctaDirection);
+  const cta = ctaDirection;
   const keyword = sanitizeText(input.keyword).toLowerCase();
   const plainContent = content.replace(/<[^>]*>/g, " ").toLowerCase();
 
@@ -1417,9 +1443,9 @@ function buildContentQualityReport(args: {
       label: "Strategische briefing",
       score: clampScore(
         45 +
-          Math.min(25, plan.keyMessages.length * 5) +
-          Math.min(15, plan.proofPoints.length * 5) +
-          Math.min(15, plan.mustAvoid.length * 5),
+          Math.min(25, keyMessages.length * 5) +
+          Math.min(15, proofPoints.length * 5) +
+          Math.min(15, mustAvoid.length * 5),
       ),
       note: "Meet of zoekintentie, kernboodschap, bewijs en vermijdregels duidelijk zijn meegenomen.",
     },
@@ -1444,7 +1470,7 @@ function buildContentQualityReport(args: {
     },
     {
       label: "Conversiekracht",
-      score: clampScore(70 + (cta && plainContent.includes(cta.toLowerCase().slice(0, 18)) ? 12 : 0) + (plan.proofPoints.length ? 8 : -8)),
+      score: clampScore(70 + (cta && plainContent.includes(cta.toLowerCase().slice(0, 18)) ? 12 : 0) + (proofPoints.length ? 8 : -8)),
       note: "Meet of de tekst richting een logische volgende stap werkt en voldoende vertrouwen geeft.",
     },
   ];
@@ -1455,7 +1481,7 @@ function buildContentQualityReport(args: {
   const risks = [
     ...(wordCount < 600 ? ["Tekst is mogelijk nog te kort voor een premium SEO-pagina."] : []),
     ...(headingCount < 4 ? ["Structuur kan sterker: voeg meer duidelijke tussenkoppen toe."] : []),
-    ...(plan.proofPoints.length < 2 ? ["Bewijs is nog dun: voeg cases, voorbeelden of harde context toe."] : []),
+    ...(proofPoints.length < 2 ? ["Bewijs is nog dun: voeg cases, voorbeelden of harde context toe."] : []),
     ...(variants.length < 3 ? ["Er zijn minder varianten dan gewenst gegenereerd."] : []),
   ];
 
@@ -1470,8 +1496,8 @@ function buildContentQualityReport(args: {
     dimensions,
     strengths: [
       primaryVariant.quality_summary || "Beste variant automatisch geselecteerd op kwaliteit en SEO.",
-      `Past bij zoekintentie: ${plan.searchIntent || "onbekend"}.`,
-      `CTA-richting: ${plan.ctaDirection || "nog niet scherp"}.`,
+      `Past bij zoekintentie: ${searchIntent}.`,
+      `CTA-richting: ${ctaDirection || "nog niet scherp"}.`,
     ],
     risks,
     next_actions: [

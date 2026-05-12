@@ -2268,8 +2268,15 @@ async function triggerGeneration(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify(payload)
     });
-    const data=await resp.json().catch(()=>null);
-    if(!resp.ok)throw new Error(data?.error||'Content generatie mislukte.');
+    const responseText=await resp.text();
+    let data=null;
+    try{data=responseText?JSON.parse(responseText):null;}catch(_err){}
+    if(!resp.ok){
+      const detail=data?.error||responseText?.slice(0,500)||'Content generatie mislukte.';
+      const debugStage=data?.stage?' Stap: '+data.stage+'.':'';
+      const debugJob=data?.job_id?' Job: '+data.job_id+'.':'';
+      throw new Error(detail+debugStage+debugJob);
+    }
     clearGenerationTimers();
     genStatus='done';
     genStage=data?.status||'ready_for_review';

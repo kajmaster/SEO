@@ -69,20 +69,26 @@ export default async function handler(request: Request): Promise<Response> {
   }
 
   let jobId = "";
+  let stage = "request";
 
   try {
+    stage = "payload_lezen";
     const body = await request.json();
+    stage = "payload_valideren";
     const input = validateRequest(body);
 
+    stage = "job_aanmaken";
     const job = await createGenerationJob(input);
     jobId = String(job.id || "");
     if (!jobId) throw new Error("Generation job kon niet worden aangemaakt.");
 
+    stage = "context_laden";
     await updateGenerationJob(jobId, { status: "drafting" });
     const context = await loadGenerationContext(input);
     let plan = buildDefaultPlan(input, context);
     let planningFallbackReason = "";
     try {
+      stage = "strategie_maken";
       plan = await withTimeout(
         planContent(input, context),
         12000,
@@ -93,12 +99,14 @@ export default async function handler(request: Request): Promise<Response> {
         error instanceof Error ? error.message : "Strategielaag gaf geen bruikbaar plan.";
     }
 
+    stage = "tekst_genereren";
     await updateGenerationJob(jobId, { status: "drafting" });
     const variants = await withTimeout(
       generateVariants(input, context, plan),
       42000,
       "OpenAI duurde te lang. Er is geen fallbacktekst opgeslagen, zodat je geen nepkwaliteit krijgt.",
     );
+    stage = "resultaat_opslaan";
     const saved = await saveGeneratedContent({
       input,
       job,
@@ -106,6 +114,7 @@ export default async function handler(request: Request): Promise<Response> {
       brandProfile: context.brandProfile,
     });
 
+    stage = "response_bouwen";
     const responsePayload = buildGenerationResponse({
       job,
       page: saved.page,
@@ -115,6 +124,7 @@ export default async function handler(request: Request): Promise<Response> {
       plan,
     });
 
+    stage = "job_afronden";
     await updateGenerationJob(jobId, {
       status: "ready_for_review",
       quality_summary: {
@@ -141,6 +151,6 @@ export default async function handler(request: Request): Promise<Response> {
 
     const message = error instanceof Error ? error.message : "Kon content niet genereren.";
     const status = /verplicht|geldig/i.test(message) ? 400 : 500;
-    return jsonResponse({ error: message }, status);
+    return jsonResponse({ error: message, stage, job_id: jobId || null }, status);
   }
 }
