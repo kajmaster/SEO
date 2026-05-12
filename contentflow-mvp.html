@@ -1212,24 +1212,66 @@ function saveBriefFields(){
   const angle=document.getElementById('briefAngle');
   const proof=document.getElementById('briefProof');
   const mustInclude=document.getElementById('briefMustInclude');
+  const objections=document.getElementById('briefObjections');
+  const competitors=document.getElementById('briefCompetitors');
+  const forbidden=document.getElementById('briefForbidden');
   const cta=document.getElementById('briefCta');
   if(audience)savedBriefAudience=audience.value||'';
   if(offer)savedBriefOffer=offer.value||'';
   if(angle)savedBriefAngle=angle.value||'';
   if(proof)savedBriefProof=proof.value||'';
   if(mustInclude)savedBriefMustInclude=mustInclude.value||'';
+  if(objections)savedBriefObjections=objections.value||'';
+  if(competitors)savedBriefCompetitors=competitors.value||'';
+  if(forbidden)savedBriefForbidden=forbidden.value||'';
   if(cta)savedBriefCta=cta.value||'';
 }
-function getManualBriefContent(){
-  saveBriefFields();
-  const rows=[
+function getBriefRows(){
+  return [
     ['Doelgroep',savedBriefAudience],
     ['Aanbod/dienst',savedBriefOffer],
     ['Gewenste invalshoek',savedBriefAngle],
     ['Bewijs, voorbeelden of USPs',savedBriefProof],
     ['Moet absoluut in de tekst',savedBriefMustInclude],
+    ['Bezwaren of twijfels van de klant',savedBriefObjections],
+    ['Concurrenten of alternatieven',savedBriefCompetitors],
+    ['Verboden woorden, claims of stijl',savedBriefForbidden],
     ['Gewenste CTA',savedBriefCta]
   ].map(([label,value])=>[label,cleanBriefValue(value)]).filter(([,value])=>value);
+}
+function getBriefingScore(){
+  saveBriefFields();
+  const important=[savedBriefAudience,savedBriefOffer,savedBriefAngle,savedBriefProof,savedBriefMustInclude,savedBriefCta];
+  const bonus=[savedBriefObjections,savedBriefCompetitors,savedBriefForbidden];
+  const base=important.filter(value=>cleanBriefValue(value).length>=8).length;
+  const extra=bonus.filter(value=>cleanBriefValue(value).length>=8).length;
+  const score=Math.min(100,Math.round((base/important.length)*78+(extra/bonus.length)*22));
+  const label=score>=82?'Sterke briefing':score>=55?'Prima basis':'Te dun voor premium output';
+  const missing=[];
+  if(!cleanBriefValue(savedBriefAudience))missing.push('doelgroep');
+  if(!cleanBriefValue(savedBriefOffer))missing.push('aanbod');
+  if(!cleanBriefValue(savedBriefProof))missing.push('bewijs');
+  if(!cleanBriefValue(savedBriefCta))missing.push('CTA');
+  return {score,label,missing};
+}
+function briefingScoreHtml(){
+  const b=getBriefingScore();
+  const color=b.score>=82?'var(--accent)':b.score>=55?'#f59e0b':'#f87171';
+  return '<div id="briefingScoreBox" style="margin-top:14px;padding:14px 16px;border-radius:var(--radius-sm);background:var(--surface2);border:1px solid var(--border);">'
+    +'<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:8px;">'
+    +'<div><div style="font-size:12px;font-weight:800;color:'+color+';">Briefing score: '+b.score+'/100</div>'
+    +'<div style="font-size:12px;color:var(--muted);margin-top:2px;">'+escHtml(b.label)+(b.missing.length?' - mist nog: '+escHtml(b.missing.join(', ')):'')+'</div></div>'
+    +'<span class="tag '+(b.score>=82?'tag-live':b.score>=55?'tag-review':'tag-grey')+'">'+(b.score>=82?'Premium input':b.score>=55?'Werkbaar':'Aanvullen')+'</span></div>'
+    +'<div style="height:7px;border-radius:999px;background:var(--surface3);overflow:hidden;"><div style="height:100%;width:'+b.score+'%;background:'+color+';"></div></div>'
+    +'</div>';
+}
+function updateBriefingScoreDisplay(){
+  const box=document.getElementById('briefingScoreBox');
+  if(box)box.outerHTML=briefingScoreHtml();
+}
+function getManualBriefContent(){
+  saveBriefFields();
+  const rows=getBriefRows();
   return rows.length
     ? 'CONTENT BRIEFING VAN GEBRUIKER\n'+rows.map(([label,value])=>label+': '+value).join('\n')
     : '';
@@ -1444,7 +1486,7 @@ function renderPage(p){
 
 let genStatus='idle',genMessage='',genJobId=null,genResult=null,feedbackSaveMessage='',feedbackSaveTone='muted',websiteToneScanStatus='',websiteToneScanTone='muted';
 let KB_ITEMS=[],kbStatus='',kbStatusTone='muted',kbLoading=false,kbLoaded=false,kbLoadAttempted=false,kbSelectedType='source';
-let savedKw='',savedBriefAudience='',savedBriefOffer='',savedBriefAngle='',savedBriefProof='',savedBriefMustInclude='',savedBriefCta='';
+let savedKw='',savedBriefAudience='',savedBriefOffer='',savedBriefAngle='',savedBriefProof='',savedBriefMustInclude='',savedBriefObjections='',savedBriefCompetitors='',savedBriefForbidden='',savedBriefCta='';
 
 function buildCreate(el){
   el.innerHTML='<div class="page-header"><div><h2>Nieuwe content maken</h2><p>In 3 stappen naar een volledig SEO-artikel.</p></div></div>'
@@ -1546,13 +1588,17 @@ function step2Html(){
     +'<span class="tag tag-grey">Aanbevolen</span>'
     +'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">'
-    +'<div class="form-group"><label class="form-label">Voor wie is deze pagina?</label><textarea id="briefAudience" class="form-control" oninput="savedBriefAudience=this.value" placeholder="Bijv. marketing managers bij B2B-bedrijven die betere SEO-content willen">'+escHtml(savedBriefAudience||profile.target_audience||'')+'</textarea></div>'
-    +'<div class="form-group"><label class="form-label">Wat verkoop of bied je aan?</label><textarea id="briefOffer" class="form-control" oninput="savedBriefOffer=this.value" placeholder="Bijv. SEO-content, technische SEO audits, linkbuilding, contentstrategie">'+escHtml(savedBriefOffer||profile.services||'')+'</textarea></div>'
-    +'<div class="form-group"><label class="form-label">Welke invalshoek moet de tekst hebben?</label><textarea id="briefAngle" class="form-control" oninput="savedBriefAngle=this.value" placeholder="Bijv. praktisch, kritisch, premium, educatief, gericht op conversie">'+escHtml(savedBriefAngle)+'</textarea></div>'
-    +'<div class="form-group"><label class="form-label">Bewijs, voorbeelden of USP&apos;s</label><textarea id="briefProof" class="form-control" oninput="savedBriefProof=this.value" placeholder="Bijv. eigen werkwijze, cases, certificering, ervaring, garanties die echt waar zijn">'+escHtml(savedBriefProof)+'</textarea></div>'
-    +'<div class="form-group"><label class="form-label">Wat moet er absoluut in?</label><textarea id="briefMustInclude" class="form-control" oninput="savedBriefMustInclude=this.value" placeholder="Bijv. bepaalde dienstnamen, bezwaren, FAQ&apos;s, regio, vergelijking, stappenplan">'+escHtml(savedBriefMustInclude)+'</textarea></div>'
-    +'<div class="form-group"><label class="form-label">Gewenste call-to-action</label><input id="briefCta" class="form-control" oninput="savedBriefCta=this.value" placeholder="Bijv. Plan een kennismaking" value="'+escAttr(savedBriefCta||profile.primary_cta||'')+'"></div>'
+    +'<div class="form-group"><label class="form-label">Voor wie is deze pagina?</label><textarea id="briefAudience" class="form-control" oninput="savedBriefAudience=this.value;updateBriefingScoreDisplay()" placeholder="Bijv. marketing managers bij B2B-bedrijven die betere SEO-content willen">'+escHtml(savedBriefAudience||profile.target_audience||'')+'</textarea></div>'
+    +'<div class="form-group"><label class="form-label">Wat verkoop of bied je aan?</label><textarea id="briefOffer" class="form-control" oninput="savedBriefOffer=this.value;updateBriefingScoreDisplay()" placeholder="Bijv. SEO-content, technische SEO audits, linkbuilding, contentstrategie">'+escHtml(savedBriefOffer||profile.services||'')+'</textarea></div>'
+    +'<div class="form-group"><label class="form-label">Welke invalshoek moet de tekst hebben?</label><textarea id="briefAngle" class="form-control" oninput="savedBriefAngle=this.value;updateBriefingScoreDisplay()" placeholder="Bijv. praktisch, kritisch, premium, educatief, gericht op conversie">'+escHtml(savedBriefAngle)+'</textarea></div>'
+    +'<div class="form-group"><label class="form-label">Bewijs, voorbeelden of USP&apos;s</label><textarea id="briefProof" class="form-control" oninput="savedBriefProof=this.value;updateBriefingScoreDisplay()" placeholder="Bijv. eigen werkwijze, cases, certificering, ervaring, garanties die echt waar zijn">'+escHtml(savedBriefProof)+'</textarea></div>'
+    +'<div class="form-group"><label class="form-label">Wat moet er absoluut in?</label><textarea id="briefMustInclude" class="form-control" oninput="savedBriefMustInclude=this.value;updateBriefingScoreDisplay()" placeholder="Bijv. bepaalde dienstnamen, bezwaren, FAQ&apos;s, regio, vergelijking, stappenplan">'+escHtml(savedBriefMustInclude)+'</textarea></div>'
+    +'<div class="form-group"><label class="form-label">Welke bezwaren moet de tekst wegnemen?</label><textarea id="briefObjections" class="form-control" oninput="savedBriefObjections=this.value;updateBriefingScoreDisplay()" placeholder="Bijv. te duur, te technisch, twijfel over kwaliteit, angst voor tijdverlies">'+escHtml(savedBriefObjections)+'</textarea></div>'
+    +'<div class="form-group"><label class="form-label">Concurrenten of alternatieven</label><textarea id="briefCompetitors" class="form-control" oninput="savedBriefCompetitors=this.value;updateBriefingScoreDisplay()" placeholder="Bijv. bestaande aanbieders, interne oplossing, zelf doen, goedkopere tools">'+escHtml(savedBriefCompetitors)+'</textarea></div>'
+    +'<div class="form-group"><label class="form-label">Wat mag de tekst niet doen?</label><textarea id="briefForbidden" class="form-control" oninput="savedBriefForbidden=this.value;updateBriefingScoreDisplay()" placeholder="Bijv. geen overdreven claims, geen woord praktisch, geen Amerikaans taalgebruik">'+escHtml(savedBriefForbidden)+'</textarea></div>'
+    +'<div class="form-group"><label class="form-label">Gewenste call-to-action</label><input id="briefCta" class="form-control" oninput="savedBriefCta=this.value;updateBriefingScoreDisplay()" placeholder="Bijv. Plan een kennismaking" value="'+escAttr(savedBriefCta||profile.primary_cta||'')+'"></div>'
     +'</div>'
+    +briefingScoreHtml()
     +'<div style="font-size:12px;color:var(--muted);line-height:1.5;">Tip: hoe specifieker dit is, hoe minder de tekst klinkt als standaard ChatGPT-output.</div>'
     +'</div>'
     +'<div class="voice-card">'
@@ -1607,6 +1653,7 @@ function step3Html(){
       +'<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:'+(qualityNotes.length?12:0)+'px;"><span class="tag tag-live">Refine-pass voltooid</span><span class="tag tag-review">Reviewstatus: '+escHtml((genResult.result?.review_status||genResult.review_status||'needs_review').replace(/_/g,' '))+'</span><span class="tag tag-grey">Beste variant automatisch gekozen</span></div>'
       +(qualityNotes.length?'<div style="display:flex;flex-wrap:wrap;gap:8px;">'+qualityNotes.map(note=>'<span class="tag tag-grey">'+escHtml(note)+'</span>').join('')+'</div>':'')
       +'</div>'
+      +renderQualityReportCard(getQualityReport(genResult))
       +renderFeedbackLearningCard(activeVariant)
       +renderStrategyPlanCard(strategyPlan)
       +(variants.length?'<div class="card" style="padding:20px 24px;">'
@@ -1665,10 +1712,10 @@ function buildBrandProfileSnapshot(){
     services:savedBriefOffer||profile.services||'',
     target_audience:savedBriefAudience||profile.target_audience||'',
     buyer_persona:profile.buyer_persona||'',
-    prohibited_claims:profile.prohibited_claims||'',
+    prohibited_claims:[profile.prohibited_claims||'',savedBriefForbidden||''].filter(Boolean).join('\n'),
     style_preferences:profile.style_preferences||'',
-    positive_examples:profile.positive_examples||'',
-    negative_examples:profile.negative_examples||''
+    positive_examples:[profile.positive_examples||'',savedBriefProof||''].filter(Boolean).join('\n'),
+    negative_examples:[profile.negative_examples||'',savedBriefObjections||'',savedBriefCompetitors||''].filter(Boolean).join('\n')
   };
 }
 function buildToneProfile(){
@@ -1718,6 +1765,38 @@ function getStageCopy(status){
 }
 function getStrategyPlan(result){
   return result?.result?.strategy_plan||result?.strategy_plan||null;
+}
+function getQualityReport(result){
+  return result?.result?.quality_report||result?.quality_report||null;
+}
+function renderScoreBar(score){
+  const n=Math.max(0,Math.min(100,Number(score)||0));
+  const color=n>=82?'var(--accent)':n>=65?'#f59e0b':'#f87171';
+  return '<div style="height:7px;border-radius:999px;background:var(--surface3);overflow:hidden;margin-top:7px;"><div style="height:100%;width:'+n+'%;background:'+color+';"></div></div>';
+}
+function renderQualityReportCard(report){
+  if(!report)return '';
+  const dimensions=Array.isArray(report.dimensions)?report.dimensions:[];
+  const strengths=Array.isArray(report.strengths)?report.strengths.slice(0,3):[];
+  const risks=Array.isArray(report.risks)?report.risks.slice(0,4):[];
+  const next=Array.isArray(report.next_actions)?report.next_actions.slice(0,3):[];
+  const overall=Number(report.overall_score||0)||0;
+  const overallColor=overall>=82?'var(--accent)':overall>=65?'#f59e0b':'#f87171';
+  return '<div class="card" style="padding:20px 24px;border:1px solid rgba(0,198,122,.18);">'
+    +'<div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:14px;">'
+    +'<div><div style="font-size:11px;font-weight:800;letter-spacing:.08em;color:var(--accent);text-transform:uppercase;margin-bottom:6px;">Kwaliteitsrapport</div>'
+    +'<div style="font-size:18px;font-weight:800;">Waarom deze output beter is dan losse ChatGPT-copy</div>'
+    +'<p style="font-size:13px;color:var(--muted);line-height:1.55;margin-top:6px;">'+escHtml(report.verdict||'Automatische inhoudelijke kwaliteitscheck voltooid.')+'</p></div>'
+    +'<div style="min-width:120px;text-align:right;"><div style="font-size:28px;font-weight:900;color:'+overallColor+';">'+overall+'</div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">overall</div></div>'
+    +'</div>'
+    +(dimensions.length?'<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px;">'+dimensions.map(item=>{
+      const score=Number(item.score||0)||0;
+      return '<div style="padding:12px 14px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);"><div style="display:flex;justify-content:space-between;gap:10px;"><strong style="font-size:12.5px;">'+escHtml(item.label||'Score')+'</strong><span style="font-size:12px;color:var(--muted);">'+score+'/100</span></div>'+renderScoreBar(score)+'<div style="font-size:12px;color:var(--muted);line-height:1.45;margin-top:8px;">'+escHtml(item.note||'')+'</div></div>';
+    }).join('')+'</div>':'')
+    +(strengths.length?'<div style="margin-bottom:12px;"><div style="font-size:12px;font-weight:800;margin-bottom:6px;">Sterk</div><div style="display:flex;flex-wrap:wrap;gap:7px;">'+strengths.map(item=>'<span class="tag tag-live">'+escHtml(item)+'</span>').join('')+'</div></div>':'')
+    +(risks.length?'<div style="margin-bottom:12px;"><div style="font-size:12px;font-weight:800;margin-bottom:6px;">Nog aanscherpen</div><div style="display:flex;flex-wrap:wrap;gap:7px;">'+risks.map(item=>'<span class="tag" style="background:#2a1f1f;color:#f5b4b4;border:1px solid rgba(245,180,180,.15);">'+escHtml(item)+'</span>').join('')+'</div></div>':'')
+    +(next.length?'<div><div style="font-size:12px;font-weight:800;margin-bottom:6px;">Volgende acties</div><div style="display:flex;flex-wrap:wrap;gap:7px;">'+next.map(item=>'<span class="tag tag-grey">'+escHtml(item)+'</span>').join('')+'</div></div>':'')
+    +'</div>';
 }
 function getStrategyHighlights(plan){
   if(!plan)return [];

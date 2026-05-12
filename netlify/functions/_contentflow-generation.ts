@@ -53,6 +53,21 @@ export interface ContentPlan {
   writingNotes: string[];
 }
 
+interface QualityDimension {
+  label: string;
+  score: number;
+  note: string;
+}
+
+interface ContentQualityReport {
+  overall_score: number;
+  verdict: string;
+  dimensions: QualityDimension[];
+  strengths: string[];
+  risks: string[];
+  next_actions: string[];
+}
+
 export function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -1378,6 +1393,95 @@ export async function saveGeneratedContent(args: {
   }
 }
 
+function clampScore(value: number): number {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function buildContentQualityReport(args: {
+  primaryVariant: GeneratedVariant;
+  variants: GeneratedVariant[];
+  plan: ContentPlan;
+  input: GenerateContentRequest;
+}): ContentQualityReport {
+  const { primaryVariant, variants, plan, input } = args;
+  const content = sanitizeText(primaryVariant.content);
+  const wordCount = primaryVariant.word_count || countWords(content);
+  const headingCount = (content.match(/<h[23][\s>]/gi) || []).length;
+  const paragraphCount = (content.match(/<p[\s>]/gi) || []).length;
+  const cta = sanitizeText(plan.ctaDirection);
+  const keyword = sanitizeText(input.keyword).toLowerCase();
+  const plainContent = content.replace(/<[^>]*>/g, " ").toLowerCase();
+
+  const dimensions: QualityDimension[] = [
+    {
+      label: "Strategische briefing",
+      score: clampScore(
+        45 +
+          Math.min(25, plan.keyMessages.length * 5) +
+          Math.min(15, plan.proofPoints.length * 5) +
+          Math.min(15, plan.mustAvoid.length * 5),
+      ),
+      note: "Meet of zoekintentie, kernboodschap, bewijs en vermijdregels duidelijk zijn meegenomen.",
+    },
+    {
+      label: "SEO-basis",
+      score: clampScore(
+        primaryVariant.seo_score +
+          (keyword && plainContent.includes(keyword) ? 4 : -8) +
+          (primaryVariant.meta_description ? 4 : -6),
+      ),
+      note: "Controleert zoekwoorddekking, meta description en technische basis voor een SEO-pagina.",
+    },
+    {
+      label: "Publiceerbaarheid",
+      score: clampScore(
+        primaryVariant.quality_score +
+          (wordCount >= 600 ? 6 : wordCount >= 420 ? 0 : -14) +
+          (headingCount >= 4 ? 5 : -5) +
+          (paragraphCount >= 6 ? 4 : -4),
+      ),
+      note: "Kijkt of de pagina lang, gestructureerd en compleet genoeg voelt voor review.",
+    },
+    {
+      label: "Conversiekracht",
+      score: clampScore(70 + (cta && plainContent.includes(cta.toLowerCase().slice(0, 18)) ? 12 : 0) + (plan.proofPoints.length ? 8 : -8)),
+      note: "Meet of de tekst richting een logische volgende stap werkt en voldoende vertrouwen geeft.",
+    },
+  ];
+
+  const overall = clampScore(
+    dimensions.reduce((sum, dimension) => sum + dimension.score, 0) / dimensions.length,
+  );
+  const risks = [
+    ...(wordCount < 600 ? ["Tekst is mogelijk nog te kort voor een premium SEO-pagina."] : []),
+    ...(headingCount < 4 ? ["Structuur kan sterker: voeg meer duidelijke tussenkoppen toe."] : []),
+    ...(plan.proofPoints.length < 2 ? ["Bewijs is nog dun: voeg cases, voorbeelden of harde context toe."] : []),
+    ...(variants.length < 3 ? ["Er zijn minder varianten dan gewenst gegenereerd."] : []),
+  ];
+
+  return {
+    overall_score: overall,
+    verdict:
+      overall >= 84
+        ? "Sterk genoeg voor inhoudelijke review."
+        : overall >= 68
+          ? "Goede basis, maar nog aanscherpen voor publicatie."
+          : "Nog niet premium genoeg; briefing of bewijs aanvullen.",
+    dimensions,
+    strengths: [
+      primaryVariant.quality_summary || "Beste variant automatisch geselecteerd op kwaliteit en SEO.",
+      `Past bij zoekintentie: ${plan.searchIntent || "onbekend"}.`,
+      `CTA-richting: ${plan.ctaDirection || "nog niet scherp"}.`,
+    ],
+    risks,
+    next_actions: [
+      risks.length ? "Verwerk de risico's voordat je publiceert." : "Laat een mens de feiten en nuance nog controleren.",
+      "Gebruik feedback onder de tekst om leerregels voor volgende generaties vast te leggen.",
+      "Voeg extra kennisbank-items toe als bewijs, tone of voice of doelgroep nog te algemeen voelt.",
+    ],
+  };
+}
+
 export function buildGenerationResponse(args: {
   job: UnknownRecord;
   page: UnknownRecord;
@@ -1393,6 +1497,7 @@ export function buildGenerationResponse(args: {
     locale: "nl-NL",
     content_goal: input.content_goal || "convince",
   };
+  const qualityReport = buildContentQualityReport({ primaryVariant, variants, plan, input });
 
   return {
     status: "ready_for_review",
@@ -1422,6 +1527,7 @@ export function buildGenerationResponse(args: {
     seo_metadata: seoMetadata,
     review_status: reviewStatus,
     quality_score: primaryVariant.quality_score,
+    quality_report: qualityReport,
     result: {
       title: primaryVariant.title,
       content: primaryVariant.content,
@@ -1430,6 +1536,7 @@ export function buildGenerationResponse(args: {
       variants,
       strategy_plan: plan,
       quality_score: primaryVariant.quality_score,
+      quality_report: qualityReport,
       seo_metadata: seoMetadata,
       review_status: reviewStatus,
       content_page_id: page.id,
