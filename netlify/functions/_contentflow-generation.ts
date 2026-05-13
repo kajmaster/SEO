@@ -1334,7 +1334,7 @@ export function buildPrompt(
     "",
     "KWALITEITSEISEN",
     "- Schrijf als een ervaren menselijke copywriter, niet als een standaard AI-assistent.",
-    "- Lever per variant een volledige, publiceerbare pagina op van ongeveer 600-900 woorden.",
+    "- Lever per variant een compacte, bruikbare SEO-pagina op van ongeveer 450-650 woorden.",
     "- Schrijf specifiek op basis van de opgegeven website, diensten, tone-of-voice scan, feedbackregels en bronmateriaal.",
     "- Vermijd generieke B2B-zinnen zoals 'in een wereld waarin', 'het draait om' en lege containerwoorden.",
     "- Maak elke alinea inhoudelijk nuttig: uitleg, keuzehulp, nuance, bewijs, risicoverlaging of vervolgstap.",
@@ -1406,7 +1406,7 @@ export async function generateVariants(
 ): Promise<GeneratedDraft> {
   const env = getBackendEnv();
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 40000);
+  const timeout = setTimeout(() => controller.abort(), 22000);
   let response: Response;
   try {
     response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -1421,8 +1421,8 @@ export async function generateVariants(
       body: JSON.stringify({
         model: CONTENT_MODEL,
         response_format: { type: "json_object" },
-        temperature: 0.72,
-        max_tokens: 7000,
+        temperature: 0.62,
+        max_tokens: 4500,
         messages: [
           {
             role: "system",
@@ -1438,7 +1438,7 @@ export async function generateVariants(
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("OpenAI duurde te lang. Er is geen fallbacktekst opgeslagen.");
+      throw new Error("OpenAI duurde te lang. Probeer opnieuw met korter bronmateriaal of minder briefingtekst.");
     }
     throw error;
   } finally {

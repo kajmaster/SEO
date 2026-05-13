@@ -7,7 +7,6 @@ import {
   isUuid,
   jsonResponse,
   loadGenerationContext,
-  planContent,
   saveGeneratedContent,
   type GenerateContentRequest,
   updateGenerationJob,
@@ -85,26 +84,14 @@ export default async function handler(request: Request): Promise<Response> {
     stage = "context_laden";
     await updateGenerationJob(jobId, { status: "drafting" });
     const context = await loadGenerationContext(input);
-    let plan = buildDefaultPlan(input, context);
-    let planningFallbackReason = "";
-    try {
-      stage = "strategie_maken";
-      plan = await withTimeout(
-        planContent(input, context),
-        12000,
-        "Strategielaag duurde te lang; basisplan gebruikt.",
-      );
-    } catch (error) {
-      planningFallbackReason =
-        error instanceof Error ? error.message : "Strategielaag gaf geen bruikbaar plan.";
-    }
+    const plan = buildDefaultPlan(input, context);
 
     stage = "tekst_genereren";
     await updateGenerationJob(jobId, { status: "drafting" });
     const draft = await withTimeout(
       generateVariants(input, context, plan),
-      42000,
-      "OpenAI duurde te lang. Er is geen fallbacktekst opgeslagen, zodat je geen nepkwaliteit krijgt.",
+      23000,
+      "OpenAI duurde te lang. Probeer opnieuw met korter bronmateriaal of minder briefingtekst.",
     );
     const variants = draft.variants;
     stage = "resultaat_opslaan";
@@ -133,7 +120,7 @@ export default async function handler(request: Request): Promise<Response> {
         selected_variant_combined_score: saved.primaryVariant.combined_score,
         variant_count: saved.variants.length,
         fallback_reason: null,
-        planning_fallback_reason: planningFallbackReason || null,
+        planning_fallback_reason: "Strategie lokaal opgebouwd om Netlify timeouts te voorkomen.",
         quality_control: draft.qualityControl,
       },
       result: responsePayload.result,

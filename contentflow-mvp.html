@@ -2292,7 +2292,8 @@ async function triggerGeneration(){
     let data=null;
     try{data=responseText?JSON.parse(responseText):null;}catch(_err){}
     if(!resp.ok){
-      const detail=data?.error||responseText?.slice(0,500)||'Content generatie mislukte.';
+      let detail=data?.error||responseText?.slice(0,500)||'Content generatie mislukte.';
+      if(/^<html/i.test(String(detail).trim()))detail='De server verbrak de generatie door een timeout. Probeer opnieuw met korter bronmateriaal of minder briefingtekst.';
       const debugStage=data?.stage?' Stap: '+data.stage+'.':'';
       const debugJob=data?.job_id?' Job: '+data.job_id+'.':'';
       throw new Error(detail+debugStage+debugJob);
