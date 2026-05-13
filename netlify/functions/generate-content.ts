@@ -101,11 +101,12 @@ export default async function handler(request: Request): Promise<Response> {
 
     stage = "tekst_genereren";
     await updateGenerationJob(jobId, { status: "drafting" });
-    const variants = await withTimeout(
+    const draft = await withTimeout(
       generateVariants(input, context, plan),
       42000,
       "OpenAI duurde te lang. Er is geen fallbacktekst opgeslagen, zodat je geen nepkwaliteit krijgt.",
     );
+    const variants = draft.variants;
     stage = "resultaat_opslaan";
     const saved = await saveGeneratedContent({
       input,
@@ -122,6 +123,7 @@ export default async function handler(request: Request): Promise<Response> {
       variants: saved.variants,
       input,
       plan,
+      qualityControl: draft.qualityControl,
     });
 
     stage = "job_afronden";
@@ -132,6 +134,7 @@ export default async function handler(request: Request): Promise<Response> {
         variant_count: saved.variants.length,
         fallback_reason: null,
         planning_fallback_reason: planningFallbackReason || null,
+        quality_control: draft.qualityControl,
       },
       result: responsePayload.result,
     });

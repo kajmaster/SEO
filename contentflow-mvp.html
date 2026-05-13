@@ -1653,6 +1653,7 @@ function step3Html(){
       +'<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:'+(qualityNotes.length?12:0)+'px;"><span class="tag tag-live">Refine-pass voltooid</span><span class="tag tag-review">Reviewstatus: '+escHtml((genResult.result?.review_status||genResult.review_status||'needs_review').replace(/_/g,' '))+'</span><span class="tag tag-grey">Beste variant automatisch gekozen</span></div>'
       +(qualityNotes.length?'<div style="display:flex;flex-wrap:wrap;gap:8px;">'+qualityNotes.map(note=>'<span class="tag tag-grey">'+escHtml(note)+'</span>').join('')+'</div>':'')
       +'</div>'
+      +renderQualityControlCard(getQualityControl(genResult))
       +renderQualityReportCard(getQualityReport(genResult))
       +renderFeedbackLearningCard(activeVariant)
       +renderStrategyPlanCard(strategyPlan)
@@ -1769,10 +1770,29 @@ function getStrategyPlan(result){
 function getQualityReport(result){
   return result?.result?.quality_report||result?.quality_report||null;
 }
+function getQualityControl(result){
+  return result?.result?.quality_control||result?.quality_control||null;
+}
 function renderScoreBar(score){
   const n=Math.max(0,Math.min(100,Number(score)||0));
   const color=n>=82?'var(--accent)':n>=65?'#f59e0b':'#f87171';
   return '<div style="height:7px;border-radius:999px;background:var(--surface3);overflow:hidden;margin-top:7px;"><div style="height:100%;width:'+n+'%;background:'+color+';"></div></div>';
+}
+function renderQualityControlCard(control){
+  if(!control)return '';
+  const issues=Array.isArray(control.issues)?control.issues.slice(0,6):[];
+  const rules=Array.isArray(control.applied_rules)?control.applied_rules.slice(0,5):[];
+  const passed=!!control.passed;
+  return '<div class="card" style="padding:18px 22px;border:1px solid '+(passed?'rgba(0,198,122,.22)':'rgba(248,113,113,.28)')+';">'
+    +'<div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;margin-bottom:12px;">'
+    +'<div><div style="font-size:11px;font-weight:800;letter-spacing:.08em;color:'+(passed?'var(--accent)':'#f87171')+';text-transform:uppercase;margin-bottom:6px;">Eindredacteurpoort</div>'
+    +'<div style="font-size:18px;font-weight:800;">'+(passed?'Kwaliteitscontrole geslaagd':'Kwaliteitscontrole vond blockers')+'</div>'
+    +'<p style="font-size:13px;color:var(--muted);line-height:1.55;margin-top:6px;">ContentFlow controleert verboden woorden, zoekwoordgebruik, lengte, structuur, CTA en generieke AI-zinnen voordat de beste variant gekozen wordt.</p></div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;"><span class="tag '+(passed?'tag-live':'')+'" style="'+(passed?'':'background:#2a1f1f;color:#f5b4b4;border:1px solid rgba(245,180,180,.15);')+'">'+(passed?'Geslaagd':'Geblokkeerd')+'</span><span class="tag tag-grey">'+(control.blocker_count||0)+' blockers</span><span class="tag tag-grey">'+(control.warning_count||0)+' warnings</span></div>'
+    +'</div>'
+    +(issues.length?'<div style="margin-bottom:12px;"><div style="font-size:12px;font-weight:800;margin-bottom:6px;">Signalen</div><div style="display:flex;flex-wrap:wrap;gap:7px;">'+issues.map(issue=>'<span class="tag" style="'+(issue.severity==='blocker'?'background:#2a1f1f;color:#f5b4b4;border:1px solid rgba(245,180,180,.15);':'')+'">'+escHtml((issue.severity||'warning')+': variant '+(issue.variant_index||'?')+' - '+(issue.message||issue.code||''))+'</span>').join('')+'</div></div>':'')
+    +(rules.length?'<div><div style="font-size:12px;font-weight:800;margin-bottom:6px;">Regels</div><div style="display:flex;flex-wrap:wrap;gap:7px;">'+rules.map(rule=>'<span class="tag tag-grey">'+escHtml(rule)+'</span>').join('')+'</div></div>':'')
+    +'</div>';
 }
 function renderQualityReportCard(report){
   if(!report)return '';

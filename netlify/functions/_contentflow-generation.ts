@@ -68,6 +68,28 @@ interface ContentQualityReport {
   next_actions: string[];
 }
 
+interface QualityControlIssue {
+  severity: "blocker" | "warning";
+  code: string;
+  variant_index: number;
+  message: string;
+}
+
+interface QualityControlReport {
+  passed: boolean;
+  checked_at: string;
+  primary_variant_index: number;
+  blocker_count: number;
+  warning_count: number;
+  issues: QualityControlIssue[];
+  applied_rules: string[];
+}
+
+export interface GeneratedDraft {
+  variants: GeneratedVariant[];
+  qualityControl: QualityControlReport;
+}
+
 export function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -223,6 +245,12 @@ function extractForbiddenWordsFromRule(rule: string): string[] {
     const word = match[1]?.replace(/[^a-z0-9à-ÿ-]/gi, "").trim();
     if (word) words.add(word);
   }
+  const listLike = rule
+    .split(/[,;\n]/)
+    .map((part) => part.replace(/^(vermijd|verboden woorden?|niet gebruiken|nooit gebruiken)\s*:?\s*/i, ""))
+    .map(compactRule)
+    .filter((part) => part.length >= 3 && part.length <= 40 && part.split(/\s+/).length <= 4);
+  for (const word of listLike) words.add(word.toLowerCase().trim());
   return [...words].filter(Boolean);
 }
 
@@ -290,6 +318,230 @@ function enforceForbiddenWords(variant: GeneratedVariant, forbiddenWords: string
     meta_description: meta,
     content,
     word_count: countWords(content),
+  };
+}
+
+function stripHtml(value: string): string {
+  return sanitizeText(value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " "));
+}
+
+function containsPhrase(text: string, phrase: string): boolean {
+  const needle = sanitizeText(phrase).toLowerCase();
+  if (!needle) return false;
+  const haystack = stripHtml(text).toLowerCase();
+  const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|[^a-z0-9À-ÿ-])${escaped}(?=$|[^a-z0-9À-ÿ-])`, "i").test(haystack);
+}
+
+function findForbiddenHits(variant: GeneratedVariant, forbiddenWords: string[]): string[] {
+  const text = [variant.title, variant.meta_description, variant.content].join(" ");
+  return uniqueRules(
+    forbiddenWords.filter((word) => sanitizeText(word).length >= 3 && containsPhrase(text, word)),
+    10,
+  );
+}
+
+function collectGenericPhraseHits(variant: GeneratedVariant): string[] {
+  const genericPhrases = [
+    "in een wereld waarin",
+    "het draait om",
+    "vandaag de dag",
+    "steeds belangrijker",
+    "op maat gemaakte oplossingen",
+    "naar een hoger niveau",
+    "de juiste partner",
+    "ontdek hoe",
+    "essentieel voor elk bedrijf",
+  ];
+  return genericPhrases.filter((phrase) => containsPhrase(variant.content, phrase));
+}
+
+function collectQualityIssues(
+  variant: GeneratedVariant,
+  input: GenerateContentRequest,
+  plan: ContentPlan,
+  forbiddenWords: string[],
+): QualityControlIssue[] {
+  const issues: QualityControlIssue[] = [];
+  const text = [variant.title, variant.meta_description, variant.content].join(" ");
+  const plainContent = stripHtml(variant.content).toLowerCase();
+  const keyword = sanitizeText(input.keyword).toLowerCase();
+  const cta = sanitizeText(plan.ctaDirection);
+  const wordCount = variant.word_count || countWords(variant.content);
+  const headingCount = (variant.content.match(/<h[23][\s>]/gi) || []).length;
+  const paragraphCount = (variant.content.match(/<p[\s>]/gi) || []).length;
+  const forbiddenHits = findForbiddenHits(variant, forbiddenWords);
+  const genericHits = collectGenericPhraseHits(variant);
+
+  for (const hit of forbiddenHits) {
+    issues.push({
+      severity: "blocker",
+      code: "forbidden_word",
+      variant_index: variant.variant_index,
+      message: `Verboden woord gevonden: ${hit}`,
+    });
+  }
+
+  if (/geen content ontvangen|placeholder|lorem ipsum/i.test(text)) {
+    issues.push({
+      severity: "blocker",
+      code: "placeholder_content",
+      variant_index: variant.variant_index,
+      message: "De tekst bevat placeholder- of fallbacktaal.",
+    });
+  }
+
+  if (wordCount < 350) {
+    issues.push({
+      severity: "blocker",
+      code: "too_short",
+      variant_index: variant.variant_index,
+      message: `Te kort voor publicatie: ${wordCount} woorden.`,
+    });
+  } else if (wordCount < 600) {
+    issues.push({
+      severity: "warning",
+      code: "thin_content",
+      variant_index: variant.variant_index,
+      message: `Nog wat dun voor premium SEO: ${wordCount} woorden.`,
+    });
+  }
+
+  if (keyword && !plainContent.includes(keyword) && !variant.title.toLowerCase().includes(keyword)) {
+    issues.push({
+      severity: "blocker",
+      code: "missing_keyword",
+      variant_index: variant.variant_index,
+      message: `Het zoekwoord "${input.keyword}" ontbreekt in titel en tekst.`,
+    });
+  }
+
+  if (headingCount < 3) {
+    issues.push({
+      severity: "warning",
+      code: "weak_structure",
+      variant_index: variant.variant_index,
+      message: "De structuur heeft te weinig duidelijke tussenkoppen.",
+    });
+  }
+
+  if (paragraphCount < 5) {
+    issues.push({
+      severity: "warning",
+      code: "few_paragraphs",
+      variant_index: variant.variant_index,
+      message: "De tekst heeft weinig uitgewerkte paragrafen.",
+    });
+  }
+
+  if (variant.meta_description && variant.meta_description.length > 165) {
+    issues.push({
+      severity: "warning",
+      code: "meta_too_long",
+      variant_index: variant.variant_index,
+      message: "De meta description is langer dan 165 tekens.",
+    });
+  }
+
+  if (cta && !plainContent.includes(cta.toLowerCase().slice(0, 16))) {
+    issues.push({
+      severity: "warning",
+      code: "cta_not_explicit",
+      variant_index: variant.variant_index,
+      message: "De gewenste CTA komt niet duidelijk genoeg terug.",
+    });
+  }
+
+  for (const phrase of genericHits.slice(0, 3)) {
+    issues.push({
+      severity: "warning",
+      code: "generic_phrase",
+      variant_index: variant.variant_index,
+      message: `Generieke AI-achtige formulering gevonden: "${phrase}".`,
+    });
+  }
+
+  return issues;
+}
+
+function applyQualityIssues(variant: GeneratedVariant, issues: QualityControlIssue[]): GeneratedVariant {
+  const blockers = issues.filter((issue) => issue.severity === "blocker");
+  const warnings = issues.filter((issue) => issue.severity === "warning");
+  const penalty = blockers.length * 22 + warnings.length * 5;
+  const seoPenalty = issues.some((issue) => issue.code === "missing_keyword") ? 18 : warnings.length * 2;
+  const qualityScore = clampScore(variant.quality_score - penalty);
+  const seoScore = clampScore(variant.seo_score - seoPenalty);
+  const issueNotes = issues.slice(0, 4).map((issue) => `Kwaliteitscontrole: ${issue.message}`);
+
+  return {
+    ...variant,
+    seo_score: seoScore,
+    quality_score: qualityScore,
+    combined_score: scoreVariant(seoScore, qualityScore),
+    quality_notes: uniqueRules([...variant.quality_notes, ...issueNotes], 8),
+    quality_summary:
+      blockers.length > 0
+        ? "Deze variant is niet gekozen als primaire versie omdat de kwaliteitscontrole blockers vond."
+        : variant.quality_summary || "Deze variant kwam door de kwaliteitscontrole.",
+  };
+}
+
+function runQualityControl(
+  variants: GeneratedVariant[],
+  input: GenerateContentRequest,
+  plan: ContentPlan,
+  forbiddenWords: string[],
+): { variants: GeneratedVariant[]; report: QualityControlReport } {
+  const allIssues: QualityControlIssue[] = [];
+  const checkedVariants = variants.map((variant) => {
+    const issues = collectQualityIssues(variant, input, plan, forbiddenWords);
+    allIssues.push(...issues);
+    return applyQualityIssues(variant, issues);
+  });
+
+  const hasBlocker = (variant: GeneratedVariant) =>
+    allIssues.some((issue) => issue.variant_index === variant.variant_index && issue.severity === "blocker");
+
+  checkedVariants.sort((a, b) => {
+    const aBlocked = hasBlocker(a) ? 1 : 0;
+    const bBlocked = hasBlocker(b) ? 1 : 0;
+    if (aBlocked !== bBlocked) return aBlocked - bBlocked;
+    return b.combined_score - a.combined_score;
+  });
+
+  const primary = checkedVariants.find((variant) => !hasBlocker(variant)) || checkedVariants[0];
+  const finalVariants = checkedVariants.map((variant) => ({
+    ...variant,
+    is_primary: primary ? variant.id === primary.id : false,
+  }));
+  const blockerCount = allIssues.filter((issue) => issue.severity === "blocker").length;
+  const warningCount = allIssues.filter((issue) => issue.severity === "warning").length;
+  const passed = !!primary && !hasBlocker(primary);
+
+  if (!passed) {
+    const firstIssue = allIssues.find((issue) => issue.severity === "blocker");
+    throw new Error(
+      `Kwaliteitscontrole stopte de output: ${firstIssue?.message || "geen variant kwam door de eindredacteurpoort."}`,
+    );
+  }
+
+  return {
+    variants: finalVariants,
+    report: {
+      passed,
+      checked_at: new Date().toISOString(),
+      primary_variant_index: primary.variant_index,
+      blocker_count: blockerCount,
+      warning_count: warningCount,
+      issues: allIssues.slice(0, 20),
+      applied_rules: [
+        "Geen verboden woorden uit feedback of briefing",
+        "Minimaal 350 woorden als harde ondergrens",
+        "Zoekwoord moet zichtbaar terugkomen",
+        "Geen placeholder- of fallbacktaal",
+        "Structuur, CTA, meta en generieke zinnen worden meegewogen",
+      ],
+    },
   };
 }
 
@@ -1144,7 +1396,7 @@ export async function generateVariants(
   input: GenerateContentRequest,
   context: Awaited<ReturnType<typeof loadGenerationContext>>,
   plan: ContentPlan,
-): Promise<GeneratedVariant[]> {
+): Promise<GeneratedDraft> {
   const env = getBackendEnv();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 40000);
@@ -1214,10 +1466,20 @@ export async function generateVariants(
     };
   });
   const variants = markVariantQuality(ensureThreeVariants(normalized));
-  const cleanedVariants = variants.map((variant) => enforceForbiddenWords(variant, context.forbiddenWords));
-  cleanedVariants.sort((a, b) => b.combined_score - a.combined_score);
-  if (cleanedVariants[0]) cleanedVariants[0].is_primary = true;
-  return cleanedVariants;
+  const hardForbiddenWords = uniqueRules(
+    [
+      ...context.forbiddenWords,
+      ...extractForbiddenWordsFromRule(sanitizeText(context.brandProfile.prohibited_claims)),
+      ...extractForbiddenWordsFromRule(sanitizeText(input.brand_profile_snapshot?.prohibited_claims)),
+    ],
+    40,
+  );
+  const cleanedVariants = variants.map((variant) => enforceForbiddenWords(variant, hardForbiddenWords));
+  const qualityControl = runQualityControl(cleanedVariants, input, plan, hardForbiddenWords);
+  return {
+    variants: qualityControl.variants,
+    qualityControl: qualityControl.report,
+  };
 }
 
 export async function createGenerationJob(input: GenerateContentRequest): Promise<UnknownRecord> {
@@ -1515,8 +1777,9 @@ export function buildGenerationResponse(args: {
   variants: GeneratedVariant[];
   input: GenerateContentRequest;
   plan: ContentPlan;
+  qualityControl?: QualityControlReport;
 }) {
-  const { job, page, primaryVariant, variants, input, plan } = args;
+  const { job, page, primaryVariant, variants, input, plan, qualityControl } = args;
   const reviewStatus = "needs_review";
   const seoMetadata = {
     primary_keyword: input.keyword,
@@ -1554,6 +1817,7 @@ export function buildGenerationResponse(args: {
     review_status: reviewStatus,
     quality_score: primaryVariant.quality_score,
     quality_report: qualityReport,
+    quality_control: qualityControl || null,
     result: {
       title: primaryVariant.title,
       content: primaryVariant.content,
@@ -1563,6 +1827,7 @@ export function buildGenerationResponse(args: {
       strategy_plan: plan,
       quality_score: primaryVariant.quality_score,
       quality_report: qualityReport,
+      quality_control: qualityControl || null,
       seo_metadata: seoMetadata,
       review_status: reviewStatus,
       content_page_id: page.id,
