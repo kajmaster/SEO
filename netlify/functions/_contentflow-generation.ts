@@ -391,12 +391,19 @@ function collectQualityIssues(
     });
   }
 
-  if (wordCount < 350) {
+  if (wordCount < 120) {
     issues.push({
       severity: "blocker",
       code: "too_short",
       variant_index: variant.variant_index,
-      message: `Te kort voor publicatie: ${wordCount} woorden.`,
+      message: `Veel te kort om te beoordelen: ${wordCount} woorden.`,
+    });
+  } else if (wordCount < 350) {
+    issues.push({
+      severity: "warning",
+      code: "too_short_for_publication",
+      variant_index: variant.variant_index,
+      message: `Te kort voor publicatie, maar wel bruikbaar voor review: ${wordCount} woorden.`,
     });
   } else if (wordCount < 600) {
     issues.push({
@@ -536,7 +543,7 @@ function runQualityControl(
       issues: allIssues.slice(0, 20),
       applied_rules: [
         "Geen verboden woorden uit feedback of briefing",
-        "Minimaal 350 woorden als harde ondergrens",
+        "Onder 120 woorden wordt geblokkeerd; 120-600 woorden krijgt een duidelijke waarschuwing",
         "Zoekwoord moet zichtbaar terugkomen",
         "Geen placeholder- of fallbacktaal",
         "Structuur, CTA, meta en generieke zinnen worden meegewogen",
