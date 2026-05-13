@@ -1691,6 +1691,15 @@ function step3Html(){
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function escAttr(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function isUuidValue(value){return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value||''));}
+function normalizeKeywordInput(value){return String(value||'').replace(/\s+/g,' ').trim();}
+function getKeywordProblem(value){
+  const keyword=normalizeKeywordInput(value);
+  const wordCount=keyword?keyword.split(/\s+/).length:0;
+  if(!keyword)return 'Vul een zoekwoord in.';
+  if(keyword.length>90||wordCount>10)return 'Gebruik alleen een kort zoekwoord of onderwerp, geen hele zin of foutmelding.';
+  if(/[.!?]/.test(keyword)&&wordCount>5)return 'Gebruik alleen het onderwerp als zoekwoord, zonder volledige zin.';
+  return '';
+}
 function getWorkspaceId(){
   if(isUuidValue(profile.default_workspace_id))return profile.default_workspace_id;
   if(isUuidValue(currentWorkspaceId))return currentWorkspaceId;
@@ -2198,12 +2207,14 @@ function togglePremise(i){
 function goStep1(){wStep=1;buildCreate(document.getElementById('pg-create'));}
 function goStep2(){
   const kw=document.getElementById('kwInput');
-  if(!kw||!kw.value.trim()){alert('Vul een zoekwoord in.');return;}
-  savedKw=kw.value.trim();
+  const keyword=normalizeKeywordInput(kw?.value||'');
+  const keywordProblem=getKeywordProblem(keyword);
+  if(keywordProblem){alert(keywordProblem);return;}
+  savedKw=keyword;
   wStep=2;buildCreate(document.getElementById('pg-create'));
 }
 function goStep3(){
-  savedKw=savedKw||(document.getElementById('kwInput2')||{}).value||'';
+  savedKw=normalizeKeywordInput((document.getElementById('kwInput2')||{}).value||savedKw||'');
   saveBriefFields();
   selectedVariantIndex=0;
   genPageId=null;genStage='pending';
@@ -2214,7 +2225,17 @@ function goStep3(){
   triggerGeneration();
 }
 async function triggerGeneration(){
-  const kw=savedKw;
+  const kw=normalizeKeywordInput(savedKw);
+  const keywordProblem=getKeywordProblem(kw);
+  if(keywordProblem){
+    clearGenerationTimers();
+    genStatus='error';
+    genStage='pending';
+    genMessage=keywordProblem;
+    buildCreate(document.getElementById('pg-create'));
+    showToast(keywordProblem);
+    return;
+  }
   let workspaceId=getWorkspaceId();
   let currentUserId=currentUser?.id||'';
   genStatus='loading';

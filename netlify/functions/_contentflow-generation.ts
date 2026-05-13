@@ -356,6 +356,12 @@ function collectGenericPhraseHits(variant: GeneratedVariant): string[] {
   return genericPhrases.filter((phrase) => containsPhrase(variant.content, phrase));
 }
 
+function isReasonableKeyword(value: string): boolean {
+  const keyword = sanitizeText(value);
+  const wordCount = keyword ? keyword.split(/\s+/).filter(Boolean).length : 0;
+  return !!keyword && keyword.length <= 90 && wordCount <= 10 && (!/[.!?]/.test(keyword) || wordCount <= 5);
+}
+
 function collectQualityIssues(
   variant: GeneratedVariant,
   input: GenerateContentRequest,
@@ -414,7 +420,14 @@ function collectQualityIssues(
     });
   }
 
-  if (keyword && !plainContent.includes(keyword) && !variant.title.toLowerCase().includes(keyword)) {
+  if (!isReasonableKeyword(input.keyword)) {
+    issues.push({
+      severity: "warning",
+      code: "keyword_too_broad",
+      variant_index: variant.variant_index,
+      message: "Het opgegeven zoekwoord lijkt op een hele zin; gebruik volgende keer een kort onderwerp.",
+    });
+  } else if (keyword && !plainContent.includes(keyword) && !variant.title.toLowerCase().includes(keyword)) {
     issues.push({
       severity: "blocker",
       code: "missing_keyword",

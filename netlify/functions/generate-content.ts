@@ -29,10 +29,11 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 
 function validateRequest(body: unknown): GenerateContentRequest {
   const payload = (body || {}) as Record<string, unknown>;
+  const keyword = String(payload.keyword || "").replace(/\s+/g, " ").trim();
   const request: GenerateContentRequest = {
     workspace_id: String(payload.workspace_id || ""),
     user_id: String(payload.user_id || ""),
-    keyword: String(payload.keyword || "").trim(),
+    keyword,
     content_goal: String(payload.content_goal || "convince"),
     source_content: String(payload.source_content || ""),
     xml_template: String(payload.xml_template || ""),
@@ -54,6 +55,11 @@ function validateRequest(body: unknown): GenerateContentRequest {
 
   if (!isUuid(request.workspace_id) || !isUuid(request.user_id) || !request.keyword) {
     throw new Error("workspace_id, user_id en keyword zijn verplicht en moeten geldig zijn.");
+  }
+
+  const keywordWordCount = request.keyword.split(/\s+/).filter(Boolean).length;
+  if (request.keyword.length > 90 || keywordWordCount > 10 || (/[.!?]/.test(request.keyword) && keywordWordCount > 5)) {
+    throw new Error("Zoekwoord is te lang. Gebruik alleen een kort onderwerp, geen hele zin of foutmelding.");
   }
 
   return request;
