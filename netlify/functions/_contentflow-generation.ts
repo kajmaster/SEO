@@ -397,7 +397,7 @@ function collectQualityIssues(
     });
   }
 
-  if (wordCount < 120) {
+  if (wordCount < 100) {
     issues.push({
       severity: "blocker",
       code: "too_short",
@@ -556,7 +556,7 @@ function runQualityControl(
       issues: allIssues.slice(0, 20),
       applied_rules: [
         "Geen verboden woorden uit feedback of briefing",
-        "Onder 120 woorden wordt geblokkeerd; 120-600 woorden krijgt een duidelijke waarschuwing",
+        "Onder 100 woorden wordt geblokkeerd; 100-600 woorden krijgt een duidelijke waarschuwing",
         "Zoekwoord moet zichtbaar terugkomen",
         "Geen placeholder- of fallbacktaal",
         "Structuur, CTA, meta en generieke zinnen worden meegewogen",
