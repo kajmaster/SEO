@@ -1,5 +1,6 @@
 import {
   buildDefaultPlan,
+  buildFallbackDraft,
   buildGenerationResponse,
   createGenerationJob,
   generateVariants,
@@ -8,6 +9,7 @@ import {
   jsonResponse,
   loadGenerationContext,
   saveGeneratedContent,
+  type GeneratedDraft,
   type GenerateContentRequest,
   updateGenerationJob,
 } from "./_contentflow-generation";
@@ -94,11 +96,20 @@ export default async function handler(request: Request): Promise<Response> {
 
     stage = "tekst_genereren";
     await updateGenerationJob(jobId, { status: "drafting" });
-    const draft = await withTimeout(
-      generateVariants(input, context, plan),
-      23000,
-      "OpenAI duurde te lang. Probeer opnieuw met korter bronmateriaal of minder briefingtekst.",
-    );
+    let generationFallbackReason: string | null = null;
+    let draft: GeneratedDraft;
+    try {
+      draft = await withTimeout(
+        generateVariants(input, context, plan),
+        23000,
+        "OpenAI duurde te lang. Fallbackconcept gebruikt.",
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "OpenAI reageerde niet op tijd.";
+      if (!/duurde te lang|timeout|abort/i.test(message)) throw error;
+      generationFallbackReason = message;
+      draft = buildFallbackDraft(input, context, plan, message);
+    }
     const variants = draft.variants;
     stage = "resultaat_opslaan";
     const saved = await saveGeneratedContent({
@@ -125,7 +136,7 @@ export default async function handler(request: Request): Promise<Response> {
       quality_summary: {
         selected_variant_combined_score: saved.primaryVariant.combined_score,
         variant_count: saved.variants.length,
-        fallback_reason: null,
+        fallback_reason: generationFallbackReason,
         planning_fallback_reason: "Strategie lokaal opgebouwd om Netlify timeouts te voorkomen.",
         quality_control: draft.qualityControl,
       },

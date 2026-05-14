@@ -7,7 +7,7 @@ const CORS_HEADERS = {
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-const CONTENT_MODEL = process.env.OPENAI_CONTENT_MODEL || "gpt-4o";
+const CONTENT_MODEL = process.env.OPENAI_CONTENT_MODEL || "gpt-4o-mini";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -768,6 +768,44 @@ export function buildFallbackVariants(
   ];
 
   return variants.map((variant) => enforceForbiddenWords(variant, context.forbiddenWords));
+}
+
+export function buildFallbackDraft(
+  input: GenerateContentRequest,
+  context: Awaited<ReturnType<typeof loadGenerationContext>>,
+  plan: ContentPlan,
+  reason: string,
+): GeneratedDraft {
+  const variants = buildFallbackVariants(input, context, plan, reason);
+  const hardForbiddenWords = uniqueRules(
+    [
+      ...context.forbiddenWords,
+      ...extractForbiddenWordsFromRule(sanitizeText(context.brandProfile.prohibited_claims)),
+      ...extractForbiddenWordsFromRule(sanitizeText(input.brand_profile_snapshot?.prohibited_claims)),
+    ],
+    40,
+  );
+  const qualityControl = runQualityControl(variants, input, plan, hardForbiddenWords);
+  return {
+    variants: qualityControl.variants.map((variant) => ({
+      ...variant,
+      quality_notes: uniqueRules(
+        [
+          ...variant.quality_notes,
+          "Fallbackconcept: OpenAI reageerde te traag, dus ContentFlow gebruikte briefing en profielcontext.",
+        ],
+        8,
+      ),
+      quality_summary: "Fallbackconcept voor review omdat OpenAI te traag reageerde.",
+    })),
+    qualityControl: {
+      ...qualityControl.report,
+      applied_rules: [
+        "Fallback gebruikt na OpenAI-timeout",
+        ...qualityControl.report.applied_rules,
+      ],
+    },
+  };
 }
 
 function cloneVariant(base: GeneratedVariant, index: number, lead: string): GeneratedVariant {
