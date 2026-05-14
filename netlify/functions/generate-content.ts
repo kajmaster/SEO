@@ -2,7 +2,6 @@ import {
   buildDefaultPlan,
   buildGenerationResponse,
   createGenerationJob,
-  generateEmergencyDraft,
   generateVariants,
   handleOptions,
   isUuid,
@@ -96,30 +95,11 @@ export default async function handler(request: Request): Promise<Response> {
 
     stage = "tekst_genereren";
     await updateGenerationJob(jobId, { status: "drafting" });
-    let generationFallbackReason: string | null = null;
-    let draft: GeneratedDraft;
-    try {
-      draft = await withTimeout(generateVariants(input, context, plan), 14000, "OpenAI duurde te lang.");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "OpenAI reageerde niet op tijd.";
-      if (!/duurde te lang|timeout|abort/i.test(message)) throw error;
-      try {
-        stage = "noodgeneratie";
-        generationFallbackReason = `Snelle noodgeneratie gebruikt omdat de volledige generatie faalde: ${message}`;
-        draft = await withTimeout(
-          generateEmergencyDraft(input, context, plan, message),
-          9500,
-          "Noodgeneratie duurde te lang.",
-        );
-      } catch (emergencyError) {
-        const emergencyMessage =
-          emergencyError instanceof Error ? emergencyError.message : "Noodgeneratie mislukte.";
-        if (!/duurde te lang|timeout|abort/i.test(emergencyMessage)) throw emergencyError;
-        throw new Error(
-          `OpenAI reageerde te traag en de snelle noodgeneratie lukte ook niet. Er is geen templatecopy opgeslagen omdat de kwaliteit dan te laag zou zijn. ${message} ${emergencyMessage}`,
-        );
-      }
-    }
+    const draft: GeneratedDraft = await withTimeout(
+      generateVariants(input, context, plan),
+      21000,
+      "OpenAI duurde te lang. Er is geen templatecopy opgeslagen omdat de kwaliteit dan te laag zou zijn.",
+    );
     const variants = draft.variants;
     stage = "resultaat_opslaan";
     const saved = await saveGeneratedContent({
@@ -146,7 +126,7 @@ export default async function handler(request: Request): Promise<Response> {
       quality_summary: {
         selected_variant_combined_score: saved.primaryVariant.combined_score,
         variant_count: saved.variants.length,
-        fallback_reason: generationFallbackReason,
+        fallback_reason: null,
         planning_fallback_reason: "Strategie lokaal opgebouwd om Netlify timeouts te voorkomen.",
         quality_control: draft.qualityControl,
       },

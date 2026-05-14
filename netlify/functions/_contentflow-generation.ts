@@ -963,37 +963,6 @@ export async function generateEmergencyDraft(
   };
 }
 
-function cloneVariant(base: GeneratedVariant, index: number, lead: string): GeneratedVariant {
-  const title =
-    index === 2
-      ? `${base.title} voor besluitvormers`
-      : `${base.title} met aanpak en voordelen`;
-  const content = base.content.includes("</h1>")
-    ? base.content.replace("</h1>", `</h1><p>${lead}</p>`)
-    : `<p>${lead}</p>${base.content}`;
-  const seoScore = Math.max(60, base.seo_score - (index - 1) * 2);
-  const qualityScore = Math.max(60, base.quality_score - (index - 1));
-
-  return {
-    ...base,
-    id: `variant-${index}`,
-    variant_index: index,
-    title,
-    meta_description:
-      index === 2
-        ? `Lees hoe ${base.title.toLowerCase()} beslissers helpt om sneller keuzes te maken.`
-        : `Ontdek de aanpak, voordelen en aandachtspunten van ${base.title.toLowerCase()}.`,
-    content,
-    word_count: countWords(content),
-    seo_score: seoScore,
-    quality_score: qualityScore,
-    quality_notes: base.quality_notes.length ? base.quality_notes : ["Heldere structuur", "Natuurlijke flow"],
-    quality_summary: base.quality_summary || "Sterke basisvariant voor verdere review.",
-    combined_score: scoreVariant(seoScore, qualityScore),
-    is_primary: false,
-  };
-}
-
 function stringifyLongText(value: unknown): string {
   return typeof value === "string" && countWords(value) >= 20 ? value.trim() : "";
 }
@@ -1206,15 +1175,6 @@ function ensureThreeVariants(variants: GeneratedVariant[]): GeneratedVariant[] {
         is_primary: false,
       },
     ];
-  }
-
-  while (variants.length < 3) {
-    const base = variants[0];
-    const lead =
-      variants.length === 1
-        ? "Deze variant legt de nadruk op duidelijkheid en besluitvorming voor drukke B2B-teams."
-        : "Deze variant kiest een iets meer uitleggerichte invalshoek met nadruk op aanpak en vertrouwen.";
-    variants.push(cloneVariant(base, variants.length + 1, lead));
   }
 
   return variants.slice(0, 3).map((variant, idx) => ({
@@ -1430,7 +1390,7 @@ function buildPlanningPrompt(
       "",
       "GELEERDE FEEDBACKREGELS",
       "Deze regels komen uit eerdere feedback en zijn belangrijker dan generieke voorkeuren:",
-      ...context.learningMemory.map((rule) => `- ${rule}`),
+      ...context.learningMemory.slice(0, 10).map((rule) => `- ${rule}`),
     );
   }
 
@@ -1503,11 +1463,11 @@ export function buildPrompt(
   const customer = context.customerPreferences;
   const xmlTemplate = sanitizeText(input.xml_template) || sanitizeText(context.template?.xml_template);
   const templateName = sanitizeText(input.xml_template_name) || sanitizeText(context.template?.name);
-  const sourceContent = sanitizeText(input.source_content).slice(0, 5000);
-  const knowledgeContext = sanitizeText(context.knowledgeContext).slice(0, 6500);
+  const sourceContent = sanitizeText(input.source_content).slice(0, 2200);
+  const knowledgeContext = sanitizeText(context.knowledgeContext).slice(0, 2200);
 
   const lines = [
-    `Schrijf 3 verschillende SEO-varianten in het Nederlands voor het zoekwoord: ${input.keyword}.`,
+    `Schrijf 1 sterke Nederlandse SEO-pagina voor het zoekwoord: ${input.keyword}.`,
     "",
     "DOEL",
     buildGoalInstruction(input.content_goal || "convince"),
@@ -1516,11 +1476,11 @@ export function buildPrompt(
     `Zoekintentie: ${plan.searchIntent}`,
     `Pagina-invalshoek: ${plan.pageAngle}`,
     `Primaire lezer: ${plan.targetReader}`,
-    `Aanbevolen structuur: ${plan.recommendedStructure.join(" | ")}`,
-    `Kernboodschappen: ${plan.keyMessages.join(" | ")}`,
-    `Proof points: ${plan.proofPoints.join(" | ")}`,
-    `Moet erin: ${plan.mustInclude.join(" | ")}`,
-    `Moet vermeden worden: ${plan.mustAvoid.join(" | ")}`,
+    `Aanbevolen structuur: ${plan.recommendedStructure.slice(0, 6).join(" | ")}`,
+    `Kernboodschappen: ${plan.keyMessages.slice(0, 5).join(" | ")}`,
+    `Proof points: ${plan.proofPoints.slice(0, 5).join(" | ")}`,
+    `Moet erin: ${plan.mustInclude.slice(0, 6).join(" | ")}`,
+    `Moet vermeden worden: ${plan.mustAvoid.slice(0, 6).join(" | ")}`,
     `CTA-richting: ${plan.ctaDirection}`,
     `Extra schrijfinstructies: ${plan.writingNotes.join(" | ")}`,
     "",
@@ -1540,19 +1500,14 @@ export function buildPrompt(
     "",
     "KWALITEITSEISEN",
     "- Schrijf als een ervaren menselijke copywriter, niet als een standaard AI-assistent.",
-    "- Lever per variant een compacte, bruikbare SEO-pagina op van ongeveer 450-650 woorden.",
+    "- Lever een echte, bruikbare reviewtekst op van ongeveer 420-620 woorden.",
     "- Schrijf specifiek op basis van de opgegeven website, diensten, tone-of-voice scan, feedbackregels en bronmateriaal.",
     "- Vermijd generieke B2B-zinnen zoals 'in een wereld waarin', 'het draait om' en lege containerwoorden.",
     "- Maak elke alinea inhoudelijk nuttig: uitleg, keuzehulp, nuance, bewijs, risicoverlaging of vervolgstap.",
-    "- Gebruik HTML in de content met exact een <h1>, meerdere <h2>/<h3>, <p> en waar passend <ul>/<li>.",
+    "- Gebruik HTML in de content met exact een <h1>, 3-5 <h2>, <p> en waar passend <ul>/<li>.",
     "- Schrijf geen placeholders, geen meta-uitleg, geen template-tags en geen opmerkingen over AI.",
     "- Gebruik geen verzonnen certificeringen, cijfers, klanten of garanties. Als bewijs ontbreekt, formuleer zorgvuldig.",
     "- Laat de CTA natuurlijk voelen en passend bij het bedrijf, niet als agressieve salescopy.",
-    "",
-    "VARIANTRICHTINGEN",
-    "- Variant 1: beste publicatievariant, gebalanceerd, geloofwaardig en compleet.",
-    "- Variant 2: directer en commerciëler, zonder schreeuwerige claims.",
-    "- Variant 3: inhoudelijker en consultatiever, met meer uitleg en nuance.",
   ];
 
   if (context.learningMemory.length) {
@@ -1569,7 +1524,7 @@ export function buildPrompt(
       "",
       "HARDE VERBODEN WOORDEN",
       "Gebruik deze woorden nergens in titel, meta description of content. Ook niet als voorbeeld, synoniemlabel of tussenkop:",
-      ...context.forbiddenWords.map((word) => `- ${word}`),
+      ...context.forbiddenWords.slice(0, 25).map((word) => `- ${word}`),
     );
   }
 
@@ -1597,7 +1552,7 @@ export function buildPrompt(
 
   lines.push(
     "",
-    "Laat elke variant echt anders voelen in invalshoek en ritme, maar houd dezelfde bedrijfsstijl aan.",
+    "Maak de tekst concreet genoeg om aan een klant te laten zien. Geen kale templatezinnen.",
     "Geef exact geldig JSON terug in dit formaat:",
     '{"variants":[{"title":"string","meta_description":"string","content":"string","seo_score":80,"quality_score":85,"quality_notes":["string"],"quality_summary":"string"}]}',
   );
@@ -1612,7 +1567,7 @@ export async function generateVariants(
 ): Promise<GeneratedDraft> {
   const env = getBackendEnv();
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 13000);
+  const timeout = setTimeout(() => controller.abort(), 20000);
   let response: Response;
   try {
     response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -1627,8 +1582,8 @@ export async function generateVariants(
       body: JSON.stringify({
         model: CONTENT_MODEL,
         response_format: { type: "json_object" },
-        temperature: 0.62,
-        max_tokens: 4500,
+        temperature: 0.52,
+        max_tokens: 2800,
         messages: [
           {
             role: "system",
