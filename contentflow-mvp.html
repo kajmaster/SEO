@@ -1719,28 +1719,28 @@ function getGenerationBlockers(currentUserValue,workspaceId){
 }
 function buildBrandProfileSnapshot(){
   return {
-    company_name:profile.company_name||'',
-    website:profile.website||'',
-    services:savedBriefOffer||profile.services||'',
-    target_audience:savedBriefAudience||profile.target_audience||'',
-    buyer_persona:profile.buyer_persona||'',
-    prohibited_claims:[profile.prohibited_claims||'',savedBriefForbidden||''].filter(Boolean).join('\n'),
-    style_preferences:profile.style_preferences||'',
-    positive_examples:[profile.positive_examples||'',savedBriefProof||''].filter(Boolean).join('\n'),
-    negative_examples:[profile.negative_examples||'',savedBriefObjections||'',savedBriefCompetitors||''].filter(Boolean).join('\n')
+    company_name:getProfileValue('company_name',''),
+    website:getProfileValue('website',''),
+    services:savedBriefOffer||getProfileValue('services',''),
+    target_audience:savedBriefAudience||getProfileValue('target_audience',''),
+    buyer_persona:getProfileValue('buyer_persona',''),
+    prohibited_claims:[getProfileValue('prohibited_claims',''),savedBriefForbidden||''].filter(Boolean).join('\n'),
+    style_preferences:getProfileValue('style_preferences',''),
+    positive_examples:[getProfileValue('positive_examples',''),savedBriefProof||''].filter(Boolean).join('\n'),
+    negative_examples:[getProfileValue('negative_examples',''),savedBriefObjections||'',savedBriefCompetitors||''].filter(Boolean).join('\n')
   };
 }
 function buildToneProfile(){
   return {
-    tone_label:profile.tone_label||profile.tone_nl||'',
-    voice_principles:profile.voice_principles||profile.tone_nl||'',
-    style_preferences:profile.style_preferences||''
+    tone_label:getProfileValue('tone_label',getProfileValue('tone_nl','')),
+    voice_principles:getProfileValue('voice_principles',getProfileValue('tone_nl','')),
+    style_preferences:getProfileValue('style_preferences','')
   };
 }
 function buildCustomerPreferences(){
   return {
-    primary_cta:savedBriefCta||profile.primary_cta||'Vraag een gesprek of offerte aan',
-    preferred_length:profile.preferred_length||profile.paragraph_length||'medium',
+    primary_cta:savedBriefCta||getProfileValue('primary_cta','Vraag een gesprek of offerte aan'),
+    preferred_length:getProfileValue('preferred_length',profile.paragraph_length||'medium'),
     locale:'nl-NL',
     include_case_style:true,
     require_fact_check:true
@@ -2907,6 +2907,17 @@ function getWebsiteToneAnalysis(){
   const analysis=algo&&typeof algo.website_tone_analysis==='object'&&!Array.isArray(algo.website_tone_analysis)?algo.website_tone_analysis:null;
   return analysis||null;
 }
+function getCompanyProfileMemory(){
+  const algo=profile&&typeof profile.algo_settings==='object'&&!Array.isArray(profile.algo_settings)?profile.algo_settings:{};
+  const company=algo&&typeof algo.company_profile==='object'&&!Array.isArray(algo.company_profile)?algo.company_profile:null;
+  return company||{};
+}
+function getProfileValue(key,fallback){
+  const company=getCompanyProfileMemory();
+  const direct=profile&&profile[key];
+  const stored=company&&company[key];
+  return direct!==undefined&&direct!==null&&String(direct)!==''?direct:(stored!==undefined&&stored!==null?stored:(fallback||''));
+}
 function websiteToneSummaryHtml(){
   const analysis=getWebsiteToneAnalysis();
   const status=websiteToneScanStatus
@@ -2931,19 +2942,19 @@ function websiteToneSummaryHtml(){
 function settingsHtml(){
   if(stab==='bedrijf'){
     return '<div class="card"><div class="settings-block"><h3>Bedrijfsprofiel</h3>'
-      +'<div class="form-group"><label class="form-label">Bedrijfsnaam</label><input id="companyName" class="form-control" value="'+(profile.company_name||'')+'"></div>'
-      +'<div class="form-group"><label class="form-label">Website</label><input id="companyWebsite" class="form-control" value="'+(profile.website||'')+'"></div>'
+      +'<div class="form-group"><label class="form-label">Bedrijfsnaam</label><input id="companyName" class="form-control" value="'+escAttr(getProfileValue('company_name',''))+'"></div>'
+      +'<div class="form-group"><label class="form-label">Website</label><input id="companyWebsite" class="form-control" value="'+escAttr(getProfileValue('website',''))+'"></div>'
       +websiteToneSummaryHtml()
-      +'<div class="form-group"><label class="form-label">KVK-nummer</label><input id="companyKvk" class="form-control" value="'+(profile.kvk||'')+'"></div>'
-      +'<div class="form-group"><label class="form-label">Tone of voice</label><textarea id="companyTone" class="form-control">'+(profile.tone_nl||'')+'</textarea></div>'
-      +'<div class="form-group"><label class="form-label">Doelgroep / ICP</label><textarea id="companyAudience" class="form-control">'+(profile.target_audience||'')+'</textarea></div>'
-      +'<div class="form-group"><label class="form-label">Buyer persona / beslisser</label><textarea id="companyBuyerPersona" class="form-control">'+(profile.buyer_persona||'')+'</textarea></div>'
-      +'<div class="form-group"><label class="form-label">Stijlvoorkeuren</label><textarea id="companyStylePrefs" class="form-control">'+(profile.style_preferences||'')+'</textarea></div>'
-      +'<div class="form-group"><label class="form-label">Verboden woorden of claims</label><textarea id="companyProhibitedClaims" class="form-control">'+(profile.prohibited_claims||'')+'</textarea></div>'
-      +'<div class="form-group"><label class="form-label">Voorbeelden die wel passen</label><textarea id="companyPositiveExamples" class="form-control">'+(profile.positive_examples||'')+'</textarea></div>'
-      +'<div class="form-group"><label class="form-label">Voorbeelden die niet passen</label><textarea id="companyNegativeExamples" class="form-control">'+(profile.negative_examples||'')+'</textarea></div>'
-      +'<div class="form-group"><label class="form-label">Primaire CTA</label><input id="companyPrimaryCta" class="form-control" value="'+(profile.primary_cta||'Vraag een gesprek of offerte aan')+'"></div>'
-      +'<div class="form-group" style="margin-bottom:0;"><label class="form-label">Diensten / producten</label><textarea id="companyServices" class="form-control">'+(profile.services||'')+'</textarea></div>'
+      +'<div class="form-group"><label class="form-label">KVK-nummer</label><input id="companyKvk" class="form-control" value="'+escAttr(getProfileValue('kvk',''))+'"></div>'
+      +'<div class="form-group"><label class="form-label">Tone of voice</label><textarea id="companyTone" class="form-control">'+escHtml(getProfileValue('tone_nl',''))+'</textarea></div>'
+      +'<div class="form-group"><label class="form-label">Doelgroep / ICP</label><textarea id="companyAudience" class="form-control">'+escHtml(getProfileValue('target_audience',''))+'</textarea></div>'
+      +'<div class="form-group"><label class="form-label">Buyer persona / beslisser</label><textarea id="companyBuyerPersona" class="form-control">'+escHtml(getProfileValue('buyer_persona',''))+'</textarea></div>'
+      +'<div class="form-group"><label class="form-label">Stijlvoorkeuren</label><textarea id="companyStylePrefs" class="form-control">'+escHtml(getProfileValue('style_preferences',''))+'</textarea></div>'
+      +'<div class="form-group"><label class="form-label">Verboden woorden of claims</label><textarea id="companyProhibitedClaims" class="form-control">'+escHtml(getProfileValue('prohibited_claims',''))+'</textarea></div>'
+      +'<div class="form-group"><label class="form-label">Voorbeelden die wel passen</label><textarea id="companyPositiveExamples" class="form-control">'+escHtml(getProfileValue('positive_examples',''))+'</textarea></div>'
+      +'<div class="form-group"><label class="form-label">Voorbeelden die niet passen</label><textarea id="companyNegativeExamples" class="form-control">'+escHtml(getProfileValue('negative_examples',''))+'</textarea></div>'
+      +'<div class="form-group"><label class="form-label">Primaire CTA</label><input id="companyPrimaryCta" class="form-control" value="'+escAttr(getProfileValue('primary_cta','Vraag een gesprek of offerte aan'))+'"></div>'
+      +'<div class="form-group" style="margin-bottom:0;"><label class="form-label">Diensten / producten</label><textarea id="companyServices" class="form-control">'+escHtml(getProfileValue('services',''))+'</textarea></div>'
       +'<div class="mt-4" style="display:flex;gap:10px;align-items:center;">'
       +'<button class="btn btn-primary" onclick="saveCompany()">Opslaan</button>'
       +'<button class="btn btn-ghost btn-sm" onclick="loadDemoProfile()" title="Laad Control Union demoprofiel" style="color:var(--muted);border:1px dashed var(--border);">🎯 Demo: Control Union</button>'
@@ -3130,10 +3141,35 @@ async function loadContentItems(){
 async function saveProfile(updates){
   if(!supa||!currentUser||currentUser.is_demo){showToast('Opgeslagen (demo modus)');return;}
   try{
-    const payload=Object.assign({id:currentUser.id,updated_at:new Date().toISOString()},updates);
-    const r=await supa.from('profiles').upsert(payload);
-    if(r.error)throw r.error;
-    Object.assign(profile,updates);showToast('Opgeslagen!');
+    const directKeys=new Set(['company_name','website','tone_nl','services','algo_settings','trust_level','paragraph_length','updated_at']);
+    const currentAlgo=profile&&typeof profile.algo_settings==='object'&&!Array.isArray(profile.algo_settings)?profile.algo_settings:{};
+    const companyProfile=Object.assign({},getCompanyProfileMemory());
+    const directUpdates={};
+    Object.entries(updates||{}).forEach(([key,value])=>{
+      if(directKeys.has(key))directUpdates[key]=value;
+      companyProfile[key]=value;
+    });
+    let payload=Object.assign({id:currentUser.id,updated_at:new Date().toISOString()},directUpdates,{
+      algo_settings:Object.assign({},currentAlgo,{company_profile:companyProfile})
+    });
+    let lastError=null;
+    for(let attempt=0;attempt<8;attempt++){
+      const r=await supa.from('profiles').upsert(payload);
+      if(!r.error){
+        Object.assign(profile,updates,{algo_settings:payload.algo_settings});
+        showToast('Opgeslagen!');
+        return;
+      }
+      lastError=r.error;
+      const msg=String(r.error.message||'');
+      const match=msg.match(/'([^']+)' column/i);
+      const missing=match&&match[1];
+      if(!missing||missing==='id'||missing==='algo_settings'||!(missing in payload))break;
+      companyProfile[missing]=payload[missing];
+      delete payload[missing];
+      payload.algo_settings=Object.assign({},payload.algo_settings,{company_profile:companyProfile});
+    }
+    throw lastError||new Error('Profiel opslaan mislukte.');
   }catch(e){alert('Fout bij opslaan: '+e.message);}
 }
 function applyWebsiteToneAnalysisToForm(analysis){
@@ -3144,12 +3180,12 @@ function applyWebsiteToneAnalysisToForm(analysis){
   ].filter(Boolean).join('\n');
   const prohibited=(Array.isArray(analysis.avoid)?analysis.avoid:[]).filter(Boolean).join('\n');
   const fields={
-    companyWebsite:analysis.website_url||profile.website||'',
-    companyTone:analysis.tone_nl||profile.tone_nl||'',
-    companyServices:analysis.services||profile.services||'',
-    companyStylePrefs:stylePrefs||profile.style_preferences||'',
-    companyProhibitedClaims:prohibited||profile.prohibited_claims||'',
-    companyPrimaryCta:analysis.cta_style||profile.primary_cta||'Vraag een gesprek of offerte aan'
+    companyWebsite:analysis.website_url||getProfileValue('website',''),
+    companyTone:analysis.tone_nl||getProfileValue('tone_nl',''),
+    companyServices:analysis.services||getProfileValue('services',''),
+    companyStylePrefs:stylePrefs||getProfileValue('style_preferences',''),
+    companyProhibitedClaims:prohibited||getProfileValue('prohibited_claims',''),
+    companyPrimaryCta:analysis.cta_style||getProfileValue('primary_cta','Vraag een gesprek of offerte aan')
   };
   Object.entries(fields).forEach(([id,val])=>{const el=document.getElementById(id);if(el&&val)el.value=val;});
 }
@@ -3246,7 +3282,8 @@ function loadDemoProfile(){
     primary_cta:'Vraag een inspectiegesprek of offerte aan',
     services:'Tankinspectie, containerinspectie (voedsel & agri), graanopslag inspectie, maritieme survey, fumigatie certificering, ISO 17020 gecertificeerde inspecties, kwaliteitscontrole agrarische import, droge bulk inspectie'
   };
-  Object.assign(profile,cu);
+  const currentAlgo=profile&&typeof profile.algo_settings==='object'&&!Array.isArray(profile.algo_settings)?profile.algo_settings:{};
+  Object.assign(profile,cu,{algo_settings:Object.assign({},currentAlgo,{company_profile:Object.assign({},getCompanyProfileMemory(),cu)})});
   // Fill fields if settings tab is open
   const fields={companyName:cu.company_name,companyWebsite:cu.website,companyTone:cu.tone_nl,companyAudience:cu.target_audience,companyBuyerPersona:cu.buyer_persona,companyStylePrefs:cu.style_preferences,companyProhibitedClaims:cu.prohibited_claims,companyPositiveExamples:cu.positive_examples,companyNegativeExamples:cu.negative_examples,companyPrimaryCta:cu.primary_cta,companyServices:cu.services};
   Object.entries(fields).forEach(([id,val])=>{const el=document.getElementById(id);if(el)el.value=val;});
