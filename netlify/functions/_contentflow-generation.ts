@@ -8,6 +8,7 @@ const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const CONTENT_MODEL = process.env.OPENAI_CONTENT_MODEL || "gpt-4o-mini";
+const FAST_CONTENT_MODEL = process.env.OPENAI_FAST_CONTENT_MODEL || "gpt-4o-mini";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -808,6 +809,160 @@ export function buildFallbackDraft(
   };
 }
 
+function buildEmergencyPrompt(
+  input: GenerateContentRequest,
+  context: Awaited<ReturnType<typeof loadGenerationContext>>,
+  plan: ContentPlan,
+  reason: string,
+): string {
+  const brand = context.brandProfile;
+  const tone = context.toneProfile;
+  const customer = context.customerPreferences;
+  const sourceContent = sanitizeText(input.source_content).slice(0, 1800);
+  const knowledgeContext = sanitizeText(context.knowledgeContext).slice(0, 1800);
+  const learningRules = context.learningMemory.slice(0, 8);
+  const forbiddenWords = context.forbiddenWords.slice(0, 20);
+
+  return [
+    "OpenAI was net te traag in de volledige generatie. Schrijf daarom nu snel 1 echte, compacte Nederlandse SEO-pagina.",
+    "Belangrijk: dit mag GEEN fallback-template zijn. Schrijf alsof een menselijke copywriter dit voor review oplevert.",
+    "",
+    `Reden noodroute: ${reason}`,
+    `Zoekwoord: ${input.keyword}`,
+    `Paginadoel: ${input.content_goal || "convince"}`,
+    `Bedrijf: ${sanitizeText(brand.company_name) || "de organisatie"}`,
+    `Aanbod/diensten: ${sanitizeText(brand.services)}`,
+    `Doelgroep: ${sanitizeText(brand.target_audience || brand.buyer_persona)}`,
+    `Tone of voice: ${sanitizeText(tone.tone_label || tone.tone_nl || tone.voice_principles)}`,
+    `CTA: ${sanitizeText(customer.primary_cta || plan.ctaDirection)}`,
+    "",
+    "Strategierichting",
+    `Invalshoek: ${plan.pageAngle}`,
+    `Lezer: ${plan.targetReader}`,
+    `Kernboodschappen: ${plan.keyMessages.join(" | ")}`,
+    `Bewijs/context: ${plan.proofPoints.join(" | ")}`,
+    "",
+    sourceContent ? `Bronmateriaal:\n${sourceContent}` : "",
+    knowledgeContext ? `Kennisbank:\n${knowledgeContext}` : "",
+    learningRules.length ? `Leerregels:\n${learningRules.map((rule) => `- ${rule}`).join("\n")}` : "",
+    forbiddenWords.length ? `Verboden woorden:\n${forbiddenWords.map((word) => `- ${word}`).join("\n")}` : "",
+    "",
+    "Eisen",
+    "- 350-550 woorden.",
+    "- Gebruik HTML: exact 1 <h1>, meerdere <h2>, <p>, eventueel <ul><li>.",
+    "- Geen meta-uitleg, geen excuses, geen melding dat dit een noodroute is.",
+    "- Geen generieke zinnen zoals 'in een wereld waarin' of 'het draait om'.",
+    "- Maak het concreet met de aangeleverde context. Als bewijs ontbreekt, formuleer eerlijk en voorzichtig.",
+    "",
+    "Geef exact geldig JSON terug:",
+    '{"variants":[{"title":"string","meta_description":"string","content":"html string","seo_score":78,"quality_score":78,"quality_notes":["string"],"quality_summary":"string"}]}',
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+export async function generateEmergencyDraft(
+  input: GenerateContentRequest,
+  context: Awaited<ReturnType<typeof loadGenerationContext>>,
+  plan: ContentPlan,
+  reason: string,
+): Promise<GeneratedDraft> {
+  const env = getBackendEnv();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8500);
+  let response: Response;
+
+  try {
+    response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${env.openAiKey}`,
+        "Content-Type": "application/json",
+        ...(env.openAiProjectId ? { "OpenAI-Project": env.openAiProjectId } : {}),
+        ...(env.openAiOrganization ? { "OpenAI-Organization": env.openAiOrganization } : {}),
+      },
+      body: JSON.stringify({
+        model: FAST_CONTENT_MODEL,
+        response_format: { type: "json_object" },
+        temperature: 0.45,
+        max_tokens: 2600,
+        messages: [
+          {
+            role: "system",
+            content:
+              "Je bent een snelle Nederlandse B2B eindredacteur. Je schrijft compacte, echte reviewconcepten en retourneert alleen geldig JSON.",
+          },
+          {
+            role: "user",
+            content: buildEmergencyPrompt(input, context, plan, reason),
+          },
+        ],
+      }),
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("Noodgeneratie duurde ook te lang.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  const payload = await response.text();
+  if (!response.ok) {
+    let parsed: UnknownRecord | null = null;
+    try {
+      parsed = JSON.parse(payload) as UnknownRecord;
+    } catch {
+      parsed = null;
+    }
+    const message =
+      sanitizeText((parsed?.error as UnknownRecord | undefined)?.message) ||
+      sanitizeText(parsed?.message) ||
+      payload ||
+      `Noodgeneratie mislukte met status ${response.status}.`;
+    throw new Error(message);
+  }
+
+  const parsed = extractJsonObject(extractOpenAiMessageContent(payload));
+  const rawVariants = collectVariantRecords(parsed);
+  const normalized = rawVariants.map((variant, idx) => {
+    const normalizedVariant = normalizeVariant(variant, idx + 1);
+    const content = htmlFromPlainText(normalizedVariant.content, normalizedVariant.title);
+    return {
+      ...normalizedVariant,
+      content,
+      word_count: countWords(content),
+      quality_notes: uniqueRules(
+        [
+          ...normalizedVariant.quality_notes,
+          "Noodgeneratie: snelle AI-route gebruikt omdat de volledige generatie te traag was.",
+        ],
+        8,
+      ),
+    };
+  });
+  const variants = markVariantQuality(ensureThreeVariants(normalized));
+  const hardForbiddenWords = uniqueRules(
+    [
+      ...context.forbiddenWords,
+      ...extractForbiddenWordsFromRule(sanitizeText(context.brandProfile.prohibited_claims)),
+      ...extractForbiddenWordsFromRule(sanitizeText(input.brand_profile_snapshot?.prohibited_claims)),
+    ],
+    40,
+  );
+  const cleanedVariants = variants.map((variant) => enforceForbiddenWords(variant, hardForbiddenWords));
+  const qualityControl = runQualityControl(cleanedVariants, input, plan, hardForbiddenWords);
+  return {
+    variants: qualityControl.variants,
+    qualityControl: {
+      ...qualityControl.report,
+      applied_rules: ["Snelle AI-noodgeneratie gebruikt", ...qualityControl.report.applied_rules],
+    },
+  };
+}
+
 function cloneVariant(base: GeneratedVariant, index: number, lead: string): GeneratedVariant {
   const title =
     index === 2
@@ -1457,7 +1612,7 @@ export async function generateVariants(
 ): Promise<GeneratedDraft> {
   const env = getBackendEnv();
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 22000);
+  const timeout = setTimeout(() => controller.abort(), 13000);
   let response: Response;
   try {
     response = await fetch("https://api.openai.com/v1/chat/completions", {

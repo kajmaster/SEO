@@ -1,8 +1,8 @@
 import {
   buildDefaultPlan,
-  buildFallbackDraft,
   buildGenerationResponse,
   createGenerationJob,
+  generateEmergencyDraft,
   generateVariants,
   handleOptions,
   isUuid,
@@ -99,16 +99,26 @@ export default async function handler(request: Request): Promise<Response> {
     let generationFallbackReason: string | null = null;
     let draft: GeneratedDraft;
     try {
-      draft = await withTimeout(
-        generateVariants(input, context, plan),
-        23000,
-        "OpenAI duurde te lang. Fallbackconcept gebruikt.",
-      );
+      draft = await withTimeout(generateVariants(input, context, plan), 14000, "OpenAI duurde te lang.");
     } catch (error) {
       const message = error instanceof Error ? error.message : "OpenAI reageerde niet op tijd.";
       if (!/duurde te lang|timeout|abort/i.test(message)) throw error;
-      generationFallbackReason = message;
-      draft = buildFallbackDraft(input, context, plan, message);
+      try {
+        stage = "noodgeneratie";
+        generationFallbackReason = `Snelle noodgeneratie gebruikt omdat de volledige generatie faalde: ${message}`;
+        draft = await withTimeout(
+          generateEmergencyDraft(input, context, plan, message),
+          9500,
+          "Noodgeneratie duurde te lang.",
+        );
+      } catch (emergencyError) {
+        const emergencyMessage =
+          emergencyError instanceof Error ? emergencyError.message : "Noodgeneratie mislukte.";
+        if (!/duurde te lang|timeout|abort/i.test(emergencyMessage)) throw emergencyError;
+        throw new Error(
+          `OpenAI reageerde te traag en de snelle noodgeneratie lukte ook niet. Er is geen templatecopy opgeslagen omdat de kwaliteit dan te laag zou zijn. ${message} ${emergencyMessage}`,
+        );
+      }
     }
     const variants = draft.variants;
     stage = "resultaat_opslaan";
