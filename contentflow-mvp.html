@@ -30,6 +30,53 @@
       --cf-radius-sm: 18px;
       --cf-shadow: 0 30px 100px rgba(33,32,28,.12);
       --cf-ease: cubic-bezier(.2,0,0,1);
+      --cf-glow-cyan: rgba(173,255,248,.72);
+      --cf-glow-blue: rgba(57,119,195,.24);
+      --cf-glow-orange: rgba(247,107,21,.1);
+      --cf-glass: rgba(255,255,255,.62);
+      --cf-glass-hover: rgba(255,255,255,.9);
+      --cf-glass-strong: rgba(255,255,255,.86);
+      --cf-card-border: rgba(255,255,255,.72);
+      --cf-input-bg: rgba(255,255,255,.62);
+      --cf-input-focus: rgba(255,255,255,.92);
+      --cf-placeholder: rgba(23,25,22,.34);
+      --cf-primary-bg: #151515;
+      --cf-primary-text: #fff;
+      --cf-primary-hover: #000;
+      --cf-article-bg: #fff;
+      --cf-article-ink: #151815;
+      --cf-toast-bg: rgba(255,255,255,.9);
+      --cf-feedback-bg: rgba(249,249,248,.88);
+    }
+
+    [data-theme="dark"] {
+      color-scheme: dark;
+      --cf-bg: #080b10;
+      --cf-paper: rgba(16,21,29,.74);
+      --cf-paper-strong: rgba(20,26,36,.94);
+      --cf-ink: #f6f3ea;
+      --cf-muted: #a9b1bd;
+      --cf-soft: #1b222c;
+      --cf-line: rgba(255,255,255,.11);
+      --cf-line-strong: rgba(173,255,248,.26);
+      --cf-shadow: 0 34px 120px rgba(0,0,0,.42);
+      --cf-glow-cyan: rgba(173,255,248,.18);
+      --cf-glow-blue: rgba(57,119,195,.34);
+      --cf-glow-orange: rgba(247,107,21,.14);
+      --cf-glass: rgba(255,255,255,.06);
+      --cf-glass-hover: rgba(173,255,248,.1);
+      --cf-glass-strong: rgba(18,24,32,.82);
+      --cf-card-border: rgba(255,255,255,.12);
+      --cf-input-bg: rgba(255,255,255,.055);
+      --cf-input-focus: rgba(173,255,248,.06);
+      --cf-placeholder: rgba(169,177,189,.58);
+      --cf-primary-bg: #f6f3ea;
+      --cf-primary-text: #080b10;
+      --cf-primary-hover: #ffffff;
+      --cf-article-bg: #fdfdfc;
+      --cf-article-ink: #151815;
+      --cf-toast-bg: rgba(13,17,24,.92);
+      --cf-feedback-bg: rgba(18,24,32,.72);
     }
 
     * { box-sizing: border-box; }
@@ -38,9 +85,9 @@
       margin: 0;
       min-height: 100vh;
       background:
-        radial-gradient(circle at 10% 0%, rgba(173,255,248,.72), transparent 28%),
-        radial-gradient(circle at 88% 10%, rgba(57,119,195,.24), transparent 28%),
-        radial-gradient(circle at 55% 100%, rgba(247,107,21,.1), transparent 34%),
+        radial-gradient(circle at 10% 0%, var(--cf-glow-cyan), transparent 28%),
+        radial-gradient(circle at 88% 10%, var(--cf-glow-blue), transparent 28%),
+        radial-gradient(circle at 55% 100%, var(--cf-glow-orange), transparent 34%),
         var(--cf-bg);
       color: var(--cf-ink);
       font-family: var(--font-sans);
@@ -146,7 +193,7 @@
       border: 1px solid var(--cf-line);
       border-radius: 999px;
       padding: 0 12px;
-      background: rgba(255,255,255,.55);
+      background: var(--cf-glass);
       color: var(--cf-muted);
       font-family: var(--font-mono);
       font-size: 11px;
@@ -158,6 +205,9 @@
     .badge.ok { color: #186346; border-color: rgba(48,164,108,.22); background: rgba(244,251,246,.72); }
     .badge.warn { color: #8a4d00; border-color: rgba(247,107,21,.22); background: rgba(255,247,237,.74); }
 
+    [data-theme="dark"] .badge.ok { color: #62d394; border-color: rgba(98,211,148,.34); background: rgba(98,211,148,.1); }
+    [data-theme="dark"] .badge.warn { color: #ffbd8a; border-color: rgba(247,107,21,.35); background: rgba(247,107,21,.12); }
+
     .button {
       display: inline-flex;
       min-height: 42px;
@@ -167,7 +217,7 @@
       border: 1px solid var(--cf-line);
       border-radius: 999px;
       padding: 0 16px;
-      background: rgba(255,255,255,.62);
+      background: var(--cf-glass);
       color: var(--cf-ink);
       cursor: pointer;
       font-size: 13px;
@@ -179,19 +229,19 @@
     .button:hover {
       transform: translateY(-1px);
       border-color: var(--cf-line-strong);
-      background: rgba(255,255,255,.9);
+      background: var(--cf-glass-hover);
       box-shadow: 0 12px 35px rgba(33,32,28,.08);
     }
 
     .button.primary {
-      border-color: #151515;
-      background: #151515;
-      color: #fff;
+      border-color: var(--cf-primary-bg);
+      background: var(--cf-primary-bg);
+      color: var(--cf-primary-text);
       box-shadow: 0 20px 48px rgba(33,32,28,.2);
     }
 
     .button.primary:hover {
-      background: #000;
+      background: var(--cf-primary-hover);
     }
 
     .button.small {
@@ -246,10 +296,10 @@
       overflow: hidden;
       max-width: 980px;
       margin: 0 auto;
-      border: 1px solid rgba(255,255,255,.72);
+      border: 1px solid var(--cf-card-border);
       border-radius: var(--cf-radius);
       background:
-        linear-gradient(180deg, rgba(255,255,255,.86), rgba(255,255,255,.62)),
+        linear-gradient(180deg, var(--cf-glass-strong), var(--cf-glass)),
         var(--cf-paper);
       box-shadow: var(--cf-shadow);
       backdrop-filter: blur(28px);
@@ -291,7 +341,7 @@
       border: 1px solid rgba(33,32,28,.08);
       border-radius: 26px;
       padding: clamp(18px, 2.4vw, 26px);
-      background: rgba(255,255,255,.7);
+      background: var(--cf-input-bg);
       color: var(--cf-ink);
       outline: none;
       resize: vertical;
@@ -303,12 +353,12 @@
     }
 
     .big-input::placeholder {
-      color: rgba(23,25,22,.34);
+      color: var(--cf-placeholder);
     }
 
     .big-input:focus {
       border-color: rgba(57,119,195,.38);
-      background: rgba(255,255,255,.92);
+      background: var(--cf-input-focus);
       box-shadow: 0 0 0 6px rgba(57,119,195,.09);
     }
 
@@ -326,7 +376,7 @@
       border: 1px solid rgba(33,32,28,.1);
       border-radius: 999px;
       padding: 0 13px;
-      background: rgba(255,255,255,.62);
+      background: var(--cf-glass);
       color: var(--cf-muted);
       cursor: pointer;
       font-size: 13px;
@@ -367,7 +417,7 @@
       width: 100%;
       border: 1px solid rgba(33,32,28,.09);
       border-radius: 16px;
-      background: rgba(255,255,255,.62);
+      background: var(--cf-input-bg);
       color: var(--cf-ink);
       outline: none;
       padding: 12px 13px;
@@ -419,9 +469,9 @@
 
     .result {
       overflow: hidden;
-      border: 1px solid rgba(255,255,255,.72);
+      border: 1px solid var(--cf-card-border);
       border-radius: var(--cf-radius);
-      background: rgba(255,255,255,.7);
+      background: var(--cf-glass);
       box-shadow: var(--cf-shadow);
       backdrop-filter: blur(26px);
     }
@@ -496,8 +546,8 @@
 
     .article {
       padding: clamp(24px, 5vw, 62px);
-      background: #fff;
-      color: #151815;
+      background: var(--cf-article-bg);
+      color: var(--cf-article-ink);
       font-size: 17px;
       line-height: 1.78;
     }
@@ -522,7 +572,7 @@
     .feedback {
       padding: 18px 20px 20px;
       border-top: 1px solid rgba(33,32,28,.08);
-      background: rgba(249,249,248,.88);
+      background: var(--cf-feedback-bg);
     }
 
     .feedback-grid {
@@ -539,9 +589,9 @@
       bottom: 24px;
       z-index: 80;
       max-width: 440px;
-      border: 1px solid rgba(255,255,255,.7);
+      border: 1px solid var(--cf-card-border);
       border-radius: 20px;
-      background: rgba(255,255,255,.9);
+      background: var(--cf-toast-bg);
       color: var(--cf-ink);
       box-shadow: var(--cf-shadow);
       padding: 14px 16px;
@@ -964,8 +1014,8 @@
       $('themeToggle').addEventListener('click', () => {
         const dark = document.documentElement.dataset.theme !== 'dark';
         document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-        document.body.style.filter = dark ? 'invert(1) hue-rotate(180deg)' : '';
         $('themeToggle').textContent = dark ? 'Licht' : 'Donker';
+        localStorage.setItem(key('theme'), dark ? 'dark' : 'light');
       });
       document.querySelectorAll('[data-type]').forEach(btn => btn.addEventListener('click', () => {
         state.contentType = btn.dataset.type;
@@ -975,6 +1025,11 @@
       }));
     }
     function init() {
+      const savedTheme = localStorage.getItem(key('theme'));
+      if (savedTheme === 'dark' || savedTheme === 'light') {
+        document.documentElement.dataset.theme = savedTheme;
+        $('themeToggle').textContent = savedTheme === 'dark' ? 'Licht' : 'Donker';
+      }
       loadDraft();
       bind();
       scoreBrief();
