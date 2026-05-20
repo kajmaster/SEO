@@ -1,0 +1,4 @@
+/* SEO Tool consumes the canonical Turn.One token layer. */
+@import "../theme-turnone/tokens.css";
+
+/* Keep this file token-only. Add SEO workflow-specific values here only when they cannot be shared. */

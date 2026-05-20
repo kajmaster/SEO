@@ -1,0 +1,5 @@
+/* SEO Tool product screens use the canonical Turn.One component and pattern layers. */
+@import "../theme-turnone/components.css";
+@import "../theme-turnone/patterns.css";
+
+/* Add SEO workflow-only product CSS below. Do not fork Turn.One styling here. */

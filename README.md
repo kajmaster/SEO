@@ -28,6 +28,17 @@ De contentgeneratie loopt nu direct via een TypeScript Netlify function:
 
 Er is dus geen n8n-runtime meer nodig voor de hoofdflow.
 
+## Turn.One design system
+
+De frontend gebruikt nu lokaal geïmporteerde Turn.One design-system assets:
+
+- `assets/turnone/theme-turnone/`: gedeelde tokens, componenten en patronen
+- `assets/turnone/theme-seo-tool/`: SEO Tool productlaag bovenop Turn.One
+- `contentflow-mvp.html`: nieuwe Turn.One Studio-frontend met chat rail, artifact workspace en context rail
+- `netlify/functions/studio-context.ts`: beta-context endpoint zodat de nieuwe studio zonder apart login-scherm een bestaande workspace kan koppelen
+
+Bron: `kajmaster/turnone-design-system`, geforkt van het Turn.One design-system. De Netlify Functions en Supabase/OpenAI-backend zijn bewust niet vervangen.
+
 ## Realtime voice beta
 
 De MVP bevat nu ook een voice beta, gebaseerd op [OpenAI's realtime-voice-component](https://github.com/openai/realtime-voice-component/), maar aangepast naar deze statische ContentFlow-opzet. Installatie- en deploynotities staan in [docs/realtime-voice-beta.md](docs/realtime-voice-beta.md).
