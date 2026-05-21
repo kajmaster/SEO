@@ -28,6 +28,28 @@ De contentgeneratie loopt nu direct via een TypeScript Netlify function:
 
 Er is dus geen n8n-runtime meer nodig voor de hoofdflow.
 
+## Hermes agent
+
+Hermes draait als aparte agent op de Hetzner-server. De frontend praat niet direct met Hermes, omdat de geheime API-key dan zichtbaar zou worden in de browser. De veilige route is:
+
+```text
+contentflow-mvp.html -> Netlify function -> Hermes op Hetzner
+```
+
+Endpoint in deze repo:
+
+- `/.netlify/functions/hermes-task`
+- backendlogica: `netlify/functions/hermes-task.ts`
+
+Benodigde Netlify environment variables:
+
+```env
+HERMES_URL=http://178.105.158.211:3001
+HERMES_API_KEY=dezelfde-key-als-op-de-Hetzner-server
+```
+
+`HERMES_API_KEY` hoort nooit in `contentflow-mvp.html` of andere frontendcode te staan.
+
 ## Turn.One design system
 
 De frontend gebruikt nu lokaal geïmporteerde Turn.One design-system assets:
