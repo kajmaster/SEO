@@ -1,4 +1,4 @@
-import { handleOptions, jsonResponse } from "./_contentflow-backend";
+import { getBackendEnv, handleOptions, jsonResponse, supabaseFetch } from "./_contentflow-backend";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -20,6 +20,65 @@ function getHermesEnv(): { hermesUrl: string; hermesApiKey: string } {
   };
 }
 
+async function getAuthenticatedUser(request: Request): Promise<{ id: string; email: string } | null> {
+  const authHeader = request.headers.get("authorization") || request.headers.get("Authorization") || "";
+  if (!authHeader.startsWith("Bearer ")) {
+    return null;
+  }
+
+  const env = getBackendEnv();
+  const response = await fetch(`${env.supabaseUrl}/auth/v1/user`, {
+    method: "GET",
+    headers: {
+      apikey: env.serviceRoleKey,
+      Authorization: authHeader,
+    },
+  });
+
+  const data = (await response.json().catch(() => null)) as UnknownRecord | null;
+  if (!response.ok || !data?.id) {
+    return null;
+  }
+
+  return {
+    id: String(data.id),
+    email: typeof data.email === "string" ? data.email : "",
+  };
+}
+
+async function isAllowedRequest(request: Request, body: UnknownRecord): Promise<boolean> {
+  const internalKey = process.env.CONTENTFLOW_INTERNAL_KEY;
+  const incomingInternalKey = request.headers.get("x-contentflow-key");
+  if (internalKey && incomingInternalKey === internalKey) {
+    return true;
+  }
+
+  const user = await getAuthenticatedUser(request);
+  if (!user) {
+    return false;
+  }
+
+  const workspaceId = clean(body.workspace_id);
+  if (!workspaceId) {
+    return false;
+  }
+
+  const ownedRows = await supabaseFetch<UnknownRecord[]>(
+    `workspaces?id=eq.${encodeURIComponent(workspaceId)}&owner_user_id=eq.${encodeURIComponent(user.id)}&select=id&limit=1`,
+    { method: "GET", headers: { Prefer: "return=representation" } },
+  );
+  if (Array.isArray(ownedRows) && ownedRows.length > 0) {
+    return true;
+  }
+
+  const memberRows = await supabaseFetch<UnknownRecord[]>(
+    `workspace_members?workspace_id=eq.${encodeURIComponent(workspaceId)}&user_id=eq.${encodeURIComponent(user.id)}&select=workspace_id&limit=1`,
+    { method: "GET", headers: { Prefer: "return=representation" } },
+  );
+
+  return Array.isArray(memberRows) && memberRows.length > 0;
+}
+
 export default async function handler(request: Request): Promise<Response> {
   const preflight = handleOptions(request);
   if (preflight) return preflight;
@@ -34,6 +93,17 @@ export default async function handler(request: Request): Promise<Response> {
 
     if (!task) {
       return jsonResponse({ error: "task is verplicht." }, 400);
+    }
+
+    const allowed = await isAllowedRequest(request, body);
+    if (!allowed) {
+      return jsonResponse(
+        {
+          error:
+            "Niet toegestaan. Hermes vereist een geldige login of een server-side internal key.",
+        },
+        401,
+      );
     }
 
     const { hermesUrl, hermesApiKey } = getHermesEnv();

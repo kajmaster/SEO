@@ -47,9 +47,10 @@ Benodigde Netlify environment variables:
 ```env
 HERMES_URL=http://jouw-hermes-server:3001
 HERMES_API_KEY=dezelfde-key-als-op-de-Hetzner-server
+CONTENTFLOW_INTERNAL_KEY=optionele-key-voor-server-side-tests
 ```
 
-`HERMES_API_KEY` hoort nooit in `contentflow-mvp.html` of andere frontendcode te staan.
+`HERMES_API_KEY` en `CONTENTFLOW_INTERNAL_KEY` horen nooit in `contentflow-mvp.html` of andere frontendcode te staan. De Hermes proxy accepteert normale app-requests alleen met een geldige Supabase login en workspace-toegang. Voor terminaltests kun je server-side `x-contentflow-key` gebruiken.
 
 ## Turn.One design system
 
