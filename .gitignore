@@ -4,3 +4,6 @@ __pycache__/
 Thumbs.db
 node_modules/
 .agents/
+.env
+.env.*
+hermes-agent/node_modules/

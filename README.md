@@ -40,6 +40,7 @@ Endpoint in deze repo:
 
 - `/.netlify/functions/hermes-task`
 - backendlogica: `netlify/functions/hermes-task.ts`
+- agent source: `hermes-agent/`
 
 Benodigde Netlify environment variables:
 
