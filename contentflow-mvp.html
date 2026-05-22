@@ -569,6 +569,69 @@
     .article p, .article ul, .article ol { margin: 0 0 15px; }
     .article ul, .article ol { padding-left: 24px; }
 
+    .audit-panel {
+      padding: clamp(24px, 4vw, 42px);
+      background: var(--cf-article-bg);
+      color: var(--cf-article-ink);
+    }
+
+    .audit-summary {
+      max-width: 760px;
+      color: rgba(21,24,21,.72);
+      font-size: 17px;
+      line-height: 1.65;
+    }
+
+    .audit-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 24px;
+    }
+
+    .audit-card {
+      border: 1px solid rgba(21,24,21,.1);
+      border-radius: 22px;
+      padding: 18px;
+      background: rgba(244,243,239,.78);
+    }
+
+    .audit-card h3 {
+      margin: 10px 0 8px;
+      font-size: 18px;
+      letter-spacing: -.035em;
+    }
+
+    .audit-card p {
+      margin: 0;
+      color: rgba(21,24,21,.7);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .priority {
+      display: inline-flex;
+      border-radius: 999px;
+      padding: 5px 9px;
+      background: rgba(247,107,21,.12);
+      color: #8a4d00;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .next-actions {
+      margin-top: 22px;
+      border-top: 1px solid rgba(21,24,21,.08);
+      padding-top: 18px;
+    }
+
+    .next-actions li {
+      margin-bottom: 8px;
+    }
+
     .feedback {
       padding: 18px 20px 20px;
       border-top: 1px solid rgba(33,32,28,.08);
@@ -606,7 +669,7 @@
 
     @media (max-width: 860px) {
       .topbar, .footer-actions, .result-head { align-items: flex-start; flex-direction: column; }
-      .details, .advanced, .feedback-grid { grid-template-columns: 1fr; }
+      .details, .advanced, .feedback-grid, .audit-grid { grid-template-columns: 1fr; }
       .studio-card, .result { border-radius: 24px; }
     }
   </style>
@@ -708,6 +771,7 @@
             <div class="status-line" id="statusLine">Je kunt meteen genereren. Zonder backend-context krijg je een lokale preview.</div>
             <div class="top-actions">
               <button class="button" id="scanToneBtn">Scan website</button>
+              <button class="button" id="hermesAuditBtn">Hermes audit</button>
               <button class="button primary" id="generateBtn">Maak concept</button>
             </div>
           </div>
@@ -747,7 +811,8 @@
       studioContext: endpoint('/.netlify/functions/studio-context'),
       generate: endpoint('/.netlify/functions/generate-content'),
       feedback: endpoint('/.netlify/functions/save-feedback'),
-      tone: endpoint('/.netlify/functions/analyze-website-tone')
+      tone: endpoint('/.netlify/functions/analyze-website-tone'),
+      hermes: endpoint('/.netlify/functions/hermes-task')
     };
     const $ = (id) => document.getElementById(id);
     const key = (id) => 'cf_focus_studio_' + id;
@@ -917,6 +982,32 @@
       }));
       $('saveFeedbackBtn').addEventListener('click', saveFeedback);
     }
+    function renderHermesAudit(data) {
+      const audit = data.hermes || data;
+      const opportunities = Array.isArray(audit.opportunities) ? audit.opportunities : [];
+      const nextActions = Array.isArray(audit.next_actions) ? audit.next_actions : [];
+      $('outputTitle').textContent = 'Hermes audit';
+      $('outputSub').textContent = audit.url ? `Analyse voor ${audit.url}` : 'SEO-kansen uit Hermes';
+      $('outputStage').innerHTML = `
+        <section class="audit-panel">
+          <div class="eyebrow">Hermes agent</div>
+          <h1 style="font-size:clamp(34px,5vw,64px);letter-spacing:-.075em;line-height:.92;margin:8px 0 16px">Eerste SEO-kansen</h1>
+          <p class="audit-summary">${esc(audit.summary || 'Hermes heeft een eerste audit gemaakt.')}</p>
+          <div class="audit-grid">
+            ${opportunities.map(item => `
+              <article class="audit-card">
+                <span class="priority">${esc(item.priority || 'medium')}</span>
+                <h3>${esc(item.title || 'SEO-kans')}</h3>
+                <p>${esc(item.reason || '')}</p>
+              </article>
+            `).join('') || '<article class="audit-card"><span class="priority">info</span><h3>Nog geen kansen</h3><p>Hermes gaf geen kansen terug.</p></article>'}
+          </div>
+          <div class="next-actions">
+            <div class="eyebrow">Volgende stappen</div>
+            <ol>${nextActions.map(action => `<li>${esc(action)}</li>`).join('') || '<li>Gebruik deze audit als basis voor je briefing.</li>'}</ol>
+          </div>
+        </section>`;
+    }
     async function generate() {
       sync();
       showLoading();
@@ -980,6 +1071,43 @@
         scoreBrief();
       }
     }
+    async function runHermesAudit() {
+      sync();
+      const url = $('websiteUrl').value.trim();
+      if (!url) {
+        $('advancedPanel').classList.add('open');
+        toast('Vul eerst een website in bij Context.');
+        $('websiteUrl').focus();
+        return;
+      }
+
+      $('outputTitle').textContent = 'Hermes audit draait';
+      $('outputSub').textContent = 'De agent zoekt eerste SEO-kansen.';
+      $('outputStage').innerHTML = '<div class="empty"><div><div class="spinner"></div><div class="empty-title">Hermes kijkt mee.</div><p class="empty-copy">De aanvraag loopt via Netlify naar je Hetzner-agent. De geheime key blijft server-side.</p></div></div>';
+      setBusy($('hermesAuditBtn'), true, 'Auditen...');
+      try {
+        const data = await requestJson(ENDPOINTS.hermes, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            task: 'seo_audit',
+            url,
+            keyword: keywordFromPrompt(),
+            workspace_id: state.workspace_id,
+            user_id: state.user_id
+          })
+        });
+        renderHermesAudit(data);
+        toast('Hermes audit ontvangen.');
+      } catch (error) {
+        toast(error.message || 'Hermes audit mislukte.');
+        $('outputTitle').textContent = 'Hermes audit mislukt';
+        $('outputSub').textContent = 'Controleer of Hermes online is en Netlify env vars kloppen.';
+        $('outputStage').innerHTML = `<div class="empty"><div><div class="empty-mark">!</div><div class="empty-title">Geen audit ontvangen.</div><p class="empty-copy">${esc(error.message || 'Hermes kon niet worden bereikt.')}</p></div></div>`;
+      } finally {
+        setBusy($('hermesAuditBtn'), false);
+      }
+    }
     async function saveFeedback() {
       const text = $('feedbackText')?.value.trim() || '';
       if (!text && state.verdict !== 'approved') return toast('Schrijf kort wat beter moet.');
@@ -1010,6 +1138,7 @@
       $('generateBtn').addEventListener('click', generate);
       $('copyBtn').addEventListener('click', copyOutput);
       $('scanToneBtn').addEventListener('click', scanTone);
+      $('hermesAuditBtn').addEventListener('click', runHermesAudit);
       $('advancedToggle').addEventListener('click', () => $('advancedPanel').classList.toggle('open'));
       $('themeToggle').addEventListener('click', () => {
         const dark = document.documentElement.dataset.theme !== 'dark';
