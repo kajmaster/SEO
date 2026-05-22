@@ -44,7 +44,7 @@ Endpoint in deze repo:
 Benodigde Netlify environment variables:
 
 ```env
-HERMES_URL=http://178.105.158.211:3001
+HERMES_URL=http://jouw-hermes-server:3001
 HERMES_API_KEY=dezelfde-key-als-op-de-Hetzner-server
 ```
 
