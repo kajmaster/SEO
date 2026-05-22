@@ -582,6 +582,36 @@
       line-height: 1.65;
     }
 
+    .audit-metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .metric {
+      border: 1px solid rgba(21,24,21,.1);
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(244,243,239,.58);
+    }
+
+    .metric-label {
+      color: rgba(21,24,21,.55);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 850;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .metric-value {
+      margin-top: 5px;
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: -.04em;
+    }
+
     .audit-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -628,6 +658,16 @@
       padding-top: 18px;
     }
 
+    .brief-box {
+      margin-top: 22px;
+      border: 1px solid rgba(57,119,195,.18);
+      border-radius: 24px;
+      padding: 20px;
+      background:
+        radial-gradient(circle at 0 0, rgba(173,255,248,.55), transparent 32%),
+        rgba(244,248,251,.82);
+    }
+
     .next-actions li {
       margin-bottom: 8px;
     }
@@ -669,7 +709,7 @@
 
     @media (max-width: 860px) {
       .topbar, .footer-actions, .result-head { align-items: flex-start; flex-direction: column; }
-      .details, .advanced, .feedback-grid, .audit-grid { grid-template-columns: 1fr; }
+      .details, .advanced, .feedback-grid, .audit-grid, .audit-metrics { grid-template-columns: 1fr; }
       .studio-card, .result { border-radius: 24px; }
     }
   </style>
@@ -986,13 +1026,21 @@
       const audit = data.hermes || data;
       const opportunities = Array.isArray(audit.opportunities) ? audit.opportunities : [];
       const nextActions = Array.isArray(audit.next_actions) ? audit.next_actions : [];
+      const brief = Array.isArray(audit.content_brief) ? audit.content_brief : [];
+      const metrics = audit.metrics || {};
       $('outputTitle').textContent = 'Hermes audit';
       $('outputSub').textContent = audit.url ? `Analyse voor ${audit.url}` : 'SEO-kansen uit Hermes';
       $('outputStage').innerHTML = `
         <section class="audit-panel">
           <div class="eyebrow">Hermes agent</div>
-          <h1 style="font-size:clamp(34px,5vw,64px);letter-spacing:-.075em;line-height:.92;margin:8px 0 16px">Eerste SEO-kansen</h1>
+          <h1 style="font-size:clamp(34px,5vw,64px);letter-spacing:-.075em;line-height:.92;margin:8px 0 16px">${audit.status === 'scanned' ? 'Live SEO-scan' : 'Eerste SEO-kansen'}</h1>
           <p class="audit-summary">${esc(audit.summary || 'Hermes heeft een eerste audit gemaakt.')}</p>
+          <div class="audit-metrics">
+            <div class="metric"><div class="metric-label">Woorden</div><div class="metric-value">${esc(metrics.word_count ?? '-')}</div></div>
+            <div class="metric"><div class="metric-label">H2-koppen</div><div class="metric-value">${esc(Array.isArray(metrics.h2) ? metrics.h2.length : '-')}</div></div>
+            <div class="metric"><div class="metric-label">Interne links</div><div class="metric-value">${esc(metrics.internal_links ?? '-')}</div></div>
+            <div class="metric"><div class="metric-label">Bewijs</div><div class="metric-value">${metrics.proof_signals ? 'Ja' : 'Nee'}</div></div>
+          </div>
           <div class="audit-grid">
             ${opportunities.map(item => `
               <article class="audit-card">
@@ -1001,6 +1049,11 @@
                 <p>${esc(item.reason || '')}</p>
               </article>
             `).join('') || '<article class="audit-card"><span class="priority">info</span><h3>Nog geen kansen</h3><p>Hermes gaf geen kansen terug.</p></article>'}
+          </div>
+          <div class="brief-box">
+            <div class="eyebrow">Contenthoek</div>
+            <p style="font-size:18px;line-height:1.6;margin:8px 0 14px">${esc(audit.content_angle || 'Gebruik deze scan als basis voor een scherpere briefing.')}</p>
+            <ol>${brief.map(point => `<li>${esc(point)}</li>`).join('') || '<li>Maak de pagina specifieker op zoekintentie, bewijs en CTA.</li>'}</ol>
           </div>
           <div class="next-actions">
             <div class="eyebrow">Volgende stappen</div>
