@@ -1,9 +1,29 @@
+import { createHmac } from "crypto";
 import { handleOptions, jsonResponse, supabaseFetch } from "./_contentflow-backend";
 
 type UnknownRecord = Record<string, unknown>;
 
 function clean(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function base64Url(value: string): string {
+  return Buffer.from(value).toString("base64url");
+}
+
+function createHermesStudioToken(workspaceId: string, userId: string): string | null {
+  const secret = process.env.CONTENTFLOW_INTERNAL_KEY;
+  if (!secret) return null;
+
+  const payload = {
+    workspace_id: workspaceId,
+    user_id: userId,
+    exp: Math.floor(Date.now() / 1000) + 15 * 60,
+    scope: "hermes_studio_demo",
+  };
+  const encodedPayload = base64Url(JSON.stringify(payload));
+  const signature = createHmac("sha256", secret).update(encodedPayload).digest("base64url");
+  return `${encodedPayload}.${signature}`;
 }
 
 export default async function handler(request: Request): Promise<Response> {
@@ -52,6 +72,7 @@ export default async function handler(request: Request): Promise<Response> {
       ok: true,
       workspace_id: workspace.id,
       user_id: workspace.owner_user_id,
+      hermes_studio_token: createHermesStudioToken(String(workspace.id), String(workspace.owner_user_id)),
       workspace,
       profile,
     });

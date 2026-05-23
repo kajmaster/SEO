@@ -582,6 +582,50 @@
       line-height: 1.65;
     }
 
+    .strategy-hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 170px;
+      gap: 22px;
+      align-items: center;
+      border: 1px solid rgba(57,119,195,.18);
+      border-radius: 30px;
+      padding: clamp(20px, 3vw, 30px);
+      background:
+        radial-gradient(circle at 0 0, rgba(173,255,248,.62), transparent 34%),
+        linear-gradient(135deg, rgba(244,248,251,.94), rgba(255,255,255,.74));
+    }
+
+    .score-ring {
+      display: grid;
+      width: 148px;
+      height: 148px;
+      place-items: center;
+      border-radius: 999px;
+      background:
+        conic-gradient(var(--cf-blue) var(--score-angle, 198deg), rgba(21,24,21,.1) 0),
+        rgba(255,255,255,.7);
+      box-shadow: inset 0 0 0 13px rgba(255,255,255,.85), 0 18px 45px rgba(57,119,195,.18);
+    }
+
+    .score-ring strong {
+      display: block;
+      font-size: 38px;
+      letter-spacing: -.08em;
+      line-height: .85;
+    }
+
+    .score-ring span {
+      display: block;
+      margin-top: 4px;
+      color: rgba(21,24,21,.62);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 850;
+      letter-spacing: .08em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
     .audit-metrics {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -668,6 +712,37 @@
         rgba(244,248,251,.82);
     }
 
+    .strategy-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .strategy-list {
+      border: 1px solid rgba(21,24,21,.1);
+      border-radius: 22px;
+      padding: 18px;
+      background: rgba(255,255,255,.62);
+    }
+
+    .strategy-list h3 {
+      margin: 0 0 12px;
+      font-size: 19px;
+      letter-spacing: -.04em;
+    }
+
+    .strategy-list li {
+      margin-bottom: 10px;
+    }
+
+    .audit-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
     .next-actions li {
       margin-bottom: 8px;
     }
@@ -709,7 +784,7 @@
 
     @media (max-width: 860px) {
       .topbar, .footer-actions, .result-head { align-items: flex-start; flex-direction: column; }
-      .details, .advanced, .feedback-grid, .audit-grid, .audit-metrics { grid-template-columns: 1fr; }
+      .details, .advanced, .feedback-grid, .audit-grid, .audit-metrics, .strategy-hero, .strategy-columns { grid-template-columns: 1fr; }
       .studio-card, .result { border-radius: 24px; }
     }
   </style>
@@ -861,6 +936,7 @@
       user_id: localStorage.getItem(key('user_id')) || '',
       contentType: localStorage.getItem(key('contentType')) || 'service_page',
       lastResponse: null,
+      hermesStudioToken: '',
       verdict: 'improve'
     };
     const fieldIds = ['mainPrompt','keyword','contentGoal','primaryCta','companyName','websiteUrl','services','targetAudience','toneVoice','forbiddenClaims','workspaceId','userId'];
@@ -951,6 +1027,7 @@
         const data = await requestJson(ENDPOINTS.studioContext);
         state.workspace_id = data.workspace_id || state.workspace_id;
         state.user_id = data.user_id || state.user_id;
+        state.hermesStudioToken = data.hermes_studio_token || '';
         $('workspaceId').value = state.workspace_id;
         $('userId').value = state.user_id;
         const p = data.profile || {};
@@ -1028,13 +1105,28 @@
       const nextActions = Array.isArray(audit.next_actions) ? audit.next_actions : [];
       const brief = Array.isArray(audit.content_brief) ? audit.content_brief : [];
       const metrics = audit.metrics || {};
+      const clusters = Array.isArray(audit.clusters) ? audit.clusters : [];
+      const pageIdeas = Array.isArray(audit.page_ideas) ? audit.page_ideas : [];
+      const linkPlan = Array.isArray(audit.internal_link_plan) ? audit.internal_link_plan : [];
+      state.lastHermesAudit = audit;
       $('outputTitle').textContent = 'Hermes audit';
       $('outputSub').textContent = audit.url ? `Analyse voor ${audit.url}` : 'SEO-kansen uit Hermes';
       $('outputStage').innerHTML = `
         <section class="audit-panel">
-          <div class="eyebrow">Hermes agent</div>
-          <h1 style="font-size:clamp(34px,5vw,64px);letter-spacing:-.075em;line-height:.92;margin:8px 0 16px">${audit.status === 'scanned' ? 'Live SEO-scan' : 'Eerste SEO-kansen'}</h1>
-          <p class="audit-summary">${esc(audit.summary || 'Hermes heeft een eerste audit gemaakt.')}</p>
+          <div class="strategy-hero">
+            <div>
+              <div class="eyebrow">Hermes strategist</div>
+              <h1 style="font-size:clamp(38px,6vw,76px);letter-spacing:-.085em;line-height:.88;margin:8px 0 16px">${audit.status === 'scanned' ? 'Live strategy scan' : 'Strategie op basis van input'}</h1>
+              <p class="audit-summary">${esc(audit.executive_takeaway || audit.summary || 'Hermes heeft een eerste audit gemaakt.')}</p>
+              <div class="audit-actions">
+                <button class="button primary" id="useHermesBriefBtn">Zet briefing in editor</button>
+                <span class="badge">${esc(audit.score_label || 'Strategie')}</span>
+              </div>
+            </div>
+            <div class="score-ring" style="--score-angle:${Number(audit.strategic_score || 0) * 3.6}deg">
+              <div><strong>${esc(audit.strategic_score ?? '-')}</strong><span>Hermes score</span></div>
+            </div>
+          </div>
           <div class="audit-metrics">
             <div class="metric"><div class="metric-label">Woorden</div><div class="metric-value">${esc(metrics.word_count ?? '-')}</div></div>
             <div class="metric"><div class="metric-label">H2-koppen</div><div class="metric-value">${esc(Array.isArray(metrics.h2) ? metrics.h2.length : '-')}</div></div>
@@ -1055,11 +1147,39 @@
             <p style="font-size:18px;line-height:1.6;margin:8px 0 14px">${esc(audit.content_angle || 'Gebruik deze scan als basis voor een scherpere briefing.')}</p>
             <ol>${brief.map(point => `<li>${esc(point)}</li>`).join('') || '<li>Maak de pagina specifieker op zoekintentie, bewijs en CTA.</li>'}</ol>
           </div>
+          <div class="strategy-columns">
+            <div class="strategy-list">
+              <h3>Contentclusters</h3>
+              <ol>${clusters.map(cluster => `<li><strong>${esc(cluster.name)}</strong><br><span>${esc(cluster.intent)} - ${esc(cluster.angle)}</span></li>`).join('') || '<li>Geen clusters gevonden.</li>'}</ol>
+            </div>
+            <div class="strategy-list">
+              <h3>Pagina-ideeën</h3>
+              <ol>${pageIdeas.map(page => `<li><strong>${esc(page.title)}</strong><br><span>${esc(page.format)} - ${esc(page.why)}</span></li>`).join('') || '<li>Geen pagina-ideeën gevonden.</li>'}</ol>
+            </div>
+          </div>
+          <div class="strategy-list" style="margin-top:14px">
+            <h3>Interne-linkplan</h3>
+            <ol>${linkPlan.map(item => `<li>${esc(item)}</li>`).join('') || '<li>Link deze pagina naar de belangrijkste commerciële pagina.</li>'}</ol>
+          </div>
           <div class="next-actions">
             <div class="eyebrow">Volgende stappen</div>
             <ol>${nextActions.map(action => `<li>${esc(action)}</li>`).join('') || '<li>Gebruik deze audit als basis voor je briefing.</li>'}</ol>
           </div>
         </section>`;
+      $('useHermesBriefBtn')?.addEventListener('click', useHermesBrief);
+    }
+    function useHermesBrief() {
+      const audit = state.lastHermesAudit || {};
+      const prompt = audit.editor_prompt || [
+        `Maak een SEO-pagina over "${audit.keyword || keywordFromPrompt()}".`,
+        audit.content_angle || '',
+        ...(Array.isArray(audit.content_brief) ? audit.content_brief : [])
+      ].filter(Boolean).join('\n');
+      $('mainPrompt').value = prompt;
+      if (audit.keyword) $('keyword').value = audit.keyword;
+      scoreBrief();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      toast('Hermes briefing staat nu in de editor.');
     }
     async function generate() {
       sync();
@@ -1139,9 +1259,11 @@
       $('outputStage').innerHTML = '<div class="empty"><div><div class="spinner"></div><div class="empty-title">Hermes kijkt mee.</div><p class="empty-copy">De aanvraag loopt via Netlify naar je Hetzner-agent. De geheime key blijft server-side.</p></div></div>';
       setBusy($('hermesAuditBtn'), true, 'Auditen...');
       try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (state.hermesStudioToken) headers['x-hermes-studio-token'] = state.hermesStudioToken;
         const data = await requestJson(ENDPOINTS.hermes, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({
             task: 'seo_audit',
             url,

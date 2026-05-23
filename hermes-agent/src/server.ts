@@ -87,6 +87,17 @@ function includesLoose(text: string, keyword: string): boolean {
   return terms.some((term) => cleanText.includes(term));
 }
 
+function clampScore(score: number): number {
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+function scoreLabel(score: number): string {
+  if (score >= 78) return "Sterke basis";
+  if (score >= 58) return "Groeikans";
+  if (score >= 38) return "Veel potentie";
+  return "Onbenutte pagina";
+}
+
 async function scanPage(url: string, keyword: string): Promise<PageScan> {
   const finalUrl = normalizeUrl(url);
   const controller = new AbortController();
@@ -198,6 +209,18 @@ async function buildSeoAudit(body: TaskBody) {
   const pageTitle = scan?.title || "Geen title gevonden";
   const h1Label = scan?.h1[0] || "Geen H1 gevonden";
   const wordCount = scan?.wordCount || 0;
+  const strategicScore = scan
+    ? clampScore(
+        18 +
+          (scan.keywordInTitle ? 14 : 0) +
+          (scan.keywordInH1 ? 14 : 0) +
+          Math.min(18, scan.wordCount / 55) +
+          Math.min(12, scan.h2.length * 3) +
+          Math.min(10, scan.internalLinks * 1.2) +
+          (scan.hasProofSignals ? 12 : 0) +
+          (scan.hasCtaSignals ? 10 : 0),
+      )
+    : 32;
   const opportunities = [
     !scan?.keywordInTitle || !scan?.keywordInH1
       ? {
@@ -256,6 +279,50 @@ async function buildSeoAudit(body: TaskBody) {
         `CTA-signalen: ${scan.hasCtaSignals ? "ja" : "nee"}`,
       ]
     : [`Scan mislukt: ${scanError}`];
+  const clusters = [
+    {
+      name: `${keyword} voor beginners`,
+      intent: "Informeren",
+      angle: "Leg uit wat iemand moet weten voordat hij koopt of contact opneemt.",
+    },
+    {
+      name: `${keyword} vergelijken`,
+      intent: "Overwegen",
+      angle: "Vergelijk opties, valkuilen, kosten, kwaliteit en wanneer welke keuze logisch is.",
+    },
+    {
+      name: `${keyword} bewijs en cases`,
+      intent: "Vertrouwen",
+      angle: "Gebruik klantvoorbeelden, reviews, resultaten en concrete situaties als bewijs.",
+    },
+    {
+      name: `${keyword} aanvragen`,
+      intent: "Converteren",
+      angle: "Maak de stap naar contact of aankoop kort, duidelijk en zonder ruis.",
+    },
+  ];
+  const pageIdeas = [
+    {
+      title: `${keyword}: complete keuzehulp`,
+      why: "Een pillar page die de hoofdzoekintentie pakt en doorlinkt naar verdieping.",
+      format: "Pillar page",
+    },
+    {
+      title: `Wanneer is ${keyword} de juiste keuze?`,
+      why: "Een beslissingspagina voor bezoekers die twijfelen en bewijs zoeken.",
+      format: "BOFU pagina",
+    },
+    {
+      title: `${keyword}: veelgemaakte fouten`,
+      why: "Een artikel dat risico's wegneemt en autoriteit opbouwt.",
+      format: "Kennisbank",
+    },
+  ];
+  const internalLinkPlan = [
+    `Link vanaf de homepage of hoofdcategorie naar de belangrijkste ${keyword}-pagina.`,
+    `Link vanuit informatieve artikelen door naar de conversiepagina rond ${keyword}.`,
+    "Voeg onderaan de pagina 3 verwante artikelen of diensten toe.",
+  ];
 
   return {
     ok: true,
@@ -263,6 +330,11 @@ async function buildSeoAudit(body: TaskBody) {
     status: scan ? "scanned" : "fallback",
     url: scan?.finalUrl || normalizedUrl || url,
     keyword,
+    strategic_score: strategicScore,
+    score_label: scoreLabel(strategicScore),
+    executive_takeaway: scan
+      ? `Hermes ziet een ${scoreLabel(strategicScore).toLowerCase()} voor "${keyword}". De pagina heeft ${wordCount} woorden, ${scan.h2.length} H2-koppen en ${scan.internalLinks} interne links. De snelste winst zit in scherpere zoekintentie, bewijs en een duidelijkere route naar conversie.`
+      : `Hermes kon de pagina niet live lezen, maar kan al wel een strategie starten rond "${keyword}".`,
     summary: scan
       ? `Hermes heeft de pagina echt opgehaald en ziet: ${visibleSignals.join(" · ")}. De grootste kans is om van losse pagina-informatie een scherpere zoekintentie- en conversiepagina te maken.`
       : `Hermes kon de pagina nog niet ophalen (${scanError}), maar heeft wel een audit-shape gemaakt op basis van de opgegeven URL en het onderwerp.`,
@@ -282,6 +354,9 @@ async function buildSeoAudit(body: TaskBody) {
         }
       : null,
     opportunities: opportunities.slice(0, 5),
+    clusters,
+    page_ideas: pageIdeas,
+    internal_link_plan: internalLinkPlan,
     content_angle: `Maak een pagina rond "${keyword}" die niet alleen uitlegt wat het is, maar de bezoeker helpt kiezen: wanneer is dit relevant, waar let je op, welk bewijs is er, en wat is de volgende stap?`,
     content_brief: [
       `Gebruik de huidige page title als startpunt: ${pageTitle}.`,
@@ -290,6 +365,13 @@ async function buildSeoAudit(body: TaskBody) {
       "Maak interne links naar verwante diensten of kennisbankartikelen.",
       "Sluit af met één duidelijke CTA.",
     ],
+    editor_prompt: [
+      `Maak een hoogwaardige SEO-pagina over "${keyword}" voor ${scan?.finalUrl || normalizedUrl || "deze website"}.`,
+      `Gebruik deze Hermes-diagnose: ${visibleSignals.join(" | ")}.`,
+      "Schrijf niet generiek. Maak de pagina verkoopbaar met situaties, keuzecriteria, bewijs, interne links en een duidelijke CTA.",
+      `Contenthoek: maak een pagina die bezoekers helpt kiezen wanneer ${keyword} relevant is, waar ze op moeten letten en welke volgende stap logisch is.`,
+      "Aanbevolen structuur: probleem, voor wie, keuzecriteria, bewijs, aanpak, veelgestelde vragen, CTA.",
+    ].join("\n"),
     next_actions: [
       "Kies de belangrijkste zoekintentie voor deze pagina.",
       "Laat ContentFlow een nieuwe pagina of verbeterbrief genereren op basis van deze audit.",

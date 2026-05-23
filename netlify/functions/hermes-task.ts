@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from "crypto";
 import { getBackendEnv, handleOptions, jsonResponse, supabaseFetch } from "./_contentflow-backend";
 
 type UnknownRecord = Record<string, unknown>;
@@ -18,6 +19,38 @@ function getHermesEnv(): { hermesUrl: string; hermesApiKey: string } {
     hermesUrl: hermesUrl.replace(/\/$/, ""),
     hermesApiKey,
   };
+}
+
+function verifyHermesStudioToken(token: string, body: UnknownRecord): boolean {
+  const secret = process.env.CONTENTFLOW_INTERNAL_KEY;
+  if (!secret || !token.includes(".")) return false;
+
+  const [encodedPayload, signature] = token.split(".");
+  if (!encodedPayload || !signature) return false;
+
+  const expected = createHmac("sha256", secret).update(encodedPayload).digest("base64url");
+  const expectedBuffer = Buffer.from(expected);
+  const actualBuffer = Buffer.from(signature);
+  if (expectedBuffer.length !== actualBuffer.length || !timingSafeEqual(expectedBuffer, actualBuffer)) {
+    return false;
+  }
+
+  let payload: UnknownRecord;
+  try {
+    payload = JSON.parse(Buffer.from(encodedPayload, "base64url").toString("utf8")) as UnknownRecord;
+  } catch {
+    return false;
+  }
+
+  const exp = Number(payload.exp || 0);
+  const workspaceId = clean(payload.workspace_id);
+  const userId = clean(payload.user_id);
+  return (
+    clean(payload.scope) === "hermes_studio_demo" &&
+    exp > Math.floor(Date.now() / 1000) &&
+    workspaceId === clean(body.workspace_id) &&
+    userId === clean(body.user_id)
+  );
 }
 
 async function getAuthenticatedUser(request: Request): Promise<{ id: string; email: string } | null> {
@@ -50,6 +83,11 @@ async function isAllowedRequest(request: Request, body: UnknownRecord): Promise<
   const internalKey = process.env.CONTENTFLOW_INTERNAL_KEY;
   const incomingInternalKey = request.headers.get("x-contentflow-key");
   if (internalKey && incomingInternalKey === internalKey) {
+    return true;
+  }
+
+  const studioToken = request.headers.get("x-hermes-studio-token") || "";
+  if (verifyHermesStudioToken(studioToken, body)) {
     return true;
   }
 
