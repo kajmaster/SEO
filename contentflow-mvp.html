@@ -1108,9 +1108,10 @@
       const clusters = Array.isArray(audit.clusters) ? audit.clusters : [];
       const pageIdeas = Array.isArray(audit.page_ideas) ? audit.page_ideas : [];
       const linkPlan = Array.isArray(audit.internal_link_plan) ? audit.internal_link_plan : [];
+      const aiBadge = audit.ai_enriched ? `OpenAI verrijkt${audit.model ? ` · ${audit.model}` : ''}` : 'Regel-scan';
       state.lastHermesAudit = audit;
       $('outputTitle').textContent = 'Hermes audit';
-      $('outputSub').textContent = audit.url ? `Analyse voor ${audit.url}` : 'SEO-kansen uit Hermes';
+      $('outputSub').textContent = audit.url ? `Analyse voor ${audit.url} · ${aiBadge}` : `SEO-kansen uit Hermes · ${aiBadge}`;
       $('outputStage').innerHTML = `
         <section class="audit-panel">
           <div class="strategy-hero">
@@ -1121,6 +1122,7 @@
               <div class="audit-actions">
                 <button class="button primary" id="useHermesBriefBtn">Zet briefing in editor</button>
                 <span class="badge">${esc(audit.score_label || 'Strategie')}</span>
+                <span class="badge">${esc(aiBadge)}</span>
               </div>
             </div>
             <div class="score-ring" style="--score-angle:${Number(audit.strategic_score || 0) * 3.6}deg">

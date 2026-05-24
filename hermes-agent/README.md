@@ -13,7 +13,11 @@ Maak op de server `/opt/hermes/.env`:
 ```env
 HERMES_API_KEY=een-lange-geheime-key
 PORT=3001
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4.1-mini
 ```
+
+`OPENAI_API_KEY` is optioneel. Zonder key gebruikt Hermes de eigen regel-scan. Met key verrijkt Hermes de gemeten website-signalen met een slimme strategie-output.
 
 ## Lokaal draaien op de server
 

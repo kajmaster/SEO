@@ -52,6 +52,15 @@ CONTENTFLOW_INTERNAL_KEY=optionele-key-voor-server-side-tests
 
 `HERMES_API_KEY` en `CONTENTFLOW_INTERNAL_KEY` horen nooit in `contentflow-mvp.html` of andere frontendcode te staan. De Hermes proxy accepteert normale app-requests met een geldige Supabase login en workspace-toegang, of met een korte door `studio-context` ondertekende Hermes studio-token voor de concierge demo. Voor terminaltests kun je server-side `x-contentflow-key` gebruiken.
 
+Op de Hermes-server zelf kun je daarnaast OpenAI toevoegen:
+
+```env
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4.1-mini
+```
+
+Daarmee blijft Hermes eerst zelf meten, maar laat hij OpenAI de strategie, briefing en kansen slimmer formuleren.
+
 ## Turn.One design system
 
 De frontend gebruikt nu lokaal geïmporteerde Turn.One design-system assets:

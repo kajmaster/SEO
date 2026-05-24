@@ -7,6 +7,8 @@ dotenv.config();
 const app = express();
 const port = Number(process.env.PORT || 3001);
 const hermesApiKey = process.env.HERMES_API_KEY;
+const openAiApiKey = process.env.OPENAI_API_KEY;
+const openAiModel = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 
 type TaskBody = {
   task?: unknown;
@@ -30,6 +32,18 @@ type PageScan = {
   keywordInTitle: boolean;
   keywordInH1: boolean;
   sampleText: string;
+};
+
+type StrategyPayload = {
+  executive_takeaway?: string;
+  opportunities?: Array<{ title: string; reason: string; priority: string }>;
+  clusters?: Array<{ name: string; intent: string; angle: string }>;
+  page_ideas?: Array<{ title: string; why: string; format: string }>;
+  internal_link_plan?: string[];
+  content_angle?: string;
+  content_brief?: string[];
+  editor_prompt?: string;
+  next_actions?: string[];
 };
 
 function clean(value: unknown): string {
@@ -96,6 +110,146 @@ function scoreLabel(score: number): string {
   if (score >= 58) return "Groeikans";
   if (score >= 38) return "Veel potentie";
   return "Onbenutte pagina";
+}
+
+function parseJsonObject(value: string): StrategyPayload | null {
+  try {
+    return JSON.parse(value) as StrategyPayload;
+  } catch {
+    const match = value.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    try {
+      return JSON.parse(match[0]) as StrategyPayload;
+    } catch {
+      return null;
+    }
+  }
+}
+
+function cleanStringArray(value: unknown, max = 8): string[] {
+  return Array.isArray(value)
+    ? value.map((item) => clean(item)).filter(Boolean).slice(0, max)
+    : [];
+}
+
+function cleanObjectArray<T extends Record<string, string>>(
+  value: unknown,
+  keys: Array<keyof T>,
+  max = 6,
+): T[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+      const row = item as Record<string, unknown>;
+      const output: Record<string, string> = {};
+      for (const key of keys) output[String(key)] = clean(row[String(key)]);
+      return output as T;
+    })
+    .filter((item): item is T => Boolean(item && keys.every((key) => item[key])))
+    .slice(0, max);
+}
+
+async function buildAiStrategy(input: {
+  url: string;
+  keyword: string;
+  strategicScore: number;
+  scoreLabel: string;
+  scan: PageScan | null;
+  opportunities: Array<{ title: string; reason: string; priority: string }>;
+  contentAngle: string;
+  contentBrief: string[];
+  nextActions: string[];
+}): Promise<StrategyPayload | null> {
+  if (!openAiApiKey) return null;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 18_000);
+  const scan = input.scan;
+  const prompt = {
+    url: input.url,
+    keyword: input.keyword,
+    current_score: input.strategicScore,
+    score_label: input.scoreLabel,
+    measured_signals: scan
+      ? {
+          title: scan.title,
+          meta_description: scan.metaDescription,
+          h1: scan.h1,
+          h2: scan.h2,
+          word_count: scan.wordCount,
+          internal_links: scan.internalLinks,
+          external_links: scan.externalLinks,
+          proof_signals: scan.hasProofSignals,
+          cta_signals: scan.hasCtaSignals,
+          keyword_in_title: scan.keywordInTitle,
+          keyword_in_h1: scan.keywordInH1,
+          visible_text_sample: scan.sampleText,
+        }
+      : null,
+    rule_based_opportunities: input.opportunities,
+  };
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${openAiApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: openAiModel,
+        temperature: 0.25,
+        max_completion_tokens: 1500,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content:
+              "Je bent Hermes, een senior SEO strategist voor B2B en contentteams. Gebruik alleen de gemeten website-signalen en redelijke SEO-logica. Wees concreet, verkoopbaar en niet generiek. Antwoord uitsluitend als geldig JSON-object.",
+          },
+          {
+            role: "user",
+            content:
+              `Maak een premium SEO-strategie in het Nederlands op basis van deze gemeten data.\n\n` +
+              `${JSON.stringify(prompt, null, 2)}\n\n` +
+              "Geef exact deze JSON-velden terug: executive_takeaway, opportunities, clusters, page_ideas, internal_link_plan, content_angle, content_brief, editor_prompt, next_actions. " +
+              "opportunities bevat objecten met title, reason, priority. clusters bevat name, intent, angle. page_ideas bevat title, why, format. Maak editor_prompt direct bruikbaar als briefing voor een SEO-pagina.",
+          },
+        ],
+      }),
+      signal: controller.signal,
+    });
+
+    const data = (await response.json().catch(() => null)) as
+      | { choices?: Array<{ message?: { content?: string } }>; error?: { message?: string } }
+      | null;
+
+    if (!response.ok) {
+      throw new Error(data?.error?.message || `OpenAI request mislukt met status ${response.status}.`);
+    }
+
+    const content = data?.choices?.[0]?.message?.content || "";
+    const parsed = parseJsonObject(content);
+    if (!parsed) return null;
+
+    return {
+      executive_takeaway: clean(parsed.executive_takeaway),
+      opportunities: cleanObjectArray(parsed.opportunities, ["title", "reason", "priority"], 6),
+      clusters: cleanObjectArray(parsed.clusters, ["name", "intent", "angle"], 6),
+      page_ideas: cleanObjectArray(parsed.page_ideas, ["title", "why", "format"], 6),
+      internal_link_plan: cleanStringArray(parsed.internal_link_plan, 8),
+      content_angle: clean(parsed.content_angle),
+      content_brief: cleanStringArray(parsed.content_brief, 10),
+      editor_prompt: clean(parsed.editor_prompt),
+      next_actions: cleanStringArray(parsed.next_actions, 8),
+    };
+  } catch (error) {
+    console.error("OpenAI strategy enrichment failed", error);
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function scanPage(url: string, keyword: string): Promise<PageScan> {
@@ -266,7 +420,9 @@ async function buildSeoAudit(body: TaskBody) {
           priority: "medium",
         }
       : null,
-  ].filter(Boolean);
+  ].filter(
+    (item): item is { title: string; reason: string; priority: string } => Boolean(item),
+  );
 
   const visibleSignals = scan
     ? [
@@ -323,8 +479,21 @@ async function buildSeoAudit(body: TaskBody) {
     `Link vanuit informatieve artikelen door naar de conversiepagina rond ${keyword}.`,
     "Voeg onderaan de pagina 3 verwante artikelen of diensten toe.",
   ];
+  const contentAngle = `Maak een pagina rond "${keyword}" die niet alleen uitlegt wat het is, maar de bezoeker helpt kiezen: wanneer is dit relevant, waar let je op, welk bewijs is er, en wat is de volgende stap?`;
+  const contentBrief = [
+    `Gebruik de huidige page title als startpunt: ${pageTitle}.`,
+    `Verwerk "${keyword}" zichtbaar in de eerste schermsectie.`,
+    "Voeg minimaal een bewijsblok toe: klantvoorbeeld, resultaat, review of concreet scenario.",
+    "Maak interne links naar verwante diensten of kennisbankartikelen.",
+    "Sluit af met een duidelijke CTA.",
+  ];
+  const nextActions = [
+    "Kies de belangrijkste zoekintentie voor deze pagina.",
+    "Laat ContentFlow een nieuwe pagina of verbeterbrief genereren op basis van deze audit.",
+    "Gebruik feedback om woorden, toon en claims aan te scherpen.",
+  ];
 
-  return {
+  const baseAudit = {
     ok: true,
     type: "seo_audit",
     status: scan ? "scanned" : "fallback",
@@ -357,14 +526,8 @@ async function buildSeoAudit(body: TaskBody) {
     clusters,
     page_ideas: pageIdeas,
     internal_link_plan: internalLinkPlan,
-    content_angle: `Maak een pagina rond "${keyword}" die niet alleen uitlegt wat het is, maar de bezoeker helpt kiezen: wanneer is dit relevant, waar let je op, welk bewijs is er, en wat is de volgende stap?`,
-    content_brief: [
-      `Gebruik de huidige page title als startpunt: ${pageTitle}.`,
-      `Verwerk "${keyword}" zichtbaar in de eerste schermsectie.`,
-      "Voeg minimaal één bewijsblok toe: klantvoorbeeld, resultaat, review of concreet scenario.",
-      "Maak interne links naar verwante diensten of kennisbankartikelen.",
-      "Sluit af met één duidelijke CTA.",
-    ],
+    content_angle: contentAngle,
+    content_brief: contentBrief,
     editor_prompt: [
       `Maak een hoogwaardige SEO-pagina over "${keyword}" voor ${scan?.finalUrl || normalizedUrl || "deze website"}.`,
       `Gebruik deze Hermes-diagnose: ${visibleSignals.join(" | ")}.`,
@@ -372,11 +535,52 @@ async function buildSeoAudit(body: TaskBody) {
       `Contenthoek: maak een pagina die bezoekers helpt kiezen wanneer ${keyword} relevant is, waar ze op moeten letten en welke volgende stap logisch is.`,
       "Aanbevolen structuur: probleem, voor wie, keuzecriteria, bewijs, aanpak, veelgestelde vragen, CTA.",
     ].join("\n"),
-    next_actions: [
-      "Kies de belangrijkste zoekintentie voor deze pagina.",
-      "Laat ContentFlow een nieuwe pagina of verbeterbrief genereren op basis van deze audit.",
-      "Gebruik feedback om woorden, toon en claims aan te scherpen.",
-    ],
+    next_actions: nextActions,
+  };
+
+  const aiStrategy = await buildAiStrategy({
+    url: baseAudit.url,
+    keyword,
+    strategicScore,
+    scoreLabel: baseAudit.score_label,
+    scan,
+    opportunities: baseAudit.opportunities,
+    contentAngle,
+    contentBrief,
+    nextActions,
+  });
+
+  if (!aiStrategy) {
+    return {
+      ...baseAudit,
+      ai_enriched: false,
+      model: null,
+      strategy_source: "rules",
+    };
+  }
+
+  return {
+    ...baseAudit,
+    executive_takeaway: aiStrategy.executive_takeaway || baseAudit.executive_takeaway,
+    opportunities: aiStrategy.opportunities?.length
+      ? aiStrategy.opportunities
+      : baseAudit.opportunities,
+    clusters: aiStrategy.clusters?.length ? aiStrategy.clusters : baseAudit.clusters,
+    page_ideas: aiStrategy.page_ideas?.length ? aiStrategy.page_ideas : baseAudit.page_ideas,
+    internal_link_plan: aiStrategy.internal_link_plan?.length
+      ? aiStrategy.internal_link_plan
+      : baseAudit.internal_link_plan,
+    content_angle: aiStrategy.content_angle || baseAudit.content_angle,
+    content_brief: aiStrategy.content_brief?.length
+      ? aiStrategy.content_brief
+      : baseAudit.content_brief,
+    editor_prompt: aiStrategy.editor_prompt || baseAudit.editor_prompt,
+    next_actions: aiStrategy.next_actions?.length
+      ? aiStrategy.next_actions
+      : baseAudit.next_actions,
+    ai_enriched: true,
+    model: openAiModel,
+    strategy_source: "openai",
   };
 }
 
