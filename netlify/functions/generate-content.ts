@@ -97,8 +97,8 @@ export default async function handler(request: Request): Promise<Response> {
     await updateGenerationJob(jobId, { status: "drafting" });
     const draft: GeneratedDraft = await withTimeout(
       generateVariants(input, context, plan),
-      21000,
-      "OpenAI duurde te lang. Er is geen templatecopy opgeslagen omdat de kwaliteit dan te laag zou zijn.",
+      36000,
+      "OpenAI duurde te lang. Er is geen lokale voorbeeldtekst opgeslagen omdat de kwaliteit dan te laag zou zijn.",
     );
     const variants = draft.variants;
     stage = "resultaat_opslaan";

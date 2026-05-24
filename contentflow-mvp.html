@@ -743,6 +743,75 @@
       margin-top: 18px;
     }
 
+    .hermes-command {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(280px, .85fr);
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .command-card {
+      border: 1px solid rgba(57,119,195,.18);
+      border-radius: 24px;
+      padding: 18px;
+      background: linear-gradient(135deg, rgba(255,255,255,.72), rgba(244,248,251,.9));
+    }
+
+    .command-card h3 {
+      margin: 0 0 8px;
+      font-size: 20px;
+      letter-spacing: -.04em;
+    }
+
+    .command-card p {
+      margin: 0;
+      color: rgba(21,24,21,.68);
+      line-height: 1.55;
+    }
+
+    .brief-preview {
+      max-height: 250px;
+      overflow: auto;
+      margin-top: 12px;
+      border: 1px solid rgba(21,24,21,.08);
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(21,24,21,.04);
+      color: rgba(21,24,21,.76);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .impact-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .impact-pill {
+      border-radius: 18px;
+      padding: 12px;
+      background: rgba(173,255,248,.38);
+    }
+
+    .impact-pill strong {
+      display: block;
+      font-size: 18px;
+      letter-spacing: -.04em;
+    }
+
+    .impact-pill span {
+      display: block;
+      margin-top: 3px;
+      color: rgba(21,24,21,.58);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 850;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
     .next-actions li {
       margin-bottom: 8px;
     }
@@ -784,7 +853,7 @@
 
     @media (max-width: 860px) {
       .topbar, .footer-actions, .result-head { align-items: flex-start; flex-direction: column; }
-      .details, .advanced, .feedback-grid, .audit-grid, .audit-metrics, .strategy-hero, .strategy-columns { grid-template-columns: 1fr; }
+      .details, .advanced, .feedback-grid, .audit-grid, .audit-metrics, .strategy-hero, .strategy-columns, .hermes-command, .impact-strip { grid-template-columns: 1fr; }
       .studio-card, .result { border-radius: 24px; }
     }
   </style>
@@ -888,7 +957,7 @@
               <button class="button" id="scanToneBtn">Scan website</button>
               <button class="button" id="hermesAuditBtn">Hermes audit</button>
               <button class="button" id="hermesPlaybookBtn">Hermes groeiplan</button>
-              <button class="button primary" id="generateBtn">Maak concept</button>
+              <button class="button primary" id="generateBtn">Maak concept met Hermes</button>
             </div>
           </div>
         </div>
@@ -900,7 +969,7 @@
             <div>
               <div class="eyebrow">Output</div>
               <div class="result-title" id="outputTitle">Nog geen concept</div>
-              <div class="result-sub" id="outputSub">Je tekst verschijnt hier zodra je op “Maak concept” klikt.</div>
+              <div class="result-sub" id="outputSub">Je tekst verschijnt hier zodra je op “Maak concept met Hermes” klikt.</div>
             </div>
             <button class="button small" id="copyBtn">Kopieer HTML</button>
           </div>
@@ -922,7 +991,9 @@
 
   <script>
     const LIVE_BASE = 'https://splendid-ganache-01f6c2.netlify.app';
-    const endpoint = (path) => location.protocol === 'file:' ? LIVE_BASE + path : path;
+    const usesStaticPreview = ['file:', 'http:'].includes(location.protocol)
+      && ['127.0.0.1', 'localhost', ''].includes(location.hostname);
+    const endpoint = (path) => usesStaticPreview ? LIVE_BASE + path : path;
     const ENDPOINTS = {
       studioContext: endpoint('/.netlify/functions/studio-context'),
       generate: endpoint('/.netlify/functions/generate-content'),
@@ -1005,7 +1076,12 @@
       const explicit = $('keyword').value.trim();
       if (explicit) return explicit;
       const prompt = $('mainPrompt').value.trim().replace(/\s+/g, ' ');
-      return prompt.split(/[.,\n]/)[0].replace(/^(maak|schrijf|genereer)\s+(een\s+)?/i, '').slice(0, 70) || 'SEO pagina';
+      const firstInstruction = prompt.split(/[.,\n]/)[0];
+      const subjectMatch = firstInstruction.match(/\bover\s+(.+)$/i);
+      const subject = subjectMatch
+        ? subjectMatch[1]
+        : firstInstruction.replace(/^(maak|schrijf|genereer)\s+(een\s+)?/i, '');
+      return subject.replace(/^(seo\s+)?pagina\s+over\s+/i, '').trim().slice(0, 70) || 'SEO pagina';
     }
     function snapshot() {
       return {
@@ -1045,26 +1121,17 @@
         scoreBrief();
       }
     }
-    function localPreview() {
-      const prompt = $('mainPrompt').value.trim();
+    function localPreview(reason) {
       const keyword = keywordFromPrompt();
-      const company = $('companyName').value.trim() || 'jouw bedrijf';
-      const audience = $('targetAudience').value.trim() || 'de juiste doelgroep';
-      const services = $('services').value.trim() || 'het aanbod';
-      const cta = $('primaryCta').value.trim() || 'Plan een kennismaking';
-      const intro = prompt || 'Maak een heldere SEO-pagina die vertrouwen opbouwt en uitlegt waarom deze oplossing relevant is.';
       const content = `
-        <h1>${esc(keyword)}: een pagina die vertrouwen opbouwt</h1>
-        <p>${esc(intro)}</p>
-        <h2>Voor wie deze pagina bedoeld is</h2>
-        <p>Deze pagina richt zich op ${esc(audience)}. De tekst moet snel duidelijk maken waarom ${esc(company)} relevant is en welke keuze de bezoeker met vertrouwen kan maken.</p>
-        <h2>Wat het aanbod sterk maakt</h2>
-        <p>De basis voor de inhoud is: ${esc(services)}. Een sterke pagina vertaalt dit niet naar losse claims, maar naar herkenbare situaties, bewijs en duidelijke vervolgstappen.</p>
-        <h2>Aanpak</h2>
-        <ul><li>Begin met het probleem van de bezoeker.</li><li>Laat zien wat de oplossing oplevert.</li><li>Gebruik merktaal, klantbewijs en feedbackregels.</li></ul>
-        <h2>Volgende stap</h2>
-        <p>${esc(cta)}.</p>`;
-      return { status: 'preview', job: { id: 'local-preview' }, primary_variant: { id: 'local-preview-variant', title: keyword, content, seo_score: 74, quality_score: 76, word_count: 230 }, quality_report: { verdict: 'Lokale preview. Backend nog niet gekoppeld.' } };
+        <div class="empty" style="border:0;padding:10px 0;text-align:left">
+          <div>
+            <div class="empty-title">Echte generatie nodig</div>
+            <p class="empty-copy">Deze studio toont geen lokale voorbeeldtekst meer. Zodra de Netlify Functions bereikbaar zijn, maakt de backend de volledige klanttekst.</p>
+            ${reason ? `<p class="empty-copy">Reden: ${esc(reason)}</p>` : ''}
+          </div>
+        </div>`;
+      return { status: 'preview', job: { id: 'local-preview' }, primary_variant: { id: 'local-preview-variant', title: keyword, content, seo_score: 0, quality_score: 0, word_count: 0 }, quality_report: { verdict: 'Geen lokale voorbeeldtekst getoond.' } };
     }
     function showLoading() {
       $('outputTitle').textContent = 'Concept wordt gemaakt';
@@ -1110,6 +1177,8 @@
       const pageIdeas = Array.isArray(audit.page_ideas) ? audit.page_ideas : [];
       const linkPlan = Array.isArray(audit.internal_link_plan) ? audit.internal_link_plan : [];
       const aiBadge = audit.ai_enriched ? `OpenAI verrijkt${audit.model ? ` · ${audit.model}` : ''}` : 'Regel-scan';
+      const hermesPrompt = buildHermesPrompt(audit);
+      const promptPreview = esc(hermesPrompt).replace(/\n/g, '<br>');
       state.lastHermesAudit = audit;
       $('outputTitle').textContent = 'Hermes audit';
       $('outputSub').textContent = audit.url ? `Analyse voor ${audit.url} · ${aiBadge}` : `SEO-kansen uit Hermes · ${aiBadge}`;
@@ -1121,7 +1190,9 @@
               <h1 style="font-size:clamp(38px,6vw,76px);letter-spacing:-.085em;line-height:.88;margin:8px 0 16px">${audit.status === 'scanned' ? 'Live strategy scan' : 'Strategie op basis van input'}</h1>
               <p class="audit-summary">${esc(audit.executive_takeaway || audit.summary || 'Hermes heeft een eerste audit gemaakt.')}</p>
               <div class="audit-actions">
-                <button class="button primary" id="useHermesBriefBtn">Zet briefing in editor</button>
+                <button class="button primary" id="generateHermesBtn">Maak concept met Hermes</button>
+                <button class="button" id="useHermesBriefBtn">Zet briefing in editor</button>
+                <button class="button" id="copyHermesBriefBtn">Kopieer briefing</button>
                 <span class="badge">${esc(audit.score_label || 'Strategie')}</span>
                 <span class="badge">${esc(aiBadge)}</span>
               </div>
@@ -1150,6 +1221,23 @@
             <p style="font-size:18px;line-height:1.6;margin:8px 0 14px">${esc(audit.content_angle || 'Gebruik deze scan als basis voor een scherpere briefing.')}</p>
             <ol>${brief.map(point => `<li>${esc(point)}</li>`).join('') || '<li>Maak de pagina specifieker op zoekintentie, bewijs en CTA.</li>'}</ol>
           </div>
+          <div class="hermes-command">
+            <div class="command-card">
+              <div class="eyebrow">Hermes command center</div>
+              <h3>Van scan naar publiceerbare briefing</h3>
+              <p>Hermes combineert live paginasignalen, zoekintentie, kansen, linkplan en OpenAI-strategie tot een briefing die ContentFlow direct kan schrijven.</p>
+              <div class="impact-strip">
+                <div class="impact-pill"><strong>${esc(opportunities.length || 0)}</strong><span>Kansen</span></div>
+                <div class="impact-pill"><strong>${esc(clusters.length || 0)}</strong><span>Clusters</span></div>
+                <div class="impact-pill"><strong>${esc(pageIdeas.length || 0)}</strong><span>Ideeen</span></div>
+              </div>
+            </div>
+            <div class="command-card">
+              <h3>Schrijfbrief</h3>
+              <p>Dit is de briefing die naar de editor gaat. Geen losse audit meer, maar een concrete opdracht voor betere copy.</p>
+              <div class="brief-preview">${promptPreview}</div>
+            </div>
+          </div>
           <div class="strategy-columns">
             <div class="strategy-list">
               <h3>Contentclusters</h3>
@@ -1170,6 +1258,8 @@
           </div>
         </section>`;
       $('useHermesBriefBtn')?.addEventListener('click', useHermesBrief);
+      $('generateHermesBtn')?.addEventListener('click', generateFromHermesAudit);
+      $('copyHermesBriefBtn')?.addEventListener('click', copyHermesBrief);
     }
     function renderHermesPlaybook(data) {
       const playbook = data.hermes || data;
@@ -1237,25 +1327,56 @@
         </section>`;
       $('usePlaybookBriefBtn')?.addEventListener('click', useHermesBrief);
     }
-    function useHermesBrief() {
+    function buildHermesPrompt(audit) {
+      const opportunities = Array.isArray(audit.opportunities) ? audit.opportunities : [];
+      const brief = Array.isArray(audit.content_brief) ? audit.content_brief : [];
+      const linkPlan = Array.isArray(audit.internal_link_plan) ? audit.internal_link_plan : [];
+      if (audit.editor_prompt) return audit.editor_prompt;
+      return [
+        `Maak een hoogwaardige SEO-pagina over "${audit.keyword || keywordFromPrompt()}".`,
+        audit.url ? `Gebruik deze geanalyseerde pagina als context: ${audit.url}.` : '',
+        audit.executive_takeaway ? `Hermes diagnose: ${audit.executive_takeaway}` : '',
+        audit.content_angle ? `Contenthoek: ${audit.content_angle}` : '',
+        brief.length ? `Briefingpunten:\n- ${brief.join('\n- ')}` : '',
+        opportunities.length ? `Belangrijkste kansen:\n- ${opportunities.map(item => `${item.title}: ${item.reason}`).join('\n- ')}` : '',
+        linkPlan.length ? `Interne links:\n- ${linkPlan.join('\n- ')}` : '',
+        'Schrijf concreet, menselijk en verkoopbaar. Gebruik bewijs, keuzecriteria, interne links en een duidelijke CTA. Neem de audit niet letterlijk over.'
+      ].filter(Boolean).join('\n\n');
+    }
+    function useHermesBrief(options = {}) {
       const audit = state.lastHermesAudit || {};
-      const prompt = audit.editor_prompt || [
-        `Maak een SEO-pagina over "${audit.keyword || keywordFromPrompt()}".`,
-        audit.content_angle || '',
-        ...(Array.isArray(audit.content_brief) ? audit.content_brief : [])
-      ].filter(Boolean).join('\n');
+      const prompt = buildHermesPrompt(audit);
       $('mainPrompt').value = prompt;
       if (audit.keyword) $('keyword').value = audit.keyword;
       scoreBrief();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      toast('Hermes briefing staat nu in de editor.');
+      if (!options.silent) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        toast('Hermes briefing staat nu in de editor.');
+      }
     }
-    async function generate() {
+    async function copyHermesBrief() {
+      const audit = state.lastHermesAudit || {};
+      await navigator.clipboard.writeText(buildHermesPrompt(audit));
+      toast('Hermes briefing gekopieerd.');
+    }
+    async function generateFromHermesAudit() {
+      useHermesBrief({ silent: true });
+      toast('Hermes stuurt de briefing naar ContentFlow.');
+      await generate({ source: 'hermes' });
+    }
+    async function generate(options = {}) {
       sync();
       showLoading();
+      if (options.source === 'hermes') {
+        $('outputTitle').textContent = 'Hermes concept wordt gemaakt';
+        $('outputSub').textContent = 'ContentFlow schrijft nu op basis van de live audit, kansen en SEO-strategie.';
+      }
       setBusy($('generateBtn'), true, 'Maken...');
       try {
         let data;
+        if (!isUuid(state.workspace_id) || !isUuid(state.user_id)) {
+          await loadContext();
+        }
         if (isUuid(state.workspace_id) && isUuid(state.user_id)) {
           data = await requestJson(ENDPOINTS.generate, {
             method: 'POST',
@@ -1275,14 +1396,12 @@
           });
           toast('Concept opgeslagen in Supabase.');
         } else {
-          await new Promise(resolve => setTimeout(resolve, 500));
-          data = localPreview();
-          toast('Preview gemaakt. Voeg backend-context toe voor Supabase.');
+          throw new Error('Geen geldige workspace_id en user_id beschikbaar voor de TypeScript-generatie.');
         }
         renderOutput(data);
       } catch (error) {
-        renderOutput(localPreview());
-        toast('Backend lukte niet, preview getoond.');
+        renderOutput(localPreview(error.message || 'Backend lukte niet.'));
+        toast('TypeScript-generatie niet bereikbaar.');
       } finally {
         setBusy($('generateBtn'), false);
       }

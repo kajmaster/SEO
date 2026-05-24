@@ -363,6 +363,16 @@ function isReasonableKeyword(value: string): boolean {
   return !!keyword && keyword.length <= 90 && wordCount <= 10 && (!/[.!?]/.test(keyword) || wordCount <= 5);
 }
 
+function averageSentenceWords(value: string): number {
+  const sentences = stripHtml(value)
+    .split(/[.!?]+/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean);
+  if (!sentences.length) return 0;
+  const totalWords = sentences.reduce((sum, sentence) => sum + countWords(sentence), 0);
+  return totalWords / sentences.length;
+}
+
 function collectQualityIssues(
   variant: GeneratedVariant,
   input: GenerateContentRequest,
@@ -379,6 +389,7 @@ function collectQualityIssues(
   const paragraphCount = (variant.content.match(/<p[\s>]/gi) || []).length;
   const forbiddenHits = findForbiddenHits(variant, forbiddenWords);
   const genericHits = collectGenericPhraseHits(variant);
+  const briefing = userBriefing(input).toLowerCase();
 
   for (const hit of forbiddenHits) {
     issues.push({
@@ -470,6 +481,30 @@ function collectQualityIssues(
       code: "cta_not_explicit",
       variant_index: variant.variant_index,
       message: "De gewenste CTA komt niet duidelijk genoeg terug.",
+    });
+  }
+
+  if (/(12\s*-?\s*jarige|twaalfjarige|door een kind|kindertaal)/i.test(briefing)) {
+    const avgSentence = averageSentenceWords(variant.content);
+    const simpleStyleSignals = /\b(super|gewoon|snap|makkelijk|mega|alsof|stel je voor|best wel|niet moeilijk|lekker duidelijk)\b/i.test(
+      plainContent,
+    );
+    if (avgSentence > 18 || !simpleStyleSignals) {
+      issues.push({
+        severity: "warning",
+        code: "briefing_style_not_visible",
+        variant_index: variant.variant_index,
+        message: "De briefing vraagt om een 12-jarige stijl, maar de tekst klinkt nog te volwassen of te formeel.",
+      });
+    }
+  }
+
+  if (/(grappig|humor|luchtig|speels)/i.test(briefing) && !/[!?]/.test(stripHtml(variant.content))) {
+    issues.push({
+      severity: "warning",
+      code: "briefing_humor_not_visible",
+      variant_index: variant.variant_index,
+      message: "De briefing vraagt om een grappige of speelse toon, maar die is nog niet zichtbaar genoeg.",
     });
   }
 
@@ -653,6 +688,10 @@ function normalizeContentPlan(raw: UnknownRecord): ContentPlan {
   };
 }
 
+function userBriefing(input: GenerateContentRequest): string {
+  return sanitizeText(input.source_content).slice(0, 1200);
+}
+
 export function buildDefaultPlan(
   input: GenerateContentRequest,
   context: Awaited<ReturnType<typeof loadGenerationContext>>,
@@ -662,6 +701,7 @@ export function buildDefaultPlan(
   const services = sanitizeText(brand.services);
   const audience = sanitizeText(brand.target_audience || brand.buyer_persona);
   const cta = sanitizeText(customer.primary_cta) || "Vraag een gesprek of offerte aan";
+  const briefing = userBriefing(input);
 
   return {
     searchIntent: input.content_goal === "inform" ? "informatief" : "commercieel onderzoekend",
@@ -685,6 +725,12 @@ export function buildDefaultPlan(
     mustAvoid: ["Absolute claims zonder bewijs", "Vage marketingtaal", "Nietszeggende buzzwords"],
     ctaDirection: cta,
     writingNotes: [
+      ...(briefing
+        ? [
+            `Volg deze gebruikersbriefing als harde schrijfrichting, inclusief toon, leeftijdsniveau, humor of stijltest: ${briefing}`,
+            "Neem de briefing niet letterlijk over als zichtbare tekst.",
+          ]
+        : []),
       "Schrijf helder Nederlands",
       "Maak de tekst menselijk en zakelijk",
       "Gebruik concrete tussenkoppen",
@@ -818,7 +864,7 @@ function buildEmergencyPrompt(
   const brand = context.brandProfile;
   const tone = context.toneProfile;
   const customer = context.customerPreferences;
-  const sourceContent = sanitizeText(input.source_content).slice(0, 1800);
+  const sourceContent = userBriefing(input).slice(0, 1800);
   const knowledgeContext = sanitizeText(context.knowledgeContext).slice(0, 1800);
   const learningRules = context.learningMemory.slice(0, 8);
   const forbiddenWords = context.forbiddenWords.slice(0, 20);
@@ -842,13 +888,16 @@ function buildEmergencyPrompt(
     `Kernboodschappen: ${plan.keyMessages.join(" | ")}`,
     `Bewijs/context: ${plan.proofPoints.join(" | ")}`,
     "",
-    sourceContent ? `Bronmateriaal:\n${sourceContent}` : "",
+    sourceContent
+      ? `Gebruikersbriefing - verplicht volgen qua toon, stijl en inhoud, maar niet letterlijk kopieren:\n${sourceContent}`
+      : "",
     knowledgeContext ? `Kennisbank:\n${knowledgeContext}` : "",
     learningRules.length ? `Leerregels:\n${learningRules.map((rule) => `- ${rule}`).join("\n")}` : "",
     forbiddenWords.length ? `Verboden woorden:\n${forbiddenWords.map((word) => `- ${word}`).join("\n")}` : "",
     "",
     "Eisen",
     "- 350-550 woorden.",
+    "- Als de briefing vraagt om een specifieke stijl, zoals grappig of alsof een 12-jarige het schreef, moet die stijl duidelijk terugkomen in woordkeuze, zinslengte en voorbeelden.",
     "- Gebruik HTML: exact 1 <h1>, meerdere <h2>, <p>, eventueel <ul><li>.",
     "- Geen meta-uitleg, geen excuses, geen melding dat dit een noodroute is.",
     "- Geen generieke zinnen zoals 'in een wereld waarin' of 'het draait om'.",
@@ -1321,7 +1370,7 @@ function buildPlanningPrompt(
     sanitizeText(input.xml_template) || sanitizeText(context.template?.xml_template);
   const templateName =
     sanitizeText(input.xml_template_name) || sanitizeText(context.template?.name);
-  const sourceContent = sanitizeText(input.source_content).slice(0, 3000);
+  const sourceContent = userBriefing(input).slice(0, 3000);
   const knowledgeContext = sanitizeText(context.knowledgeContext).slice(0, 5000);
 
   const lines = [
@@ -1347,7 +1396,12 @@ function buildPlanningPrompt(
   ];
 
   if (sourceContent) {
-    lines.push("", "BRONMATERIAAL", sourceContent);
+    lines.push(
+      "",
+      "GEBRUIKERSBRIEFING",
+      "Volg deze briefing als harde inhouds- en stijlinstructie. Neem de tekst niet letterlijk over in de output.",
+      sourceContent,
+    );
   }
 
   if (knowledgeContext) {
@@ -1463,7 +1517,7 @@ export function buildPrompt(
   const customer = context.customerPreferences;
   const xmlTemplate = sanitizeText(input.xml_template) || sanitizeText(context.template?.xml_template);
   const templateName = sanitizeText(input.xml_template_name) || sanitizeText(context.template?.name);
-  const sourceContent = sanitizeText(input.source_content).slice(0, 2200);
+  const sourceContent = userBriefing(input).slice(0, 2200);
   const knowledgeContext = sanitizeText(context.knowledgeContext).slice(0, 2200);
 
   const lines = [
@@ -1499,6 +1553,8 @@ export function buildPrompt(
     `Gewenste CTA: ${sanitizeText(customer.primary_cta)}`,
     "",
     "KWALITEITSEISEN",
+    "- Volg de gebruikersbriefing verplicht als stijlopdracht. Als de gebruiker vraagt om grappig, simpel, kinderlijk, formeel, premium of juist speels te schrijven, moet de output dat zichtbaar laten voelen.",
+    "- Neem de letterlijke briefingzin nooit over als paragraaf of kop.",
     "- Schrijf als een ervaren menselijke copywriter, niet als een standaard AI-assistent.",
     "- Lever een echte, bruikbare reviewtekst op van ongeveer 420-620 woorden.",
     "- Schrijf specifiek op basis van de opgegeven website, diensten, tone-of-voice scan, feedbackregels en bronmateriaal.",
@@ -1538,7 +1594,11 @@ export function buildPrompt(
   }
 
   if (sourceContent) {
-    lines.push("", "BRONMATERIAAL", sourceContent);
+    lines.push(
+      "",
+      "GEBRUIKERSBRIEFING - VERPLICHT VOLGEN, NIET LETTERLIJK KOPIEREN",
+      sourceContent,
+    );
   }
 
   if (xmlTemplate) {
@@ -1599,7 +1659,14 @@ export async function generateVariants(
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("OpenAI duurde te lang. Probeer opnieuw met korter bronmateriaal of minder briefingtekst.");
+      const reason = "Volledige OpenAI-generatie duurde te lang.";
+      try {
+        return await generateEmergencyDraft(input, context, plan, reason);
+      } catch (emergencyError) {
+        const emergencyMessage =
+          emergencyError instanceof Error ? emergencyError.message : "Noodgeneratie mislukte.";
+        return buildFallbackDraft(input, context, plan, `${reason} ${emergencyMessage}`);
+      }
     }
     throw error;
   } finally {
