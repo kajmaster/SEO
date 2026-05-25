@@ -51,3 +51,14 @@ curl -X POST http://localhost:3001/tasks \
   -H "x-hermes-key: $HERMES_API_KEY" \
   -d '{"task":"seo_audit","url":"https://voorbeeld.nl","keyword":"technische seo"}'
 ```
+
+### Growth playbook
+
+```bash
+curl -X POST http://localhost:3001/tasks \
+  -H "Content-Type: application/json" \
+  -H "x-hermes-key: $HERMES_API_KEY" \
+  -d '{"task":"growth_playbook","url":"https://voorbeeld.nl","keyword":"technische seo","company_name":"Voorbeeld BV"}'
+```
+
+Het growth playbook maakt een demo-waardig plan met positionering, money pages, contentmachine, bewijs, 7-dagen sprint en een korte pitch.

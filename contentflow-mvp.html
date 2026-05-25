@@ -887,6 +887,7 @@
             <div class="top-actions">
               <button class="button" id="scanToneBtn">Scan website</button>
               <button class="button" id="hermesAuditBtn">Hermes audit</button>
+              <button class="button" id="hermesPlaybookBtn">Hermes groeiplan</button>
               <button class="button primary" id="generateBtn">Maak concept</button>
             </div>
           </div>
@@ -1170,6 +1171,72 @@
         </section>`;
       $('useHermesBriefBtn')?.addEventListener('click', useHermesBrief);
     }
+    function renderHermesPlaybook(data) {
+      const playbook = data.hermes || data;
+      const moneyPages = Array.isArray(playbook.money_pages) ? playbook.money_pages : [];
+      const machine = Array.isArray(playbook.content_machine) ? playbook.content_machine : [];
+      const proof = Array.isArray(playbook.proof_to_collect) ? playbook.proof_to_collect : [];
+      const sprint = Array.isArray(playbook.seven_day_sprint) ? playbook.seven_day_sprint : [];
+      const script = Array.isArray(playbook.demo_script) ? playbook.demo_script : [];
+      const aiBadge = playbook.ai_enriched ? `OpenAI strategist${playbook.model ? ` · ${playbook.model}` : ''}` : 'Regel-playbook';
+      state.lastHermesAudit = playbook;
+      $('outputTitle').textContent = playbook.board_title || 'Hermes groeiplan';
+      $('outputSub').textContent = playbook.url ? `Groeiplan voor ${playbook.url} · ${aiBadge}` : `Hermes groeiplan · ${aiBadge}`;
+      $('outputStage').innerHTML = `
+        <section class="audit-panel" id="articleOutput">
+          <div class="strategy-hero">
+            <div>
+              <div class="eyebrow">Hermes growth agent</div>
+              <h1 style="font-size:clamp(40px,6vw,82px);letter-spacing:-.09em;line-height:.86;margin:8px 0 16px">${esc(playbook.board_title || 'Growth playbook')}</h1>
+              <p class="audit-summary">${esc(playbook.narrative_hook || 'Hermes heeft een groeiplan gemaakt dat verder gaat dan een losse audit.')}</p>
+              <div class="audit-actions">
+                <button class="button primary" id="usePlaybookBriefBtn">Zet playbook in editor</button>
+                <span class="badge">${esc(aiBadge)}</span>
+                <span class="badge">${esc(playbook.status || 'strategy')}</span>
+              </div>
+            </div>
+            <div class="score-ring" style="--score-angle:306deg">
+              <div><strong>7d</strong><span>eerste sprint</span></div>
+            </div>
+          </div>
+          <div class="brief-box">
+            <div class="eyebrow">Positionering</div>
+            <p style="font-size:20px;line-height:1.55;margin:8px 0 12px">${esc(playbook.positioning || 'Maak van losse content een duidelijke route naar vertrouwen en conversie.')}</p>
+            <p style="margin:0;color:rgba(21,24,21,.68)">${esc(playbook.audience_insight || 'De doelgroep zoekt zekerheid, bewijs en een heldere volgende stap.')}</p>
+          </div>
+          <div class="audit-grid">
+            ${moneyPages.map(page => `
+              <article class="audit-card">
+                <span class="priority">${esc(page.intent || 'money page')}</span>
+                <h3>${esc(page.title || 'Money page')}</h3>
+                <p><strong>Belofte:</strong> ${esc(page.promise || '')}</p>
+                <p>${esc(page.why_now || '')}</p>
+              </article>
+            `).join('') || '<article class="audit-card"><span class="priority">start</span><h3>Eerste money page</h3><p>Maak een pagina die zoekintentie, bewijs en CTA samenbrengt.</p></article>'}
+          </div>
+          <div class="strategy-columns">
+            <div class="strategy-list">
+              <h3>Contentmachine</h3>
+              <ol>${machine.map(item => `<li><strong>${esc(item.pillar)}</strong><br><span>${esc((item.support_articles || []).join(' · '))}</span><br><span>Conversie: ${esc(item.conversion_link)}</span></li>`).join('') || '<li>Start met een pillar page en drie ondersteunende artikelen.</li>'}</ol>
+            </div>
+            <div class="strategy-list">
+              <h3>Bewijs verzamelen</h3>
+              <ol>${proof.map(item => `<li>${esc(item)}</li>`).join('') || '<li>Verzamel klanttaal, cijfers en voorbeelden.</li>'}</ol>
+            </div>
+          </div>
+          <div class="strategy-columns" style="margin-top:14px">
+            <div class="strategy-list">
+              <h3>7-dagen sprint</h3>
+              <ol>${sprint.map(item => `<li><strong>${esc(item.day)}</strong>: ${esc(item.action)}<br><span>${esc(item.outcome)}</span></li>`).join('') || '<li>Dag 1: kies de zoekintentie en maak de briefing.</li>'}</ol>
+            </div>
+            <div class="strategy-list">
+              <h3>Demo-pitch</h3>
+              <ol>${script.map(line => `<li>${esc(line)}</li>`).join('') || '<li>Hermes vertaalt website-signalen naar een concreet groeiplan.</li>'}</ol>
+            </div>
+          </div>
+        </section>`;
+      $('usePlaybookBriefBtn')?.addEventListener('click', useHermesBrief);
+    }
     function useHermesBrief() {
       const audit = state.lastHermesAudit || {};
       const prompt = audit.editor_prompt || [
@@ -1285,6 +1352,49 @@
         setBusy($('hermesAuditBtn'), false);
       }
     }
+    async function runHermesPlaybook() {
+      sync();
+      const url = $('websiteUrl').value.trim();
+      if (!url) {
+        $('advancedPanel').classList.add('open');
+        toast('Vul eerst een website in bij Context.');
+        $('websiteUrl').focus();
+        return;
+      }
+
+      $('outputTitle').textContent = 'Hermes groeiplan draait';
+      $('outputSub').textContent = 'De agent maakt een klantwaardig plan met money pages, bewijs en een 7-dagen sprint.';
+      $('outputStage').innerHTML = '<div class="empty"><div><div class="spinner"></div><div class="empty-title">Hermes bouwt een groeiplan.</div><p class="empty-copy">Dit is geen gewone audit: Hermes vertaalt website-signalen naar positionering, contentmachine en acties.</p></div></div>';
+      setBusy($('hermesPlaybookBtn'), true, 'Plannen...');
+      try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (state.hermesStudioToken) headers['x-hermes-studio-token'] = state.hermesStudioToken;
+        const data = await requestJson(ENDPOINTS.hermes, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            task: 'growth_playbook',
+            url,
+            keyword: keywordFromPrompt(),
+            company_name: $('companyName').value.trim(),
+            services: $('services').value.trim(),
+            target_audience: $('targetAudience').value.trim(),
+            tone_voice: $('toneVoice').value.trim(),
+            workspace_id: state.workspace_id,
+            user_id: state.user_id
+          })
+        });
+        renderHermesPlaybook(data);
+        toast('Hermes groeiplan ontvangen.');
+      } catch (error) {
+        toast(error.message || 'Hermes groeiplan mislukte.');
+        $('outputTitle').textContent = 'Hermes groeiplan mislukt';
+        $('outputSub').textContent = 'Controleer of Hermes online is en OpenAI/server-env klopt.';
+        $('outputStage').innerHTML = `<div class="empty"><div><div class="empty-mark">!</div><div class="empty-title">Geen groeiplan ontvangen.</div><p class="empty-copy">${esc(error.message || 'Hermes kon niet worden bereikt.')}</p></div></div>`;
+      } finally {
+        setBusy($('hermesPlaybookBtn'), false);
+      }
+    }
     async function saveFeedback() {
       const text = $('feedbackText')?.value.trim() || '';
       if (!text && state.verdict !== 'approved') return toast('Schrijf kort wat beter moet.');
@@ -1316,6 +1426,7 @@
       $('copyBtn').addEventListener('click', copyOutput);
       $('scanToneBtn').addEventListener('click', scanTone);
       $('hermesAuditBtn').addEventListener('click', runHermesAudit);
+      $('hermesPlaybookBtn').addEventListener('click', runHermesPlaybook);
       $('advancedToggle').addEventListener('click', () => $('advancedPanel').classList.toggle('open'));
       $('themeToggle').addEventListener('click', () => {
         const dark = document.documentElement.dataset.theme !== 'dark';

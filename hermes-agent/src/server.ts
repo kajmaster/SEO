@@ -16,6 +16,10 @@ type TaskBody = {
   keyword?: unknown;
   workspace_id?: unknown;
   user_id?: unknown;
+  company_name?: unknown;
+  services?: unknown;
+  target_audience?: unknown;
+  tone_voice?: unknown;
 };
 
 type PageScan = {
@@ -44,6 +48,19 @@ type StrategyPayload = {
   content_brief?: string[];
   editor_prompt?: string;
   next_actions?: string[];
+};
+
+type GrowthPlaybookPayload = {
+  board_title?: string;
+  narrative_hook?: string;
+  positioning?: string;
+  audience_insight?: string;
+  money_pages?: Array<{ title: string; intent: string; promise: string; why_now: string }>;
+  content_machine?: Array<{ pillar: string; support_articles: string[]; conversion_link: string }>;
+  proof_to_collect?: string[];
+  seven_day_sprint?: Array<{ day: string; action: string; outcome: string }>;
+  demo_script?: string[];
+  editor_prompt?: string;
 };
 
 function clean(value: unknown): string {
@@ -112,14 +129,14 @@ function scoreLabel(score: number): string {
   return "Onbenutte pagina";
 }
 
-function parseJsonObject(value: string): StrategyPayload | null {
+function parseJsonObject<T extends Record<string, unknown>>(value: string): T | null {
   try {
-    return JSON.parse(value) as StrategyPayload;
+    return JSON.parse(value) as T;
   } catch {
     const match = value.match(/\{[\s\S]*\}/);
     if (!match) return null;
     try {
-      return JSON.parse(match[0]) as StrategyPayload;
+      return JSON.parse(match[0]) as T;
     } catch {
       return null;
     }
@@ -150,6 +167,32 @@ function cleanObjectArray<T extends Record<string, string>>(
     .slice(0, max);
 }
 
+function cleanContentMachine(value: unknown): Array<{
+  pillar: string;
+  support_articles: string[];
+  conversion_link: string;
+}> {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+      const row = item as Record<string, unknown>;
+      const pillar = clean(row.pillar);
+      const conversionLink = clean(row.conversion_link);
+      const supportArticles = cleanStringArray(row.support_articles, 5);
+      if (!pillar || !conversionLink || !supportArticles.length) return null;
+      return {
+        pillar,
+        support_articles: supportArticles,
+        conversion_link: conversionLink,
+      };
+    })
+    .filter((item): item is { pillar: string; support_articles: string[]; conversion_link: string } =>
+      Boolean(item),
+    )
+    .slice(0, 4);
+}
+
 async function buildAiStrategy(input: {
   url: string;
   keyword: string;
@@ -164,7 +207,7 @@ async function buildAiStrategy(input: {
   if (!openAiApiKey) return null;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 18_000);
+  const timeout = setTimeout(() => controller.abort(), 11_000);
   const scan = input.scan;
   const prompt = {
     url: input.url,
@@ -230,7 +273,7 @@ async function buildAiStrategy(input: {
     }
 
     const content = data?.choices?.[0]?.message?.content || "";
-    const parsed = parseJsonObject(content);
+    const parsed = parseJsonObject<StrategyPayload>(content);
     if (!parsed) return null;
 
     return {
@@ -246,6 +289,107 @@ async function buildAiStrategy(input: {
     };
   } catch (error) {
     console.error("OpenAI strategy enrichment failed", error);
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function buildAiGrowthPlaybook(input: {
+  url: string;
+  keyword: string;
+  companyName: string;
+  services: string;
+  targetAudience: string;
+  toneVoice: string;
+  scan: PageScan | null;
+  scanError: string;
+}): Promise<GrowthPlaybookPayload | null> {
+  if (!openAiApiKey) return null;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 11_000);
+  const scan = input.scan;
+  const prompt = {
+    website: input.url,
+    keyword: input.keyword,
+    company_name: input.companyName || "Onbekend bedrijf",
+    services: input.services,
+    target_audience: input.targetAudience,
+    tone_of_voice: input.toneVoice,
+    scan: scan
+      ? {
+          title: scan.title,
+          meta_description: scan.metaDescription,
+          h1: scan.h1,
+          h2: scan.h2,
+          word_count: scan.wordCount,
+          internal_links: scan.internalLinks,
+          external_links: scan.externalLinks,
+          proof_signals: scan.hasProofSignals,
+          cta_signals: scan.hasCtaSignals,
+          visible_text_sample: scan.sampleText,
+        }
+      : { error: input.scanError },
+  };
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${openAiApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: openAiModel,
+        temperature: 0.35,
+        max_completion_tokens: 1800,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content:
+              "Je bent Hermes, een scherpe SEO growth strategist. Je maakt geen gewone audit, maar een klantwaardig groeiplan met wow-factor. Denk als een strategist: positionering, topical authority, conversie, contentmachine en concrete sprint. Antwoord uitsluitend als geldig JSON-object.",
+          },
+          {
+            role: "user",
+            content:
+              `Maak een premium Hermes Growth Playbook in het Nederlands op basis van deze context:\n\n` +
+              `${JSON.stringify(prompt, null, 2)}\n\n` +
+              "Geef exact deze JSON-velden terug: board_title, narrative_hook, positioning, audience_insight, money_pages, content_machine, proof_to_collect, seven_day_sprint, demo_script, editor_prompt. " +
+              "money_pages bevat objecten met title, intent, promise, why_now. content_machine bevat pillar, support_articles en conversion_link. seven_day_sprint bevat day, action, outcome. Maak het specifiek, verkoopbaar en direct bruikbaar in een gesprek met een partner of klant.",
+          },
+        ],
+      }),
+      signal: controller.signal,
+    });
+
+    const data = (await response.json().catch(() => null)) as
+      | { choices?: Array<{ message?: { content?: string } }>; error?: { message?: string } }
+      | null;
+
+    if (!response.ok) {
+      throw new Error(data?.error?.message || `OpenAI request mislukt met status ${response.status}.`);
+    }
+
+    const content = data?.choices?.[0]?.message?.content || "";
+    const parsed = parseJsonObject<GrowthPlaybookPayload>(content);
+    if (!parsed) return null;
+
+    return {
+      board_title: clean(parsed.board_title),
+      narrative_hook: clean(parsed.narrative_hook),
+      positioning: clean(parsed.positioning),
+      audience_insight: clean(parsed.audience_insight),
+      money_pages: cleanObjectArray(parsed.money_pages, ["title", "intent", "promise", "why_now"], 5),
+      content_machine: cleanContentMachine(parsed.content_machine),
+      proof_to_collect: cleanStringArray(parsed.proof_to_collect, 8),
+      seven_day_sprint: cleanObjectArray(parsed.seven_day_sprint, ["day", "action", "outcome"], 7),
+      demo_script: cleanStringArray(parsed.demo_script, 7),
+      editor_prompt: clean(parsed.editor_prompt),
+    };
+  } catch (error) {
+    console.error("OpenAI growth playbook failed", error);
     return null;
   } finally {
     clearTimeout(timeout);
@@ -584,6 +728,155 @@ async function buildSeoAudit(body: TaskBody) {
   };
 }
 
+async function buildGrowthPlaybook(body: TaskBody) {
+  const url = clean(body.url) || "onbekende website";
+  const keyword = clean(body.keyword) || "belangrijkste dienst";
+  const companyName = clean(body.company_name);
+  const services = clean(body.services);
+  const targetAudience = clean(body.target_audience);
+  const toneVoice = clean(body.tone_voice);
+  const normalizedUrl = normalizeUrl(url);
+
+  let scan: PageScan | null = null;
+  let scanError = "";
+  try {
+    scan = normalizedUrl ? await scanPage(normalizedUrl, keyword) : null;
+  } catch (error) {
+    scanError = error instanceof Error ? error.message : "Website kon niet worden opgehaald.";
+  }
+
+  const brandName = companyName || (scan?.title ? scan.title.split(/[|-]/)[0].trim() : "dit merk");
+  const boardTitle = `Growth playbook voor ${brandName}`;
+  const moneyPages = [
+    {
+      title: `${keyword}: keuzehulp`,
+      intent: "Overwegen",
+      promise: "Helpt bezoekers kiezen en geeft Google een duidelijke topical hub.",
+      why_now: "Dit is de pagina waar informatieve interesse naar commerciele actie kan bewegen.",
+    },
+    {
+      title: `${keyword} kosten, opties en valkuilen`,
+      intent: "Vergelijken",
+      promise: "Maakt bezwaren zichtbaar voordat een bezoeker afhaakt.",
+      why_now: "Prijs-, keuze- en risicozoekopdrachten zitten vaak dicht op conversie.",
+    },
+    {
+      title: `${keyword} aanvragen of starten`,
+      intent: "Converteren",
+      promise: "Eindigt met een rustige, duidelijke vervolgstap.",
+      why_now: "Zonder conversiepagina blijft autoriteit los zand.",
+    },
+  ];
+  const contentMachine = [
+    {
+      pillar: `${keyword}: complete gids`,
+      support_articles: [
+        `Wanneer is ${keyword} slim?`,
+        `${keyword}: veelgemaakte fouten`,
+        `Checklist voor ${keyword}`,
+      ],
+      conversion_link: `${keyword} aanvragen of gesprek plannen`,
+    },
+  ];
+  const proofToCollect = [
+    "Een klantvoorbeeld met beginsituatie, aanpak en resultaat.",
+    "Drie concrete vragen die klanten vaak stellen voor ze kopen.",
+    "Een screenshot, cijfer, review of voorbeeld dat vertrouwen geeft.",
+  ];
+  const sevenDaySprint = [
+    { day: "Dag 1", action: "Kies de hoofdzoekintentie en belofte.", outcome: "Een scherpe paginahoek." },
+    { day: "Dag 2", action: "Verzamel bewijs en klanttaal.", outcome: "Minder generieke content." },
+    { day: "Dag 3", action: "Maak de money page structuur.", outcome: "Een publiceerbare briefing." },
+    { day: "Dag 4", action: "Schrijf de eerste versie.", outcome: "Een pagina die kan worden gereviewd." },
+    { day: "Dag 5", action: "Voeg interne links toe.", outcome: "Meer topical authority." },
+    { day: "Dag 6", action: "Maak CTA en bewijsblokken sterker.", outcome: "Meer vertrouwen en conversie." },
+    { day: "Dag 7", action: "Publiceer en plan twee ondersteunende artikelen.", outcome: "Een contentmachine in plaats van een losse pagina." },
+  ];
+  const basePlaybook = {
+    ok: true,
+    type: "growth_playbook",
+    status: scan ? "scanned" : "fallback",
+    url: scan?.finalUrl || normalizedUrl || url,
+    keyword,
+    board_title: boardTitle,
+    narrative_hook: `Hermes kijkt niet alleen naar "${keyword}", maar naar het systeem eromheen: welke pagina verkoopt, welke artikelen autoriteit bouwen en welk bewijs het vertrouwen geeft.`,
+    positioning: `${brandName} kan rond "${keyword}" sterker worden door niet meer losse content te maken, maar een duidelijke route van vraag naar vertrouwen naar actie.`,
+    audience_insight:
+      targetAudience ||
+      "De bezoeker wil niet alleen uitleg, maar vooral zekerheid: is dit voor mij, waarom nu, wat zijn de risico's en wat is de logische volgende stap?",
+    source_signals: scan
+      ? {
+          title: scan.title,
+          h1: scan.h1,
+          h2: scan.h2.slice(0, 8),
+          word_count: scan.wordCount,
+          internal_links: scan.internalLinks,
+          proof_signals: scan.hasProofSignals,
+          cta_signals: scan.hasCtaSignals,
+        }
+      : { error: scanError },
+    money_pages: moneyPages,
+    content_machine: contentMachine,
+    proof_to_collect: proofToCollect,
+    seven_day_sprint: sevenDaySprint,
+    demo_script: [
+      `Hermes heeft ${scan ? "de website gelezen" : "de input gebruikt"} en maakt hier geen losse audit van, maar een groeiplan.`,
+      `De kern is: maak van "${keyword}" een route van orientatie naar vertrouwen naar conversie.`,
+      "Daarom zie je money pages, ondersteunende artikelen, bewijs dat mist en een sprint voor de eerste week.",
+    ],
+    editor_prompt: [
+      `Maak een premium SEO-money-page over "${keyword}" voor ${brandName}.`,
+      services ? `Aanbod/context: ${services}.` : "",
+      targetAudience ? `Doelgroep: ${targetAudience}.` : "",
+      toneVoice ? `Tone of voice: ${toneVoice}.` : "",
+      "Gebruik het Hermes groeiplan: positionering, bewijs, keuzecriteria, interne links en duidelijke CTA.",
+    ].filter(Boolean).join("\n"),
+  };
+
+  const aiPlaybook = await buildAiGrowthPlaybook({
+    url: basePlaybook.url,
+    keyword,
+    companyName,
+    services,
+    targetAudience,
+    toneVoice,
+    scan,
+    scanError,
+  });
+
+  if (!aiPlaybook) {
+    return {
+      ...basePlaybook,
+      ai_enriched: false,
+      model: null,
+      strategy_source: "rules",
+    };
+  }
+
+  return {
+    ...basePlaybook,
+    board_title: aiPlaybook.board_title || basePlaybook.board_title,
+    narrative_hook: aiPlaybook.narrative_hook || basePlaybook.narrative_hook,
+    positioning: aiPlaybook.positioning || basePlaybook.positioning,
+    audience_insight: aiPlaybook.audience_insight || basePlaybook.audience_insight,
+    money_pages: aiPlaybook.money_pages?.length ? aiPlaybook.money_pages : basePlaybook.money_pages,
+    content_machine: aiPlaybook.content_machine?.length
+      ? aiPlaybook.content_machine
+      : basePlaybook.content_machine,
+    proof_to_collect: aiPlaybook.proof_to_collect?.length
+      ? aiPlaybook.proof_to_collect
+      : basePlaybook.proof_to_collect,
+    seven_day_sprint: aiPlaybook.seven_day_sprint?.length
+      ? aiPlaybook.seven_day_sprint
+      : basePlaybook.seven_day_sprint,
+    demo_script: aiPlaybook.demo_script?.length ? aiPlaybook.demo_script : basePlaybook.demo_script,
+    editor_prompt: aiPlaybook.editor_prompt || basePlaybook.editor_prompt,
+    ai_enriched: true,
+    model: openAiModel,
+    strategy_source: "openai",
+  };
+}
+
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 
@@ -602,6 +895,10 @@ app.post("/tasks", requireHermesKey, async (req, res) => {
 
   if (task === "seo_audit") {
     return res.json(await buildSeoAudit(body));
+  }
+
+  if (task === "growth_playbook") {
+    return res.json(await buildGrowthPlaybook(body));
   }
 
   return res.json({
