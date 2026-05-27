@@ -61,6 +61,15 @@ OPENAI_MODEL=gpt-4.1-mini
 
 Daarmee blijft Hermes eerst zelf meten, maar laat hij OpenAI de strategie, briefing en kansen slimmer formuleren.
 
+## Tailscale
+
+Tailscale kan worden gebruikt om de Hermes/Hetzner-server veiliger te beheren via een prive-netwerk. Let op: Netlify Functions zitten niet automatisch in jouw Tailscale-netwerk, dus zet `HERMES_URL` niet zomaar op een `100.x.x.x` Tailscale-IP.
+
+Documentatie:
+
+- [docs/tailscale-hermes.md](docs/tailscale-hermes.md)
+- `scripts/setup-hermes-tailscale.sh`
+
 ## Turn.One design system
 
 De frontend gebruikt nu lokaal geïmporteerde Turn.One design-system assets:

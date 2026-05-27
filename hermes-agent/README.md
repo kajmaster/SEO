@@ -35,6 +35,20 @@ pm2 start npx --name hermes -- tsx /opt/hermes/src/server.ts
 pm2 save
 ```
 
+## Tailscale
+
+Voor veilig serverbeheer kun je Tailscale op de Hetzner-server installeren:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/kajmaster/SEO/main/scripts/setup-hermes-tailscale.sh -o setup-hermes-tailscale.sh
+chmod +x setup-hermes-tailscale.sh
+./setup-hermes-tailscale.sh
+```
+
+Lees ook: `docs/tailscale-hermes.md`.
+
+Belangrijk: Netlify kan standaard niet naar een prive Tailscale-IP (`100.x.x.x`) verbinden. Gebruik voor productie het huidige publieke Hermes endpoint met `HERMES_API_KEY`, of gebruik Tailscale Funnel met een publieke HTTPS-url.
+
 ## Taken
 
 ### Health
