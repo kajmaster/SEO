@@ -392,6 +392,56 @@
       transform: translateY(-1px);
     }
 
+    .mode-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .mode-card {
+      display: grid;
+      min-height: 118px;
+      align-content: start;
+      gap: 8px;
+      border: 1px solid rgba(33,32,28,.1);
+      border-radius: 22px;
+      padding: 16px;
+      background: var(--cf-glass);
+      color: var(--cf-ink);
+      cursor: pointer;
+      text-align: left;
+      transition: transform .18s var(--cf-ease), border .18s var(--cf-ease), background .18s var(--cf-ease), box-shadow .18s var(--cf-ease);
+    }
+
+    .mode-card:hover,
+    .mode-card.active {
+      transform: translateY(-2px);
+      border-color: rgba(57,119,195,.34);
+      background: rgba(234,252,255,.82);
+      box-shadow: 0 18px 48px rgba(57,119,195,.1);
+    }
+
+    .mode-card small {
+      color: var(--cf-blue);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 850;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .mode-card strong {
+      font-size: 17px;
+      letter-spacing: -.04em;
+    }
+
+    .mode-card span {
+      color: var(--cf-muted);
+      font-size: 12px;
+      line-height: 1.42;
+    }
+
     .details {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -448,12 +498,244 @@
       resize: vertical;
     }
 
+    .progress-board {
+      max-width: 980px;
+      margin: -8px auto 28px;
+      border: 1px solid var(--cf-card-border);
+      border-radius: 30px;
+      background: var(--cf-glass);
+      box-shadow: 0 24px 80px rgba(33,32,28,.09);
+      padding: clamp(16px, 2.5vw, 22px);
+      backdrop-filter: blur(24px);
+    }
+
+    .progress-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .progress-head h2 {
+      margin-top: 4px;
+      font-size: clamp(22px, 3vw, 34px);
+      letter-spacing: -.06em;
+    }
+
+    .progress-head p {
+      max-width: 660px;
+      margin-top: 5px;
+      color: var(--cf-muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .progress-score {
+      display: grid;
+      min-width: 92px;
+      min-height: 72px;
+      place-items: center;
+      border: 1px solid rgba(57,119,195,.16);
+      border-radius: 22px;
+      background: rgba(255,255,255,.54);
+      text-align: center;
+    }
+
+    .progress-score strong {
+      display: block;
+      font-size: 26px;
+      letter-spacing: -.06em;
+      line-height: .9;
+    }
+
+    .progress-score span {
+      color: var(--cf-muted);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 850;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+    }
+
+    .progress-track {
+      overflow: hidden;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(33,32,28,.08);
+    }
+
+    .progress-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--cf-blue), var(--cf-cyan));
+      transition: width .35s var(--cf-ease);
+    }
+
+    .progress-steps {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .progress-step {
+      border: 1px solid rgba(33,32,28,.08);
+      border-radius: 20px;
+      padding: 13px;
+      background: rgba(255,255,255,.44);
+    }
+
+    .progress-step.done {
+      border-color: rgba(48,164,108,.24);
+      background: rgba(244,251,246,.7);
+    }
+
+    .progress-step.active {
+      border-color: rgba(57,119,195,.28);
+      background: rgba(234,252,255,.66);
+    }
+
+    .progress-step small {
+      color: var(--cf-muted);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 850;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .progress-step strong {
+      display: block;
+      margin-top: 7px;
+      font-size: 14px;
+      letter-spacing: -.025em;
+    }
+
+    .progress-step span {
+      display: block;
+      margin-top: 5px;
+      color: var(--cf-muted);
+      font-size: 12px;
+      line-height: 1.38;
+    }
+
+    .progress-next {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      margin-top: 14px;
+      padding: 14px;
+      border: 1px solid rgba(57,119,195,.18);
+      border-radius: 22px;
+      background:
+        radial-gradient(circle at 0 50%, rgba(173,255,248,.42), transparent 32%),
+        rgba(255,255,255,.5);
+    }
+
+    .progress-next strong {
+      display: block;
+      font-size: 15px;
+      letter-spacing: -.025em;
+    }
+
+    .progress-next span {
+      display: block;
+      margin-top: 4px;
+      color: var(--cf-muted);
+      font-size: 12px;
+      line-height: 1.42;
+    }
+
+    .progress-next-meta {
+      margin-top: 10px;
+      color: var(--cf-muted);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 750;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
     .footer-actions {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 14px;
       margin-top: 20px;
+    }
+
+    .authority-action {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: center;
+      margin-top: 18px;
+      padding: 18px;
+      border: 1px solid rgba(57,119,195,.2);
+      border-radius: 28px;
+      background:
+        radial-gradient(circle at 0 0, rgba(173,255,248,.54), transparent 34%),
+        linear-gradient(135deg, rgba(255,255,255,.72), rgba(244,248,251,.56));
+    }
+
+    .authority-action h3 {
+      margin-top: 5px;
+      font-size: 20px;
+      letter-spacing: -.045em;
+    }
+
+    .authority-action p {
+      max-width: 720px;
+      margin-top: 7px;
+      color: var(--cf-muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .button.authority {
+      min-height: 54px;
+      padding: 0 20px;
+      border-color: rgba(57,119,195,.28);
+      background: #f7fbff;
+      box-shadow: 0 16px 42px rgba(57,119,195,.13);
+    }
+
+    [data-theme="dark"] .authority-action {
+      border-color: rgba(103,164,255,.25);
+      background:
+        radial-gradient(circle at 0 0, rgba(57,119,195,.26), transparent 38%),
+        linear-gradient(135deg, rgba(25,31,42,.82), rgba(19,20,22,.68));
+    }
+
+    [data-theme="dark"] .button.authority {
+      background: rgba(103,164,255,.12);
+      border-color: rgba(103,164,255,.3);
+    }
+
+    [data-theme="dark"] .progress-score,
+    [data-theme="dark"] .progress-step {
+      background: rgba(255,255,255,.05);
+      border-color: rgba(255,255,255,.1);
+    }
+
+    [data-theme="dark"] .progress-step.done {
+      border-color: rgba(98,211,148,.28);
+      background: rgba(98,211,148,.09);
+    }
+
+    [data-theme="dark"] .progress-step.active {
+      border-color: rgba(103,164,255,.3);
+      background: rgba(103,164,255,.1);
+    }
+
+    [data-theme="dark"] .progress-next {
+      border-color: rgba(103,164,255,.28);
+      background:
+        radial-gradient(circle at 0 50%, rgba(57,119,195,.22), transparent 34%),
+        rgba(255,255,255,.05);
     }
 
     .status-line {
@@ -568,6 +850,83 @@
 
     .article p, .article ul, .article ol { margin: 0 0 15px; }
     .article ul, .article ol { padding-left: 24px; }
+
+    .article.output-linkedin {
+      max-width: 720px;
+      margin: 0 auto;
+      border-left: 1px solid rgba(21,24,21,.1);
+      border-right: 1px solid rgba(21,24,21,.1);
+      font-size: 18px;
+      line-height: 1.62;
+    }
+
+    .article.output-linkedin h1 {
+      font-size: clamp(28px, 4vw, 48px);
+      line-height: 1;
+    }
+
+    .quality-panel {
+      padding: 20px;
+      border-top: 1px solid rgba(33,32,28,.08);
+      background: rgba(244,248,251,.78);
+    }
+
+    .quality-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: start;
+      margin-bottom: 14px;
+    }
+
+    .quality-head h2 {
+      margin-top: 6px;
+      font-size: 24px;
+      letter-spacing: -.05em;
+    }
+
+    .quality-score {
+      display: grid;
+      min-width: 76px;
+      min-height: 62px;
+      place-items: center;
+      border: 1px solid rgba(57,119,195,.18);
+      border-radius: 18px;
+      background: rgba(255,255,255,.72);
+      text-align: center;
+    }
+
+    .quality-score strong {
+      font-size: 24px;
+      letter-spacing: -.06em;
+    }
+
+    .quality-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .quality-item {
+      border: 1px solid rgba(21,24,21,.08);
+      border-radius: 18px;
+      padding: 12px;
+      background: rgba(255,255,255,.58);
+    }
+
+    .quality-item strong {
+      display: block;
+      font-size: 13px;
+      letter-spacing: -.02em;
+    }
+
+    .quality-item span {
+      display: block;
+      margin-top: 5px;
+      color: rgba(21,24,21,.62);
+      font-size: 12px;
+      line-height: 1.36;
+    }
 
     .audit-panel {
       padding: clamp(24px, 4vw, 42px);
@@ -743,223 +1102,6 @@
       margin-top: 18px;
     }
 
-    .hermes-command {
-      display: grid;
-      grid-template-columns: minmax(0, 1.15fr) minmax(280px, .85fr);
-      gap: 14px;
-      margin-top: 18px;
-    }
-
-    .command-card {
-      border: 1px solid rgba(57,119,195,.18);
-      border-radius: 24px;
-      padding: 18px;
-      background: linear-gradient(135deg, rgba(255,255,255,.72), rgba(244,248,251,.9));
-    }
-
-    .command-card h3 {
-      margin: 0 0 8px;
-      font-size: 20px;
-      letter-spacing: -.04em;
-    }
-
-    .command-card p {
-      margin: 0;
-      color: rgba(21,24,21,.68);
-      line-height: 1.55;
-    }
-
-    .brief-preview {
-      max-height: 250px;
-      overflow: auto;
-      margin-top: 12px;
-      border: 1px solid rgba(21,24,21,.08);
-      border-radius: 18px;
-      padding: 14px;
-      background: rgba(21,24,21,.04);
-      color: rgba(21,24,21,.76);
-      font-size: 13px;
-      line-height: 1.55;
-    }
-
-    .impact-strip {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-      margin-top: 14px;
-    }
-
-    .impact-pill {
-      border-radius: 18px;
-      padding: 12px;
-      background: rgba(173,255,248,.38);
-    }
-
-    .impact-pill strong {
-      display: block;
-      font-size: 18px;
-      letter-spacing: -.04em;
-    }
-
-    .impact-pill span {
-      display: block;
-      margin-top: 3px;
-      color: rgba(21,24,21,.58);
-      font-family: var(--font-mono);
-      font-size: 10px;
-      font-weight: 850;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-    }
-
-    .topic-map {
-      margin-top: 18px;
-      border: 1px solid rgba(21,24,21,.1);
-      border-radius: 28px;
-      padding: 20px;
-      background:
-        radial-gradient(circle at 100% 0, rgba(247,107,21,.14), transparent 34%),
-        linear-gradient(135deg, rgba(255,255,255,.78), rgba(244,243,239,.72));
-    }
-
-    .topic-map-head {
-      display: flex;
-      justify-content: space-between;
-      gap: 18px;
-      align-items: flex-start;
-      margin-bottom: 16px;
-    }
-
-    .topic-map-head h3 {
-      margin: 4px 0 6px;
-      font-size: 24px;
-      letter-spacing: -.055em;
-    }
-
-    .topic-map-head p {
-      margin: 0;
-      max-width: 720px;
-      color: rgba(21,24,21,.68);
-      line-height: 1.55;
-    }
-
-    .topic-nodes {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-    }
-
-    .topic-node {
-      min-height: 150px;
-      border: 1px solid rgba(57,119,195,.14);
-      border-radius: 22px;
-      padding: 14px;
-      background: rgba(255,255,255,.7);
-    }
-
-    .topic-node strong {
-      display: block;
-      margin: 8px 0 6px;
-      font-size: 17px;
-      line-height: 1.1;
-      letter-spacing: -.035em;
-    }
-
-    .topic-node p {
-      margin: 0;
-      color: rgba(21,24,21,.64);
-      font-size: 13px;
-      line-height: 1.5;
-    }
-
-    .topic-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-
-    .topic-chip {
-      display: inline-flex;
-      border-radius: 999px;
-      padding: 4px 8px;
-      background: rgba(57,119,195,.1);
-      color: rgba(21,24,21,.72);
-      font-family: var(--font-mono);
-      font-size: 9px;
-      font-weight: 850;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-    }
-
-    .topic-support {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-top: 14px;
-    }
-
-    .cluster-plan {
-      margin-top: 18px;
-      border: 1px solid rgba(57,119,195,.14);
-      border-radius: 28px;
-      padding: 20px;
-      background:
-        radial-gradient(circle at 0 100%, rgba(173,255,248,.44), transparent 30%),
-        rgba(255,255,255,.7);
-    }
-
-    .cluster-pillar {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 16px;
-      align-items: start;
-      margin-bottom: 14px;
-    }
-
-    .cluster-pillar h3 {
-      margin: 5px 0 8px;
-      font-size: 25px;
-      letter-spacing: -.06em;
-    }
-
-    .cluster-pillar p {
-      margin: 0;
-      color: rgba(21,24,21,.68);
-      line-height: 1.55;
-    }
-
-    .cluster-articles {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-    }
-
-    .cluster-article {
-      border: 1px solid rgba(21,24,21,.1);
-      border-radius: 20px;
-      padding: 14px;
-      background: rgba(244,243,239,.7);
-    }
-
-    .cluster-article strong {
-      display: block;
-      margin: 8px 0 6px;
-      font-size: 16px;
-      letter-spacing: -.035em;
-      line-height: 1.12;
-    }
-
-    .cluster-article p {
-      margin: 0;
-      color: rgba(21,24,21,.64);
-      font-size: 13px;
-      line-height: 1.5;
-    }
-
-    .cluster-order {
-      margin-top: 14px;
-    }
-
     .next-actions li {
       margin-bottom: 8px;
     }
@@ -1000,8 +1142,8 @@
     .toast.show { opacity: 1; transform: translateY(0); }
 
     @media (max-width: 860px) {
-      .topbar, .footer-actions, .result-head { align-items: flex-start; flex-direction: column; }
-      .details, .advanced, .feedback-grid, .audit-grid, .audit-metrics, .strategy-hero, .strategy-columns, .hermes-command, .impact-strip, .topic-nodes, .topic-support, .cluster-pillar, .cluster-articles { grid-template-columns: 1fr; }
+      .topbar, .footer-actions, .result-head, .progress-head { align-items: flex-start; flex-direction: column; }
+      .details, .advanced, .feedback-grid, .audit-grid, .audit-metrics, .strategy-hero, .strategy-columns, .progress-steps, .progress-next, .mode-grid, .quality-grid { grid-template-columns: 1fr; }
       .studio-card, .result { border-radius: 24px; }
     }
   </style>
@@ -1027,7 +1169,28 @@
       <section class="hero">
         <div class="eyebrow">AI content editor</div>
         <h1>Wat wil je maken?</h1>
-        <p class="hero-copy">Begin met één duidelijke opdracht. ContentFlow gebruikt daarna klantcontext, tone-of-voice, kennisbank en feedbackregels om er een betere SEO-pagina van te maken.</p>
+        <p class="hero-copy">Begin met één duidelijke opdracht. Kies daarna de vorm: websitecopy, LinkedIn, SEO of topic authority. ContentFlow gebruikt klantcontext, tone-of-voice, kennisbank en feedbackregels op de achtergrond.</p>
+      </section>
+
+      <section class="progress-board" aria-label="Projectvoortgang">
+        <div class="progress-head">
+          <div>
+            <div class="eyebrow">Project progressie</div>
+            <h2>Van losse generator naar SEO-systeem</h2>
+            <p id="progressSummary">We bouwen stap voor stap richting een product dat expertpositie, contentkwaliteit en conversiekracht combineert.</p>
+          </div>
+          <div class="progress-score">
+            <div>
+              <strong id="progressPercent">25%</strong>
+              <span>gereed</span>
+            </div>
+          </div>
+        </div>
+        <div class="progress-track" aria-hidden="true">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-steps" id="progressSteps"></div>
+        <div class="progress-next" id="progressNext"></div>
       </section>
 
       <section class="studio-card">
@@ -1036,13 +1199,29 @@
             <span>Opdracht</span>
             <span id="briefScoreLabel">Briefing 0%</span>
           </div>
-          <textarea id="mainPrompt" class="big-input" placeholder="Bijv. Maak een SEO-pagina over boekhouder voor horeca. Richt je op startende restaurants die minder administratie willen. Gebruik een heldere, deskundige toon en eindig met een uitnodiging voor een kennismaking."></textarea>
+          <textarea id="mainPrompt" class="big-input" placeholder="Bijv. Maak een scherpe homepage-sectie voor Turn.One over AI-training voor teams. Richt je op ondernemers die AI praktisch willen gebruiken. Toon: nuchter, slim en menselijk."></textarea>
 
-          <div class="choice-row" id="typeChoices">
-            <button class="choice active" data-type="service_page">Servicepagina</button>
-            <button class="choice" data-type="article">Artikel</button>
-            <button class="choice" data-type="landing_page">Landingspagina</button>
-            <button class="choice" data-type="comparison">Vergelijking</button>
+          <div class="mode-grid" id="typeChoices">
+            <button class="mode-card active" data-type="websitecopy">
+              <small>Website</small>
+              <strong>Websitecopy</strong>
+              <span>Hero, secties, trust en CTA. Voor pagina's die meteen duidelijk moeten zijn.</span>
+            </button>
+            <button class="mode-card" data-type="linkedin">
+              <small>Social</small>
+              <strong>LinkedIn</strong>
+              <span>Een menselijke post met hook, body, ritme en afsluitende vraag.</span>
+            </button>
+            <button class="mode-card" data-type="seo">
+              <small>Search</small>
+              <strong>SEO</strong>
+              <span>Een pagina met zoekintentie, structuur, bewijs, interne links en CTA.</span>
+            </button>
+            <button class="mode-card" data-type="topic_authority">
+              <small>Strategie</small>
+              <strong>Topic authority</strong>
+              <span>Een expertkaart met pillar, supportpagina's, vragen en linkroute.</span>
+            </button>
           </div>
 
           <div class="details">
@@ -1100,13 +1279,12 @@
           </div>
 
           <div class="footer-actions">
-            <div class="status-line" id="statusLine">Je kunt meteen genereren. Zonder backend-context krijg je een lokale preview.</div>
+            <div class="status-line" id="statusLine">Vul je opdracht in. Als website en onderwerp zijn ingevuld, neemt ContentFlow extra topic-context mee.</div>
             <div class="top-actions">
-              <button class="button" id="scanToneBtn">Scan toon</button>
-              <button class="button" id="hermesAuditBtn">Topic scan</button>
-              <button class="button primary" id="generateBtn">Maak concept met Hermes</button>
+              <button class="button primary" id="generateBtn">Maak concept</button>
             </div>
           </div>
+
         </div>
       </section>
 
@@ -1116,7 +1294,7 @@
             <div>
               <div class="eyebrow">Output</div>
               <div class="result-title" id="outputTitle">Nog geen concept</div>
-              <div class="result-sub" id="outputSub">Je tekst verschijnt hier zodra je op “Maak concept met Hermes” klikt.</div>
+              <div class="result-sub" id="outputSub">Je tekst verschijnt hier zodra je op “Maak concept” klikt.</div>
             </div>
             <button class="button small" id="copyBtn">Kopieer HTML</button>
           </div>
@@ -1124,7 +1302,7 @@
             <div class="empty">
               <div>
                 <div class="empty-mark">AI</div>
-                <div class="empty-title">Eén goede opdracht is genoeg om te starten.</div>
+                <div class="empty-title">Je concept verschijnt hier.</div>
                 <p class="empty-copy">Daarna kun je feedback geven. Die feedback wordt lokaal onthouden of, bij actieve backend-context, opgeslagen in Supabase.</p>
               </div>
             </div>
@@ -1138,9 +1316,7 @@
 
   <script>
     const LIVE_BASE = 'https://splendid-ganache-01f6c2.netlify.app';
-    const usesStaticPreview = ['file:', 'http:'].includes(location.protocol)
-      && ['127.0.0.1', 'localhost', ''].includes(location.hostname);
-    const endpoint = (path) => usesStaticPreview ? LIVE_BASE + path : path;
+    const endpoint = (path) => location.protocol === 'file:' ? LIVE_BASE + path : path;
     const ENDPOINTS = {
       studioContext: endpoint('/.netlify/functions/studio-context'),
       generate: endpoint('/.netlify/functions/generate-content'),
@@ -1153,15 +1329,118 @@
     const state = {
       workspace_id: localStorage.getItem(key('workspace_id')) || '',
       user_id: localStorage.getItem(key('user_id')) || '',
-      contentType: localStorage.getItem(key('contentType')) || 'service_page',
+      contentType: localStorage.getItem(key('contentType')) || 'websitecopy',
       lastResponse: null,
       hermesStudioToken: '',
       verdict: 'improve'
     };
     const fieldIds = ['mainPrompt','keyword','contentGoal','primaryCta','companyName','websiteUrl','services','targetAudience','toneVoice','forbiddenClaims','workspaceId','userId'];
+    const progressItems = [
+      { id: 'foundation', label: 'Fundament', copy: 'TypeScript backend, Supabase opslag en basiseditor staan.' },
+      { id: 'topic_authority', label: 'Expertpositie', copy: 'Topicscanner maakt een Topic Map met zoekthema’s, supportpagina’s en interne links.' },
+      { id: 'content_output', label: 'Publiceerbare tekst', copy: 'Conceptgeneratie gebruikt merkcontext en topic-context.' },
+      { id: 'feedback_loop', label: 'Zelflerend systeem', copy: 'Feedback wordt opgeslagen en maakt volgende output beter.' }
+    ];
+
+    const progressActions = {
+      foundation: 'Controleer context',
+      topic_authority: 'Start topicscanner',
+      content_output: 'Maak concept',
+      feedback_loop: 'Geef feedback'
+    };
+
+    const outputModes = {
+      websitecopy: {
+        label: 'Websitecopy',
+        loadingTitle: 'Websitecopy wordt gemaakt',
+        loadingCopy: 'We maken geen lang artikel, maar duidelijke copy met belofte, bewijs en CTA.',
+        templateName: 'ContentFlow Websitecopy',
+        goal: 'convert',
+        className: 'output-websitecopy',
+        instructions: [
+          'OUTPUTTYPE: WEBSITECOPY.',
+          'Maak websiteklare copy, geen SEO-artikel.',
+          'Gebruik HTML met: <h1>, korte intro, 3 voordelen of blokken, bewijs/trustregel en CTA.',
+          'Doel: binnen 5 seconden duidelijk maken voor wie dit is, welk probleem wordt opgelost en wat de volgende stap is.'
+        ],
+        criteria: [
+          ['Duidelijkheid', 'Binnen 5 seconden snap je de belofte.'],
+          ['Doelgroep', 'De lezer herkent zichzelf.'],
+          ['Bewijs', 'Geen lege claims, wel trust of context.'],
+          ['CTA', 'Een logische volgende stap.'],
+          ['Merkfit', 'Klinkt nuchter en Turn.One-waardig.']
+        ]
+      },
+      linkedin: {
+        label: 'LinkedIn',
+        loadingTitle: 'LinkedIn-post wordt gemaakt',
+        loadingCopy: 'We maken een post die menselijk leest, met hook, ritme en afsluitende vraag.',
+        templateName: 'ContentFlow LinkedIn',
+        goal: 'inform',
+        className: 'output-linkedin',
+        instructions: [
+          'OUTPUTTYPE: LINKEDIN.',
+          'Maak 3 LinkedIn-postvarianten, geen SEO-pagina.',
+          'Gebruik HTML met: <h1>Hook</h1>, korte alinea’s in <p>, eventueel bullets, en een afsluitende vraag.',
+          'Schrijf persoonlijk, helder en menselijk. Geen hashtags tenzij ze echt waarde toevoegen.'
+        ],
+        criteria: [
+          ['Hook', 'De eerste zin maakt nieuwsgierig.'],
+          ['Menselijk', 'Geen marketingfolder, wel echte observatie.'],
+          ['Ritme', 'Korte alinea’s, goede flow.'],
+          ['Punt', 'Een duidelijke gedachte of les.'],
+          ['Afsluiter', 'Een vraag of zachte call-to-action.']
+        ]
+      },
+      seo: {
+        label: 'SEO',
+        loadingTitle: 'SEO-pagina wordt gemaakt',
+        loadingCopy: 'We bouwen een pagina rond zoekintentie, structuur, bewijs, interne links en CTA.',
+        templateName: 'ContentFlow SEO',
+        goal: 'convince',
+        className: 'output-seo',
+        instructions: [
+          'OUTPUTTYPE: SEO.',
+          'Maak een publiceerbare SEO-pagina.',
+          'Gebruik HTML met: <h1>, 4-6 <h2>, alinea’s, bullets waar nuttig, interne-link suggesties en CTA.',
+          'Doel: zoekintentie beantwoorden en tegelijk vertrouwen en conversie opbouwen.'
+        ],
+        criteria: [
+          ['Intentie', 'Beantwoordt waarom iemand zoekt.'],
+          ['Structuur', 'Koppen leiden logisch door de pagina.'],
+          ['Bewijs', 'Cases, voorbeelden of eerlijke context.'],
+          ['Interlinks', 'Logische route naar andere pagina’s.'],
+          ['Conversie', 'CTA past bij de lezerfase.']
+        ]
+      },
+      topic_authority: {
+        label: 'Topic authority',
+        loadingTitle: 'Topic authority scan draait',
+        loadingCopy: 'We maken een expertkaart met hoofdtopic, supportpagina’s, vragen, bewijs en linkroute.',
+        templateName: 'ContentFlow Topic authority',
+        goal: 'inform',
+        className: 'output-topic-authority',
+        instructions: [
+          'OUTPUTTYPE: TOPIC AUTHORITY.',
+          'Maak geen gewone tekst, maar een strategische topic map.',
+          'Toon: pillar page, ondersteunende pagina’s, vragen van de doelgroep, begrippen, bewijs en interne links.',
+          'Doel: laten zien hoe Turn.One expertpositie opbouwt rond dit onderwerp.'
+        ],
+        criteria: [
+          ['Pillar', 'Een duidelijke hoofdpagina.'],
+          ['Support', 'Ondersteunende pagina’s zijn logisch.'],
+          ['Vragen', 'Echte vragen van de doelgroep.'],
+          ['Links', 'Interne linkroute is duidelijk.'],
+          ['Bewijs', 'Welke cases of voorbeelden nodig zijn.']
+        ]
+      }
+    };
 
     function esc(value) {
       return String(value || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function outputTemplateText() {
+      return currentMode().instructions.join('\n');
     }
     function isUuid(value) {
       return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''));
@@ -1182,11 +1461,69 @@
       return data;
     }
     function setBusy(button, busy, label) {
+      if (!button) return;
       if (!button.dataset.label) button.dataset.label = button.textContent;
       button.disabled = busy;
       button.textContent = busy ? label : button.dataset.label;
     }
+    function getProgress() {
+      try {
+        return { foundation: true, ...(JSON.parse(localStorage.getItem(key('progress')) || '{}') || {}) };
+      } catch {
+        return { foundation: true };
+      }
+    }
+    function markProgress(step) {
+      const progress = { ...getProgress(), [step]: true };
+      localStorage.setItem(key('progress'), JSON.stringify(progress));
+      localStorage.setItem(key('progress_last_at'), new Date().toISOString());
+      renderProgress();
+    }
+    function progressTimeLabel() {
+      const raw = localStorage.getItem(key('progress_last_at'));
+      if (!raw) return 'Nog geen activiteit in deze browser.';
+      const diff = Date.now() - new Date(raw).getTime();
+      if (!Number.isFinite(diff)) return 'Laatste activiteit opgeslagen.';
+      const minutes = Math.max(1, Math.round(diff / 60000));
+      if (minutes < 60) return `Laatste progressie: ${minutes} min geleden.`;
+      const hours = Math.round(minutes / 60);
+      if (hours < 24) return `Laatste progressie: ${hours} uur geleden.`;
+      return `Laatste progressie: ${Math.round(hours / 24)} dag(en) geleden.`;
+    }
+    function renderProgress() {
+      const progress = getProgress();
+      const doneCount = progressItems.filter(item => progress[item.id]).length;
+      const percent = Math.round((doneCount / progressItems.length) * 100);
+      const next = progressItems.find(item => !progress[item.id]);
+
+      $('progressPercent').textContent = percent + '%';
+      $('progressFill').style.width = percent + '%';
+      $('progressSummary').textContent = next
+        ? `Volgende focus: ${next.label}. ${next.copy}`
+        : 'Alle kernlussen staan: expertpositie, contentoutput en feedback werken samen.';
+      $('progressSteps').innerHTML = progressItems.map(item => {
+        const done = Boolean(progress[item.id]);
+        const active = !done && next?.id === item.id;
+        return `
+          <article class="progress-step ${done ? 'done' : active ? 'active' : ''}">
+            <small>${done ? 'klaar' : active ? 'nu' : 'later'}</small>
+            <strong>${esc(item.label)}</strong>
+            <span>${esc(item.copy)}</span>
+          </article>
+        `;
+      }).join('');
+      $('progressNext').innerHTML = `
+        <div>
+          <strong>${esc(next ? `Volgende beste actie: ${next.label}` : 'Kernflow staat. Volgende stap: kwaliteit verhogen.')}</strong>
+          <span>${esc(next ? next.copy : 'Gebruik de tool met echte klantinput, geef feedback en verbeter daarna de kwaliteitscontrole.')}</span>
+          <div class="progress-next-meta">${esc(progressTimeLabel())}</div>
+        </div>
+        <button class="button small" id="progressNextBtn">${esc(progressActions[next?.id] || 'Gebruik de tool')}</button>
+      `;
+      $('progressNextBtn')?.addEventListener('click', runNextProgressAction);
+    }
     function loadDraft() {
+      state.contentType = normalizeContentType(state.contentType);
       fieldIds.forEach(id => {
         const value = localStorage.getItem(key(id));
         if (value !== null && $(id)) $(id).value = value;
@@ -1194,6 +1531,7 @@
       $('workspaceId').value = state.workspace_id || $('workspaceId').value;
       $('userId').value = state.user_id || $('userId').value;
       document.querySelectorAll('[data-type]').forEach(btn => btn.classList.toggle('active', btn.dataset.type === state.contentType));
+      applyOutputMode();
     }
     function saveDraft() {
       fieldIds.forEach(id => { if ($(id)) localStorage.setItem(key(id), $(id).value || ''); });
@@ -1213,22 +1551,19 @@
       const score = Math.min(100, Math.round(Math.min(70, prompt.length / 3) + extras * 6));
       $('briefScoreLabel').textContent = 'Briefing ' + score + '%';
       const backendReady = isUuid(state.workspace_id) && isUuid(state.user_id);
+      const mode = currentMode();
       $('contextBadge').textContent = backendReady ? 'Backend actief' : 'Preview mode';
       $('contextBadge').className = backendReady ? 'badge ok' : 'badge warn';
+      $('generateBtn').textContent = state.contentType === 'topic_authority' ? 'Scan topic authority' : `Maak ${mode.label}`;
       $('statusLine').textContent = backendReady
-        ? 'Backend-context actief. Generaties worden opgeslagen in Supabase.'
-        : 'Preview mode actief. De interface blijft werken, ook zonder geldige UUIDs.';
+        ? `${mode.label}: backend-context actief. ${mode.loadingCopy}`
+        : `${mode.label}: preview mode actief. ${mode.loadingCopy}`;
     }
     function keywordFromPrompt() {
       const explicit = $('keyword').value.trim();
       if (explicit) return explicit;
       const prompt = $('mainPrompt').value.trim().replace(/\s+/g, ' ');
-      const firstInstruction = prompt.split(/[.,\n]/)[0];
-      const subjectMatch = firstInstruction.match(/\bover\s+(.+)$/i);
-      const subject = subjectMatch
-        ? subjectMatch[1]
-        : firstInstruction.replace(/^(maak|schrijf|genereer)\s+(een\s+)?/i, '');
-      return subject.replace(/^(seo\s+)?pagina\s+over\s+/i, '').trim().slice(0, 70) || 'SEO pagina';
+      return prompt.split(/[.,\n]/)[0].replace(/^(maak|schrijf|genereer)\s+(een\s+)?/i, '').slice(0, 70) || 'SEO pagina';
     }
     function snapshot() {
       return {
@@ -1245,6 +1580,100 @@
     }
     function prefs() {
       return { primary_cta: $('primaryCta').value.trim(), preferred_length: 'premium draft', locale: 'nl-NL', include_case_style: true, require_fact_check: true };
+    }
+    function normalizeContentType(type) {
+      const aliases = {
+        service_page: 'websitecopy',
+        landing_page: 'websitecopy',
+        article: 'seo',
+        comparison: 'seo'
+      };
+      const normalized = aliases[type] || type || 'websitecopy';
+      return outputModes[normalized] ? normalized : 'websitecopy';
+    }
+    function currentMode() {
+      state.contentType = normalizeContentType(state.contentType);
+      return outputModes[state.contentType] || outputModes.websitecopy;
+    }
+    function applyOutputMode() {
+      const mode = currentMode();
+      document.querySelectorAll('[data-type]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.type === state.contentType);
+      });
+      if ($('generateBtn')) {
+        const label = state.contentType === 'topic_authority'
+          ? 'Scan topic authority'
+          : `Maak ${mode.label}`;
+        $('generateBtn').dataset.label = label;
+        $('generateBtn').textContent = label;
+      }
+      if ($('contentGoal') && mode.goal) $('contentGoal').value = mode.goal;
+      const placeholders = {
+        websitecopy: 'Bijv. Maak een scherpe homepage-sectie voor Turn.One over AI-training voor teams. Richt je op ondernemers die AI praktisch willen gebruiken. Toon: nuchter, slim en menselijk.',
+        linkedin: 'Bijv. Schrijf een LinkedIn-post over waarom AI-training pas waarde krijgt als mensen maandag iets anders doen. Maak het persoonlijk, scherp en praktisch.',
+        seo: 'Bijv. Maak een SEO-pagina over AI-training voor MKB-teams. Focus op zoekintentie, vertrouwen, voorbeelden en een rustige CTA.',
+        topic_authority: 'Bijv. Breng topic authority in kaart voor AI-training voor teams. Welke pillar page, supportpagina’s, vragen, begrippen en interne links zijn nodig?'
+      };
+      if ($('mainPrompt')) $('mainPrompt').placeholder = placeholders[state.contentType] || placeholders.websitecopy;
+    }
+    function modeInstruction() {
+      return outputTemplateText();
+    }
+    function buildQualityReport(variant, mode) {
+      const content = String(variant?.content || '').replace(/<[^>]+>/g, ' ');
+      const words = content.trim().split(/\s+/).filter(Boolean).length;
+      const criteria = mode.criteria || outputModes.websitecopy.criteria;
+      const base = Number(variant?.quality_score || 74) || 74;
+      const dimensions = criteria.map(([label, fallbackNote], index) => ({
+        label,
+        score: Math.max(55, Math.min(96, Math.round(base - 8 + index * 3 + Math.min(words, 450) / 90))),
+        note: qualityNoteFor(label, words, fallbackNote)
+      }));
+      return {
+        overall_score: Math.round(dimensions.reduce((sum, item) => sum + item.score, 0) / dimensions.length),
+        verdict: variant?.quality_summary || `Eerste ${mode.label}-controle`,
+        dimensions,
+        next_actions: [
+          'Controleer of de eerste zin meteen duidelijk is.',
+          'Voeg bewijs of klanttaal toe als het nog generiek voelt.',
+          'Geef feedback zodat ContentFlow dit onthoudt.'
+        ]
+      };
+    }
+    function qualityNoteFor(label, words, fallbackNote) {
+      if (/hook/i.test(label)) return 'Trekt de eerste zin genoeg aandacht zonder clickbait?';
+      if (/menselijk/i.test(label)) return 'Klinkt dit als iemand van Turn.One, niet als een generator?';
+      if (/zoekintentie/i.test(label)) return 'Sluit de tekst aan op wat iemand echt zoekt?';
+      if (/pillar|support|linkroute/i.test(label)) return 'Bouwt dit zichtbaar expertpositie op?';
+      if (/cta/i.test(label)) return 'Is de volgende stap logisch en rustig?';
+      if (/bewijs/i.test(label)) return 'Zijn er voorbeelden, cases of concrete signalen nodig?';
+      if (fallbackNote) return fallbackNote;
+      return words < 120 ? 'Nog dun: voeg context of bewijs toe.' : 'Basis aanwezig, eindredactie blijft nodig.';
+    }
+    function renderQualityPanel(report, mode) {
+      const dimensions = Array.isArray(report?.dimensions) ? report.dimensions : [];
+      return `
+        <div class="quality-panel">
+          <div class="quality-head">
+            <div>
+              <div class="eyebrow">Kwaliteitscontrole</div>
+              <h2>${esc(mode.label)}-check</h2>
+              <p style="margin:0;color:var(--cf-muted)">${esc(report?.verdict || 'Eerste automatische beoordeling. Gebruik dit als eindredacteur, niet als absolute waarheid.')}</p>
+            </div>
+            <div class="quality-score">
+              <strong>${esc(report?.overall_score || '-')}</strong>
+              <span>score</span>
+            </div>
+          </div>
+          <div class="quality-grid">
+            ${dimensions.map(item => `
+              <div class="quality-item">
+                <strong>${esc(item.label)} · ${esc(item.score)}/100</strong>
+                <span>${esc(item.note)}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>`;
     }
     async function loadContext() {
       try {
@@ -1268,31 +1697,81 @@
         scoreBrief();
       }
     }
-    function localPreview(reason) {
+    function localPreview() {
+      const prompt = $('mainPrompt').value.trim();
       const keyword = keywordFromPrompt();
-      const content = `
-        <div class="empty" style="border:0;padding:10px 0;text-align:left">
-          <div>
-            <div class="empty-title">Echte generatie nodig</div>
-            <p class="empty-copy">Deze studio toont geen lokale voorbeeldtekst meer. Zodra de Netlify Functions bereikbaar zijn, maakt de backend de volledige klanttekst.</p>
-            ${reason ? `<p class="empty-copy">Reden: ${esc(reason)}</p>` : ''}
-          </div>
-        </div>`;
-      return { status: 'preview', job: { id: 'local-preview' }, primary_variant: { id: 'local-preview-variant', title: keyword, content, seo_score: 0, quality_score: 0, word_count: 0 }, quality_report: { verdict: 'Geen lokale voorbeeldtekst getoond.' } };
+      const company = $('companyName').value.trim() || 'jouw bedrijf';
+      const audience = $('targetAudience').value.trim() || 'de juiste doelgroep';
+      const services = $('services').value.trim() || 'het aanbod';
+      const cta = $('primaryCta').value.trim() || 'Plan een kennismaking';
+      const mode = currentMode();
+      const intro = prompt || 'Maak een heldere SEO-pagina die vertrouwen opbouwt en uitlegt waarom deze oplossing relevant is.';
+      let content = '';
+      if (state.contentType === 'linkedin') {
+        content = `
+          <h1>${esc(keyword)}</h1>
+          <p><strong>De meeste content voelt niet slecht omdat de schrijver niets weet.</strong></p>
+          <p>Het voelt slecht omdat de kennis nergens scherp bij elkaar staat.</p>
+          <p>Voor ${esc(company)} betekent dat: eerst begrijpen voor wie we schrijven, welke pijn speelt, welk bewijs er is en welke volgende stap logisch voelt.</p>
+          <p>Daarna pas schrijven.</p>
+          <p>Goede AI-content begint dus niet bij een prompt. Het begint bij context.</p>
+          <p>Welke kennis zou jij eerst vastleggen voordat je content laat schrijven?</p>`;
+      } else if (state.contentType === 'websitecopy') {
+        content = `
+          <h1>${esc(keyword)} zonder losse AI-hype</h1>
+          <p>${esc(company)} helpt ${esc(audience)} om ${esc(services)} helder, praktisch en betrouwbaar toe te passen.</p>
+          <h2>Waarom dit werkt</h2>
+          <ul>
+            <li><strong>Snel duidelijk.</strong> Bezoekers snappen direct voor wie dit is en wat het oplevert.</li>
+            <li><strong>Bewijsbaar.</strong> De tekst vraagt om voorbeelden, klanttaal en concrete situaties.</li>
+            <li><strong>Rustige CTA.</strong> De volgende stap voelt logisch: ${esc(cta)}.</li>
+          </ul>`;
+      } else if (state.contentType === 'topic_authority') {
+        content = `
+          <h1>Topic authority rond ${esc(keyword)}</h1>
+          <h2>Pillar page</h2>
+          <p><strong>${esc(keyword)}: complete gids en aanpak.</strong> Leg het hoofdonderwerp breed uit en stuur door naar verdiepende pagina's.</p>
+          <h2>Supportpagina's</h2>
+          <ul>
+            <li>${esc(keyword)} voorbeelden voor ${esc(audience)}</li>
+            <li>${esc(keyword)} checklist: waar moet je op letten?</li>
+            <li>${esc(keyword)} kosten, keuzes en valkuilen</li>
+            <li>Waarom ${esc(company)} bij dit onderwerp geloofwaardig is</li>
+          </ul>
+          <h2>Interne linkroute</h2>
+          <p>Elke supportpagina linkt terug naar de pillar page met een duidelijke anchor rond ${esc(keyword)}.</p>`;
+      } else {
+        content = `
+          <h1>${esc(keyword)}: een pagina die vertrouwen opbouwt</h1>
+          <p>${esc(intro)}</p>
+          <h2>Voor wie deze pagina bedoeld is</h2>
+          <p>Deze pagina richt zich op ${esc(audience)}. De tekst moet snel duidelijk maken waarom ${esc(company)} relevant is en welke keuze de bezoeker met vertrouwen kan maken.</p>
+          <h2>Wat het aanbod sterk maakt</h2>
+          <p>De basis voor de inhoud is: ${esc(services)}. Een sterke pagina vertaalt dit niet naar losse claims, maar naar herkenbare situaties, bewijs en duidelijke vervolgstappen.</p>
+          <h2>Aanpak</h2>
+          <ul><li>Begin met het probleem van de bezoeker.</li><li>Laat zien wat de oplossing oplevert.</li><li>Gebruik merktaal, klantbewijs en feedbackregels.</li></ul>
+          <h2>Volgende stap</h2>
+          <p>${esc(cta)}.</p>`;
+      }
+      const variant = { id: 'local-preview-variant', title: `${mode.label}: ${keyword}`, content, seo_score: 74, quality_score: 78, word_count: content.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).filter(Boolean).length };
+      return { status: 'preview', job: { id: 'local-preview' }, primary_variant: variant, quality_report: buildQualityReport(variant, mode) };
     }
     function showLoading() {
-      $('outputTitle').textContent = 'Concept wordt gemaakt';
-      $('outputSub').textContent = 'ContentFlow verwerkt je opdracht.';
-      $('outputStage').innerHTML = '<div class="empty"><div><div class="spinner"></div><div class="empty-title">Even schrijven.</div><p class="empty-copy">Met backend-context wordt dit opgeslagen in Supabase. Anders krijg je direct een lokale preview.</p></div></div>';
+      const mode = currentMode();
+      $('outputTitle').textContent = mode.loadingTitle;
+      $('outputSub').textContent = 'ContentFlow verwerkt je opdracht in de gekozen vorm.';
+      $('outputStage').innerHTML = `<div class="empty"><div><div class="spinner"></div><div class="empty-title">Even schrijven.</div><p class="empty-copy">${esc(mode.loadingCopy)} Met backend-context wordt dit opgeslagen in Supabase. Anders krijg je direct een lokale preview.</p></div></div>`;
     }
     function renderOutput(data) {
       state.lastResponse = data;
       const v = data.primary_variant || data.result?.primary_variant || {};
-      const report = data.quality_report || data.result?.quality_report || {};
+      const mode = currentMode();
+      const report = data.quality_report || data.result?.quality_report || buildQualityReport(v, mode);
       $('outputTitle').textContent = v.title || 'Concept';
-      $('outputSub').textContent = data.status === 'preview' ? 'Lokale preview' : 'Opgeslagen via TypeScript backend';
+      $('outputSub').textContent = data.status === 'preview' ? `${mode.label} · lokale preview` : `${mode.label} · opgeslagen via TypeScript backend`;
       $('outputStage').innerHTML = `
-        <article class="article" id="articleOutput">${v.content || '<p>Geen inhoud.</p>'}</article>
+        <article class="article ${esc(mode.className || '')}" id="articleOutput">${v.content || '<p>Geen inhoud.</p>'}</article>
+        ${renderQualityPanel(report, mode)}
         <div class="feedback">
           <div class="eyebrow">Feedback</div>
           <h2 style="font-size:24px;letter-spacing:-.04em;margin-top:6px">Moet ContentFlow hiervan leren?</h2>
@@ -1314,202 +1793,6 @@
       }));
       $('saveFeedbackBtn').addEventListener('click', saveFeedback);
     }
-    function renderTopicMap(map) {
-      if (!map || typeof map !== 'object') return '';
-      const nodes = Array.isArray(map.nodes) ? map.nodes : [];
-      const gaps = Array.isArray(map.authority_gaps) ? map.authority_gaps : [];
-      const moves = Array.isArray(map.interlink_moves) ? map.interlink_moves : [];
-      return `
-        <div class="topic-map">
-          <div class="topic-map-head">
-            <div>
-              <div class="eyebrow">Topical authority</div>
-              <h3>${esc(map.core_topic || 'Topic map')}</h3>
-              <p>${esc(map.authority_goal || 'Maak van losse pagina-informatie een duidelijke topical hub met subtopics, bewijs en interne links.')}</p>
-            </div>
-            <span class="badge">${esc(nodes.length || 0)} topics</span>
-          </div>
-          <div class="topic-nodes">
-            ${nodes.map(node => `
-              <article class="topic-node">
-                <div class="topic-meta">
-                  <span class="topic-chip">${esc(node.role || 'topic')}</span>
-                  <span class="topic-chip">${esc(node.intent || 'intent')}</span>
-                </div>
-                <strong>${esc(node.topic || 'Subtopic')}</strong>
-                <p>${esc(node.why || node.content_type || '')}</p>
-              </article>
-            `).join('') || '<article class="topic-node"><span class="topic-chip">pillar</span><strong>Start met een hoofdtopic</strong><p>Hermes bouwt hier de topic map zodra er genoeg scaninformatie is.</p></article>'}
-          </div>
-          <div class="topic-support">
-            <div class="strategy-list">
-              <h3>Authority gaps</h3>
-              <ol>${gaps.map(item => `<li>${esc(item)}</li>`).join('') || '<li>Geen grote topical gaps gevonden.</li>'}</ol>
-            </div>
-            <div class="strategy-list">
-              <h3>Interlink moves</h3>
-              <ol>${moves.map(item => `<li>${esc(item)}</li>`).join('') || '<li>Gebruik interne links om de hub te versterken.</li>'}</ol>
-            </div>
-          </div>
-        </div>`;
-    }
-    function topicMapFromAudit(audit) {
-      const existing = audit.topic_map;
-      if (existing && typeof existing === 'object') return existing;
-      const keyword = audit.keyword || keywordFromPrompt();
-      const clusters = Array.isArray(audit.clusters) ? audit.clusters : [];
-      const pageIdeas = Array.isArray(audit.page_ideas) ? audit.page_ideas : [];
-      const linkPlan = Array.isArray(audit.internal_link_plan) ? audit.internal_link_plan : [];
-      const metrics = audit.metrics || {};
-      return {
-        core_topic: keyword || 'Topic map',
-        authority_goal: `Bouw rond "${keyword || 'dit onderwerp'}" een topical hub die informeert, vergelijkt, vertrouwen geeft en naar actie stuurt.`,
-        nodes: [
-          {
-            topic: keyword || 'Hoofdtopic',
-            intent: 'Hoofdzoekintentie',
-            role: 'pillar',
-            content_type: 'Pillar / money page',
-            why: 'Centrale pagina die de zoekintentie opvangt en doorlinkt naar ondersteunende subtopics.'
-          },
-          ...clusters.slice(0, 5).map((cluster, index) => ({
-            topic: cluster.name || pageIdeas[index]?.title || `Subtopic ${index + 1}`,
-            intent: cluster.intent || 'Support',
-            role: index === clusters.length - 1 ? 'conversion support' : 'supporting cluster',
-            content_type: pageIdeas[index]?.format || 'Ondersteunende pagina',
-            why: cluster.angle || pageIdeas[index]?.why || 'Ondersteunt expertise, bewijs en interne linkkracht.'
-          }))
-        ],
-        authority_gaps: [
-          Number(metrics.word_count || 0) && Number(metrics.word_count || 0) < 650 ? 'Verdiep de pagina met meer keuzecriteria, bewijs en FAQ-content.' : '',
-          Array.isArray(metrics.h2) && metrics.h2.length < 4 ? 'Voeg meer duidelijke subtopics toe in de H2-structuur.' : '',
-          metrics.proof_signals === false ? 'Voeg E-E-A-T bewijs toe: cases, reviews, cijfers of auteursexpertise.' : '',
-          Number(metrics.internal_links || 0) < 5 ? 'Gebruik interne links om de pillar en subtopics als cluster te verbinden.' : ''
-        ].filter(Boolean),
-        interlink_moves: linkPlan.length ? linkPlan : [
-          `Link vanuit ondersteunende artikelen naar de belangrijkste ${keyword || 'pillar'}-pagina.`,
-          'Link vanuit de pillar terug naar bewijs, FAQ en conversiegerichte pagina’s.',
-          'Gebruik onderaan de pagina drie verwante artikelen als topical vervolgstap.'
-        ]
-      };
-    }
-    function topicMapFromPlaybook(playbook) {
-      const existing = playbook.topic_map;
-      if (existing && typeof existing === 'object') return existing;
-      const keyword = playbook.keyword || keywordFromPrompt();
-      const machine = Array.isArray(playbook.content_machine) ? playbook.content_machine : [];
-      const moneyPages = Array.isArray(playbook.money_pages) ? playbook.money_pages : [];
-      const supportNodes = machine.flatMap(item => (item.support_articles || []).map(article => ({
-        topic: article,
-        intent: 'Support',
-        role: 'supporting article',
-        content_type: 'Artikel',
-        why: `Ondersteunt de pillar "${item.pillar}" en linkt door naar ${item.conversion_link}.`
-      })));
-      return {
-        core_topic: keyword || playbook.board_title || 'Growth topic map',
-        authority_goal: playbook.positioning || `Maak van "${keyword || 'dit thema'}" een route van vraag naar vertrouwen naar conversie.`,
-        nodes: [
-          ...moneyPages.slice(0, 3).map(page => ({
-            topic: page.title || keyword || 'Money page',
-            intent: page.intent || 'Converteren',
-            role: 'money page',
-            content_type: 'Money page',
-            why: page.promise || page.why_now || 'Verbindt topical authority met conversie.'
-          })),
-          ...supportNodes.slice(0, 5)
-        ],
-        authority_gaps: Array.isArray(playbook.proof_to_collect) ? playbook.proof_to_collect : [],
-        interlink_moves: machine.map(item => `Link "${item.pillar}" naar ${item.conversion_link}.`).filter(Boolean)
-      };
-    }
-    function renderClusterPlan(plan) {
-      if (!plan || typeof plan !== 'object') return '';
-      const articles = Array.isArray(plan.supporting_articles) ? plan.supporting_articles : [];
-      const order = Array.isArray(plan.publishing_order) ? plan.publishing_order : [];
-      return `
-        <div class="cluster-plan">
-          <div class="cluster-pillar">
-            <div>
-              <div class="eyebrow">Cluster plan</div>
-              <h3>${esc(plan.pillar_title || 'Pillar + ondersteunende artikelen')}</h3>
-              <p>${esc(plan.pillar_promise || 'Maak van de topic map een publiceerbare cluster met een centrale pillar en gerichte support content.')}</p>
-            </div>
-            <span class="badge">${esc(articles.length || 0)} artikelen</span>
-          </div>
-          <div class="cluster-articles">
-            ${articles.map(article => `
-              <article class="cluster-article">
-                <div class="topic-meta">
-                  <span class="topic-chip">${esc(article.intent || 'intent')}</span>
-                  <span class="topic-chip">${esc(article.format || 'format')}</span>
-                </div>
-                <strong>${esc(article.title || 'Ondersteunend artikel')}</strong>
-                <p>${esc(article.purpose || '')}</p>
-              </article>
-            `).join('') || '<article class="cluster-article"><span class="topic-chip">pillar</span><strong>Start met de pillar</strong><p>Hermes vult ondersteunende artikelen aan zodra er topicdata is.</p></article>'}
-          </div>
-          <div class="strategy-list cluster-order">
-            <h3>Publicatievolgorde</h3>
-            <ol>${order.map(item => `<li>${esc(item)}</li>`).join('') || '<li>Publiceer eerst de pillar, daarna support artikelen, daarna bewijs en interne links.</li>'}</ol>
-          </div>
-        </div>`;
-    }
-    function clusterPlanFromAudit(audit, topicMap) {
-      const existing = audit.cluster_plan;
-      if (existing && typeof existing === 'object') return existing;
-      const keyword = audit.keyword || keywordFromPrompt();
-      const pageIdeas = Array.isArray(audit.page_ideas) ? audit.page_ideas : [];
-      const nodes = Array.isArray(topicMap?.nodes) ? topicMap.nodes : [];
-      const pillarTitle = `${keyword || 'Hoofdtopic'}: complete gids`;
-      const supporting = nodes
-        .filter(node => node.role !== 'pillar')
-        .slice(0, 6)
-        .map((node, index) => ({
-          title: pageIdeas[index]?.title || node.topic,
-          intent: node.intent || 'Support',
-          format: pageIdeas[index]?.format || node.content_type || 'Artikel',
-          purpose: pageIdeas[index]?.why || node.why || 'Ondersteunt de pillar en bouwt topical authority op.',
-          links_to: pillarTitle
-        }));
-      return {
-        pillar_title: pillarTitle,
-        pillar_promise: `De centrale pagina die alle zoekvragen rond "${keyword || 'dit onderwerp'}" samenbrengt en doorstuurt naar actie.`,
-        supporting_articles: supporting,
-        publishing_order: [
-          `Publiceer eerst de pillar: ${pillarTitle}.`,
-          'Publiceer daarna de support artikelen met informerende en vergelijkende intent.',
-          'Voeg bewijscontent toe en link alles terug naar de pillar.',
-          'Gebruik de pillar om bezoekers door te sturen naar de conversiestap.'
-        ]
-      };
-    }
-    function clusterPlanFromPlaybook(playbook, topicMap) {
-      const existing = playbook.cluster_plan;
-      if (existing && typeof existing === 'object') return existing;
-      const keyword = playbook.keyword || keywordFromPrompt();
-      const machine = Array.isArray(playbook.content_machine) ? playbook.content_machine : [];
-      const moneyPages = Array.isArray(playbook.money_pages) ? playbook.money_pages : [];
-      const pillar = machine[0]?.pillar || moneyPages[0]?.title || `${keyword || 'Hoofdtopic'}: complete gids`;
-      const support = machine.flatMap(item => (item.support_articles || []).map(article => ({
-        title: article,
-        intent: 'Support',
-        format: 'Artikel',
-        purpose: `Ondersteunt "${item.pillar}" en stuurt door naar ${item.conversion_link}.`,
-        links_to: item.pillar || pillar
-      })));
-      return {
-        pillar_title: pillar,
-        pillar_promise: playbook.positioning || topicMap?.authority_goal || 'Maak van de topic map een contentcluster dat autoriteit en conversie verbindt.',
-        supporting_articles: support.slice(0, 8),
-        publishing_order: [
-          `Start met de pillar: ${pillar}.`,
-          'Publiceer de ondersteunende artikelen in volgorde van zoekintentie.',
-          'Verzamel bewijs en voeg dat toe aan pillar en money pages.',
-          'Leg interne links tussen pillar, support en conversiepagina.'
-        ]
-      };
-    }
     function renderHermesAudit(data) {
       const audit = data.hermes || data;
       const opportunities = Array.isArray(audit.opportunities) ? audit.opportunities : [];
@@ -1520,12 +1803,8 @@
       const pageIdeas = Array.isArray(audit.page_ideas) ? audit.page_ideas : [];
       const linkPlan = Array.isArray(audit.internal_link_plan) ? audit.internal_link_plan : [];
       const aiBadge = audit.ai_enriched ? `OpenAI verrijkt${audit.model ? ` · ${audit.model}` : ''}` : 'Regel-scan';
-      const hermesPrompt = buildHermesPrompt(audit);
-      const promptPreview = esc(hermesPrompt).replace(/\n/g, '<br>');
-      const topicMap = topicMapFromAudit(audit);
-      const clusterPlan = clusterPlanFromAudit(audit, topicMap);
       state.lastHermesAudit = audit;
-      $('outputTitle').textContent = 'Topic scan';
+      $('outputTitle').textContent = 'Hermes audit';
       $('outputSub').textContent = audit.url ? `Analyse voor ${audit.url} · ${aiBadge}` : `SEO-kansen uit Hermes · ${aiBadge}`;
       $('outputStage').innerHTML = `
         <section class="audit-panel">
@@ -1535,9 +1814,7 @@
               <h1 style="font-size:clamp(38px,6vw,76px);letter-spacing:-.085em;line-height:.88;margin:8px 0 16px">${audit.status === 'scanned' ? 'Live strategy scan' : 'Strategie op basis van input'}</h1>
               <p class="audit-summary">${esc(audit.executive_takeaway || audit.summary || 'Hermes heeft een eerste audit gemaakt.')}</p>
               <div class="audit-actions">
-                <button class="button primary" id="generateHermesBtn">Maak concept met Hermes</button>
-                <button class="button" id="useHermesBriefBtn">Zet briefing in editor</button>
-                <button class="button" id="copyHermesBriefBtn">Kopieer briefing</button>
+                <button class="button primary" id="useHermesBriefBtn">Zet briefing in editor</button>
                 <span class="badge">${esc(audit.score_label || 'Strategie')}</span>
                 <span class="badge">${esc(aiBadge)}</span>
               </div>
@@ -1566,25 +1843,6 @@
             <p style="font-size:18px;line-height:1.6;margin:8px 0 14px">${esc(audit.content_angle || 'Gebruik deze scan als basis voor een scherpere briefing.')}</p>
             <ol>${brief.map(point => `<li>${esc(point)}</li>`).join('') || '<li>Maak de pagina specifieker op zoekintentie, bewijs en CTA.</li>'}</ol>
           </div>
-          ${renderTopicMap(topicMap)}
-          ${renderClusterPlan(clusterPlan)}
-          <div class="hermes-command">
-            <div class="command-card">
-              <div class="eyebrow">Hermes command center</div>
-              <h3>Van scan naar publiceerbare briefing</h3>
-              <p>Hermes combineert live paginasignalen, zoekintentie, kansen, linkplan en OpenAI-strategie tot een briefing die ContentFlow direct kan schrijven.</p>
-              <div class="impact-strip">
-                <div class="impact-pill"><strong>${esc(opportunities.length || 0)}</strong><span>Kansen</span></div>
-                <div class="impact-pill"><strong>${esc(clusters.length || 0)}</strong><span>Clusters</span></div>
-                <div class="impact-pill"><strong>${esc(pageIdeas.length || 0)}</strong><span>Ideeen</span></div>
-              </div>
-            </div>
-            <div class="command-card">
-              <h3>Schrijfbrief</h3>
-              <p>Dit is de briefing die naar de editor gaat. Geen losse audit meer, maar een concrete opdracht voor betere copy.</p>
-              <div class="brief-preview">${promptPreview}</div>
-            </div>
-          </div>
           <div class="strategy-columns">
             <div class="strategy-list">
               <h3>Contentclusters</h3>
@@ -1605,8 +1863,6 @@
           </div>
         </section>`;
       $('useHermesBriefBtn')?.addEventListener('click', useHermesBrief);
-      $('generateHermesBtn')?.addEventListener('click', generateFromHermesAudit);
-      $('copyHermesBriefBtn')?.addEventListener('click', copyHermesBrief);
     }
     function renderHermesPlaybook(data) {
       const playbook = data.hermes || data;
@@ -1616,8 +1872,6 @@
       const sprint = Array.isArray(playbook.seven_day_sprint) ? playbook.seven_day_sprint : [];
       const script = Array.isArray(playbook.demo_script) ? playbook.demo_script : [];
       const aiBadge = playbook.ai_enriched ? `OpenAI strategist${playbook.model ? ` · ${playbook.model}` : ''}` : 'Regel-playbook';
-      const topicMap = topicMapFromPlaybook(playbook);
-      const clusterPlan = clusterPlanFromPlaybook(playbook, topicMap);
       state.lastHermesAudit = playbook;
       $('outputTitle').textContent = playbook.board_title || 'Hermes groeiplan';
       $('outputSub').textContent = playbook.url ? `Groeiplan voor ${playbook.url} · ${aiBadge}` : `Hermes groeiplan · ${aiBadge}`;
@@ -1643,8 +1897,6 @@
             <p style="font-size:20px;line-height:1.55;margin:8px 0 12px">${esc(playbook.positioning || 'Maak van losse content een duidelijke route naar vertrouwen en conversie.')}</p>
             <p style="margin:0;color:rgba(21,24,21,.68)">${esc(playbook.audience_insight || 'De doelgroep zoekt zekerheid, bewijs en een heldere volgende stap.')}</p>
           </div>
-          ${renderTopicMap(topicMap)}
-          ${renderClusterPlan(clusterPlan)}
           <div class="audit-grid">
             ${moneyPages.map(page => `
               <article class="audit-card">
@@ -1678,68 +1930,320 @@
         </section>`;
       $('usePlaybookBriefBtn')?.addEventListener('click', useHermesBrief);
     }
-    function buildHermesPrompt(audit) {
-      const opportunities = Array.isArray(audit.opportunities) ? audit.opportunities : [];
-      const brief = Array.isArray(audit.content_brief) ? audit.content_brief : [];
-      const linkPlan = Array.isArray(audit.internal_link_plan) ? audit.internal_link_plan : [];
-      const topicMap = audit.type === 'growth_playbook' ? topicMapFromPlaybook(audit) : topicMapFromAudit(audit);
-      const clusterPlan = audit.type === 'growth_playbook' ? clusterPlanFromPlaybook(audit, topicMap) : clusterPlanFromAudit(audit, topicMap);
-      const topicNodes = Array.isArray(topicMap.nodes) ? topicMap.nodes : [];
-      const clusterArticles = Array.isArray(clusterPlan.supporting_articles) ? clusterPlan.supporting_articles : [];
-      const topicPrompt = [
-        topicMap.authority_goal ? `Topic map doel: ${topicMap.authority_goal}` : '',
-        topicNodes.length ? `Topical authority structuur:\n- ${topicNodes.map(node => `${node.topic} (${node.intent}, ${node.role})`).join('\n- ')}` : '',
-        clusterPlan.pillar_title ? `Cluster plan pillar: ${clusterPlan.pillar_title}` : '',
-        clusterArticles.length ? `Ondersteunende artikelen:\n- ${clusterArticles.map(article => `${article.title} (${article.intent})`).join('\n- ')}` : ''
-      ].filter(Boolean).join('\n\n');
-      if (audit.editor_prompt) return [audit.editor_prompt, topicPrompt].filter(Boolean).join('\n\n');
-      return [
-        `Maak een hoogwaardige SEO-pagina over "${audit.keyword || keywordFromPrompt()}".`,
-        audit.url ? `Gebruik deze geanalyseerde pagina als context: ${audit.url}.` : '',
-        audit.executive_takeaway ? `Hermes diagnose: ${audit.executive_takeaway}` : '',
-        topicPrompt,
-        audit.content_angle ? `Contenthoek: ${audit.content_angle}` : '',
-        brief.length ? `Briefingpunten:\n- ${brief.join('\n- ')}` : '',
-        opportunities.length ? `Belangrijkste kansen:\n- ${opportunities.map(item => `${item.title}: ${item.reason}`).join('\n- ')}` : '',
-        linkPlan.length ? `Interne links:\n- ${linkPlan.join('\n- ')}` : '',
-        'Schrijf concreet, menselijk en verkoopbaar. Gebruik bewijs, keuzecriteria, interne links en een duidelijke CTA. Neem de audit niet letterlijk over.'
-      ].filter(Boolean).join('\n\n');
-    }
-    function useHermesBrief(options = {}) {
+    function useHermesBrief() {
       const audit = state.lastHermesAudit || {};
-      const prompt = buildHermesPrompt(audit);
+      const prompt = audit.editor_prompt || [
+        `Maak een SEO-pagina over "${audit.keyword || keywordFromPrompt()}".`,
+        audit.pillar_page?.title ? `Gebruik deze pillar page als basis: ${audit.pillar_page.title}. ${audit.pillar_page.promise || ''}` : '',
+        Array.isArray(audit.supporting_pages) && audit.supporting_pages.length ? `Houd rekening met deze ondersteunende pagina's: ${audit.supporting_pages.map(page => page.title).join(', ')}.` : '',
+        Array.isArray(audit.internal_link_routes) && audit.internal_link_routes.length ? `Interne linkroute: ${audit.internal_link_routes.map(route => `${route.from} -> ${route.to}`).join(' | ')}.` : '',
+        audit.content_angle || '',
+        ...(Array.isArray(audit.content_brief) ? audit.content_brief : [])
+      ].filter(Boolean).join('\n');
       $('mainPrompt').value = prompt;
       if (audit.keyword) $('keyword').value = audit.keyword;
       scoreBrief();
-      if (!options.silent) {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        toast('Hermes briefing staat nu in de editor.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      toast('Hermes briefing staat nu in de editor.');
+    }
+    function localTopicScanPreview() {
+      const keyword = keywordFromPrompt();
+      const company = $('companyName').value.trim() || 'dit merk';
+      const audience = $('targetAudience').value.trim() || 'de belangrijkste doelgroep';
+      const services = $('services').value.trim() || 'het aanbod';
+      return {
+        ok: true,
+        type: 'topic_scan',
+        status: 'local',
+        ai_enriched: false,
+        keyword,
+        url: $('websiteUrl').value.trim(),
+        topic_summary: `Eerste topic-schets voor "${keyword}". Dit laat zien welke thema's nodig zijn om ${company} sterker als expert te positioneren.`,
+        search_intent: 'Gemengd: uitleg, vergelijking en keuzehulp.',
+        funnel_stage: 'TOFU/MOFU met conversiekans',
+        topic_variants: [keyword, `${keyword} kosten`, `${keyword} voorbeelden`, `${keyword} checklist`, `${keyword} vergelijken`, `beste ${keyword}`],
+        audience_questions: [`Wat is ${keyword}?`, `Wanneer is ${keyword} relevant voor ${audience}?`, `Waar moet je op letten bij ${keyword}?`, `Welke fouten moet je vermijden?`, `Waarom kiezen voor ${company}?`],
+        entity_terms: [keyword, services, 'bewijs', 'case', 'proces', 'resultaat', 'veelgestelde vragen'].filter(Boolean),
+        existing_signals: ['Lokale scan: vul website en backend-context in voor een diepere Hermes-scan.'],
+        missing_angles: [
+          { angle: 'Pillar page', why_it_matters: 'Een sterke hoofdpagina legt het topic breed uit en stuurt door naar verdiepende pagina’s.', priority: 'high' },
+          { angle: 'Bewijslaag', why_it_matters: 'Cases, cijfers en voorbeelden maken expertpositie geloofwaardig.', priority: 'high' },
+          { angle: 'Interne linkroute', why_it_matters: 'Ondersteunende artikelen moeten logisch teruglinken naar de belangrijkste conversiepagina.', priority: 'medium' }
+        ],
+        serp_expectation: 'Verwacht een mix van gidsen, vergelijkingen, voorbeelden en commerciële pagina’s. Echte SERP-data kan later via een zoekdata-API worden toegevoegd.',
+        recommended_next_step: 'Kies één hoofdpagina en drie ondersteunende artikelen die samen expertpositie opbouwen.',
+        editor_prompt: `Maak een SEO-briefing voor "${keyword}" voor ${company}. Gebruik doelgroep ${audience}, aanbod ${services}, en werk dit uit als pillar page plus ondersteunende artikelen.`
+      };
+    }
+    function renderTopicScan(data) {
+      const scan = data.hermes || data;
+      const variants = Array.isArray(scan.topic_variants) ? scan.topic_variants : [];
+      const questions = Array.isArray(scan.audience_questions) ? scan.audience_questions : [];
+      const entities = Array.isArray(scan.entity_terms) ? scan.entity_terms : [];
+      const signals = Array.isArray(scan.existing_signals) ? scan.existing_signals : [];
+      const missing = Array.isArray(scan.missing_angles) ? scan.missing_angles : [];
+      const pillar = scan.pillar_page || {
+        title: `${scan.keyword || 'Topic'}: complete gids en aanpak`,
+        intent: 'Hoofdpagina die uitlegt, vertrouwen opbouwt en naar actie beweegt.',
+        promise: 'Deze pagina verbindt zoekintentie, expertise, bewijs en conversie.',
+        cta: $('primaryCta').value.trim() || 'Plan een kennismaking'
+      };
+      const supportPages = Array.isArray(scan.supporting_pages) && scan.supporting_pages.length
+        ? scan.supporting_pages
+        : variants.slice(1, 5).map(item => ({
+            title: item,
+            intent: 'supporting search intent',
+            angle: `Verdiep "${item}" en link terug naar de hoofdpagina.`,
+            links_to: pillar.title
+          }));
+      const linkRoutes = Array.isArray(scan.internal_link_routes) && scan.internal_link_routes.length
+        ? scan.internal_link_routes
+        : supportPages.slice(0, 5).map(page => ({
+            from: page.title,
+            to: pillar.title,
+            anchor: scan.keyword || 'hoofdpagina',
+            reason: 'Ondersteunende content bouwt topical authority op rond de hoofdpagina.'
+          }));
+      const proofAssets = Array.isArray(scan.proof_assets) && scan.proof_assets.length
+        ? scan.proof_assets
+        : ['Klantcase of praktijkvoorbeeld', 'Veelgestelde vragen uit sales', 'Concrete cijfers of screenshots', 'Quote van specialist'];
+      const aiBadge = scan.ai_enriched ? `Hermes + OpenAI${scan.model ? ` · ${scan.model}` : ''}` : 'Snelle topic-scan';
+      state.lastHermesAudit = scan;
+      $('outputTitle').textContent = 'Expertpositie scan';
+      $('outputSub').textContent = scan.url ? `Zoekthema en SERP-inschatting voor ${scan.url}` : 'Zoekthema, vragen en contentkansen';
+      $('outputStage').innerHTML = `
+        <section class="audit-panel" id="articleOutput">
+          <div class="strategy-hero">
+            <div>
+              <div class="eyebrow">Topical authority · expertpositie</div>
+              <h1 style="font-size:clamp(38px,6vw,76px);letter-spacing:-.085em;line-height:.88;margin:8px 0 16px">${esc(scan.keyword || 'Topic')}</h1>
+              <p class="audit-summary">${esc(scan.topic_summary || 'De topicscanner heeft de eerste autoriteitssignalen bepaald.')}</p>
+              <div class="audit-actions">
+                <button class="button primary" id="useTopicScanBriefBtn">Gebruik als briefing</button>
+                <span class="badge">${esc(aiBadge)}</span>
+                <span class="badge">${esc(scan.funnel_stage || 'authority')}</span>
+              </div>
+            </div>
+            <div class="score-ring" style="--score-angle:250deg">
+              <div><strong>TA</strong><span>authority</span></div>
+            </div>
+          </div>
+          <div class="audit-metrics">
+            <div class="metric"><div class="metric-label">Zoekintentie</div><div class="metric-value" style="font-size:15px">${esc(scan.search_intent || '-')}</div></div>
+            <div class="metric"><div class="metric-label">Thema's</div><div class="metric-value">${esc(variants.length || '-')}</div></div>
+            <div class="metric"><div class="metric-label">Vragen</div><div class="metric-value">${esc(questions.length || '-')}</div></div>
+            <div class="metric"><div class="metric-label">Entiteiten</div><div class="metric-value">${esc(entities.length || '-')}</div></div>
+          </div>
+          <div class="brief-box">
+            <div class="eyebrow">SERP verwachting</div>
+            <p style="font-size:18px;line-height:1.6;margin:8px 0 14px">${esc(scan.serp_expectation || 'Nog geen SERP-inschatting beschikbaar.')}</p>
+          </div>
+          <div class="brief-box" style="margin-top:14px">
+            <div class="eyebrow">Topic map</div>
+            <h2 style="font-size:28px;letter-spacing:-.055em;margin:8px 0 8px">${esc(pillar.title)}</h2>
+            <p style="font-size:17px;line-height:1.6;margin:0 0 10px">${esc(pillar.promise || pillar.intent || '')}</p>
+            <div class="choice-row">
+              <span class="badge">${esc(pillar.intent || 'pillar page')}</span>
+              <span class="badge">CTA: ${esc(pillar.cta || 'Volgende stap')}</span>
+            </div>
+          </div>
+          <div class="strategy-columns" style="margin-top:14px">
+            <div class="strategy-list">
+              <h3>Ondersteunende pagina's</h3>
+              <ol>${supportPages.map(page => `<li><strong>${esc(page.title)}</strong><br><span>${esc(page.intent || '')}</span><br><span>${esc(page.angle || '')}</span><br><span>Linkt naar: ${esc(page.links_to || pillar.title)}</span></li>`).join('') || '<li>Nog geen supportpagina’s gevonden.</li>'}</ol>
+            </div>
+            <div class="strategy-list">
+              <h3>Interne linkroute</h3>
+              <ol>${linkRoutes.map(route => `<li><strong>${esc(route.from)} → ${esc(route.to)}</strong><br><span>Anchor: ${esc(route.anchor || '')}</span><br><span>${esc(route.reason || '')}</span></li>`).join('') || '<li>Nog geen interne linkroute gevonden.</li>'}</ol>
+            </div>
+          </div>
+          <div class="strategy-columns" style="margin-top:14px">
+            <div class="strategy-list">
+              <h3>Zoekthema's</h3>
+              <ol>${variants.map(item => `<li>${esc(item)}</li>`).join('') || '<li>Nog geen zoekthema’s gevonden.</li>'}</ol>
+            </div>
+            <div class="strategy-list">
+              <h3>Vragen die je moet beantwoorden</h3>
+              <ol>${questions.map(item => `<li>${esc(item)}</li>`).join('') || '<li>Nog geen doelgroepvragen gevonden.</li>'}</ol>
+            </div>
+          </div>
+          <div class="audit-grid">
+            ${missing.map(item => `
+              <article class="audit-card">
+                <span class="priority">${esc(item.priority || 'medium')}</span>
+                <h3>${esc(item.angle || 'Contentkans')}</h3>
+                <p>${esc(item.why_it_matters || '')}</p>
+              </article>
+            `).join('') || '<article class="audit-card"><span class="priority">start</span><h3>Maak een topic map</h3><p>Groepeer hoofdthema, subtopics en conversiepagina’s.</p></article>'}
+          </div>
+          <div class="strategy-columns" style="margin-top:14px">
+            <div class="strategy-list">
+              <h3>Belangrijke begrippen</h3>
+              <ol>${entities.map(item => `<li>${esc(item)}</li>`).join('') || '<li>Nog geen begrippen gevonden.</li>'}</ol>
+            </div>
+            <div class="strategy-list">
+              <h3>Signalen op de site</h3>
+              <ol>${signals.map(item => `<li>${esc(item)}</li>`).join('') || '<li>Nog geen signalen gevonden.</li>'}</ol>
+            </div>
+          </div>
+          <div class="strategy-list" style="margin-top:14px">
+            <h3>Bewijs dat nodig is</h3>
+            <ol>${proofAssets.map(item => `<li>${esc(item)}</li>`).join('') || '<li>Voeg cases, cijfers of klanttaal toe om de pagina geloofwaardig te maken.</li>'}</ol>
+          </div>
+          <div class="next-actions">
+            <div class="eyebrow">Volgende beste actie</div>
+            <ol><li>${esc(scan.recommended_next_step || 'Gebruik deze scan als input voor de contentbriefing.')}</li></ol>
+          </div>
+        </section>`;
+      $('useTopicScanBriefBtn')?.addEventListener('click', useHermesBrief);
+    }
+    function topicScanToBrief(scan) {
+      if (!scan) return '';
+      const angles = Array.isArray(scan.missing_angles)
+        ? scan.missing_angles.map(item => item.angle || item.why_it_matters).filter(Boolean)
+        : [];
+      const supportPages = Array.isArray(scan.supporting_pages) ? scan.supporting_pages : [];
+      const linkRoutes = Array.isArray(scan.internal_link_routes) ? scan.internal_link_routes : [];
+      return [
+        'Achtergrond uit topic scan:',
+        scan.topic_summary ? `Samenvatting: ${scan.topic_summary}` : '',
+        scan.search_intent ? `Zoekintentie: ${scan.search_intent}` : '',
+        scan.funnel_stage ? `Funnel stage: ${scan.funnel_stage}` : '',
+        Array.isArray(scan.topic_variants) && scan.topic_variants.length ? `Topicvarianten: ${scan.topic_variants.join(', ')}` : '',
+        Array.isArray(scan.audience_questions) && scan.audience_questions.length ? `Doelgroepvragen: ${scan.audience_questions.join(' | ')}` : '',
+        Array.isArray(scan.entity_terms) && scan.entity_terms.length ? `Belangrijke begrippen: ${scan.entity_terms.join(', ')}` : '',
+        angles.length ? `Ontbrekende invalshoeken: ${angles.join(', ')}` : '',
+        scan.pillar_page?.title ? `Pillar page: ${scan.pillar_page.title} | ${scan.pillar_page.promise || scan.pillar_page.intent || ''}` : '',
+        supportPages.length ? `Ondersteunende pagina's: ${supportPages.map(page => `${page.title} (${page.intent || 'support'})`).join(' | ')}` : '',
+        linkRoutes.length ? `Interne linkroute: ${linkRoutes.map(route => `${route.from} -> ${route.to} met anchor "${route.anchor}"`).join(' | ')}` : '',
+        Array.isArray(scan.proof_assets) && scan.proof_assets.length ? `Benodigd bewijs: ${scan.proof_assets.join(', ')}` : '',
+        scan.serp_expectation ? `SERP verwachting: ${scan.serp_expectation}` : '',
+        scan.editor_prompt || ''
+      ].filter(Boolean).join('\n');
+    }
+    async function runBackgroundTopicScan() {
+      const url = $('websiteUrl').value.trim();
+      const keyword = keywordFromPrompt();
+      if (!url || !keyword || !isUuid(state.workspace_id) || !isUuid(state.user_id)) return null;
+
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 8000);
+      try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (state.hermesStudioToken) headers['x-hermes-studio-token'] = state.hermesStudioToken;
+        const data = await requestJson(ENDPOINTS.hermes, {
+          method: 'POST',
+          headers,
+          signal: controller.signal,
+          body: JSON.stringify({
+            task: 'topic_scan',
+            url,
+            keyword,
+            company_name: $('companyName').value.trim(),
+            services: $('services').value.trim(),
+            target_audience: $('targetAudience').value.trim(),
+            workspace_id: state.workspace_id,
+            user_id: state.user_id
+          })
+        });
+        return data.hermes || data;
+      } catch (error) {
+        console.warn('Achtergrond topic scan overgeslagen:', error);
+        return null;
+      } finally {
+        clearTimeout(timer);
       }
     }
-    async function copyHermesBrief() {
-      const audit = state.lastHermesAudit || {};
-      await navigator.clipboard.writeText(buildHermesPrompt(audit));
-      toast('Hermes briefing gekopieerd.');
+    function nextProgressItem() {
+      const progress = getProgress();
+      return progressItems.find(item => !progress[item.id]) || null;
     }
-    async function generateFromHermesAudit() {
-      useHermesBrief({ silent: true });
-      toast('Hermes stuurt de briefing naar ContentFlow.');
-      await generate({ source: 'hermes' });
+    function scrollToElement(element) {
+      element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-    async function generate(options = {}) {
+    function runNextProgressAction() {
+      const next = nextProgressItem();
+      if (!next) {
+        scrollToElement(document.querySelector('.studio-card'));
+        toast('Kernflow staat. Gebruik nu echte input om kwaliteit te verhogen.');
+        return;
+      }
+      if (next.id === 'foundation') {
+        $('advancedPanel').classList.add('open');
+        scrollToElement($('advancedPanel'));
+        toast('Vul klantcontext, website en Supabase-context aan.');
+        return;
+      }
+      if (next.id === 'topic_authority') {
+        runTopicScanner();
+        return;
+      }
+      if (next.id === 'content_output') {
+        if (!$('mainPrompt').value.trim()) {
+          scrollToElement($('mainPrompt'));
+          $('mainPrompt').focus();
+          toast('Schrijf eerst kort wat je wilt maken.');
+          return;
+        }
+        generate();
+        return;
+      }
+      if (next.id === 'feedback_loop') {
+        if ($('feedbackText')) {
+          scrollToElement($('feedbackText'));
+          $('feedbackText').focus();
+          toast('Geef feedback, dan leert de volgende generatie hiervan.');
+          return;
+        }
+        scrollToElement($('generateBtn'));
+        toast('Maak eerst een concept, daarna verschijnt feedback.');
+      }
+    }
+    async function runTopicScanner() {
       sync();
-      showLoading();
-      if (options.source === 'hermes') {
-        $('outputTitle').textContent = 'Hermes concept wordt gemaakt';
-        $('outputSub').textContent = 'ContentFlow schrijft nu op basis van de live audit, kansen en SEO-strategie.';
+      const keyword = keywordFromPrompt();
+      if (!keyword || keyword === 'SEO pagina') {
+        $('keyword').focus();
+        toast('Vul eerst een onderwerp of opdracht in.');
+        return;
       }
+      $('outputTitle').textContent = 'Expertpositie scan draait';
+      $('outputSub').textContent = 'ContentFlow zoekt zoekthema’s, doelgroepvragen en ontbrekende invalshoeken.';
+      $('outputStage').innerHTML = '<div class="empty"><div><div class="spinner"></div><div class="empty-title">Topicscanner bouwt de eerste expertkaart.</div><p class="empty-copy">Hermes kijkt naar website-context, zoekthema en SERP-verwachting. Als de backend niet beschikbaar is, tonen we een lokale schets.</p></div></div>';
+      const scanButton = $('topicScannerBtn') || $('generateBtn');
+      setBusy(scanButton, true, 'Scannen...');
+      try {
+        let scan = null;
+        if (isUuid(state.workspace_id) && isUuid(state.user_id) && $('websiteUrl').value.trim()) {
+          scan = await runBackgroundTopicScan();
+        }
+        renderTopicScan(scan || localTopicScanPreview());
+        markProgress('topic_authority');
+        toast(scan ? 'Topicscanner klaar: Hermes heeft expertpositie-kansen gevonden.' : 'Lokale topic-schets gemaakt. Voeg website/backend-context toe voor Hermes.');
+      } catch (error) {
+        renderTopicScan(localTopicScanPreview());
+        markProgress('topic_authority');
+        toast(error.message || 'Hermes lukte niet, lokale topic-schets getoond.');
+      } finally {
+        setBusy(scanButton, false);
+      }
+    }
+    async function generate() {
+      sync();
+      if (state.contentType === 'topic_authority') {
+        await runTopicScanner();
+        return;
+      }
+      showLoading();
       setBusy($('generateBtn'), true, 'Maken...');
       try {
         let data;
-        if (!isUuid(state.workspace_id) || !isUuid(state.user_id)) {
-          await loadContext();
-        }
         if (isUuid(state.workspace_id) && isUuid(state.user_id)) {
+          const topicScan = await runBackgroundTopicScan();
+          const sourceContent = [
+            $('mainPrompt').value.trim(),
+            topicScanToBrief(topicScan)
+          ].filter(Boolean).join('\n\n');
           data = await requestJson(ENDPOINTS.generate, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1748,29 +2252,33 @@
               user_id: state.user_id,
               keyword: keywordFromPrompt(),
               content_goal: $('contentGoal').value,
-              source_content: $('mainPrompt').value.trim(),
-              xml_template: 'Content type: ' + state.contentType,
-              xml_template_name: 'ContentFlow focused studio',
+              source_content: sourceContent,
+              xml_template: modeInstruction(),
+              xml_template_name: `ContentFlow ${currentMode().label}`,
               brand_profile_snapshot: snapshot(),
               tone_profile: toneProfile(),
               customer_preferences: prefs()
             })
           });
-          toast('Concept opgeslagen in Supabase.');
+          toast(topicScan ? 'Concept opgeslagen. Topic scan is stilletjes meegenomen.' : 'Concept opgeslagen in Supabase.');
         } else {
-          throw new Error('Geen geldige workspace_id en user_id beschikbaar voor de TypeScript-generatie.');
+          await new Promise(resolve => setTimeout(resolve, 500));
+          data = localPreview();
+          toast('Preview gemaakt. Voeg backend-context toe voor Supabase.');
         }
         renderOutput(data);
+        markProgress('content_output');
       } catch (error) {
-        renderOutput(localPreview(error.message || 'Backend lukte niet.'));
-        toast('TypeScript-generatie niet bereikbaar.');
+        renderOutput(localPreview());
+        markProgress('content_output');
+        toast('Backend lukte niet, preview getoond.');
       } finally {
         setBusy($('generateBtn'), false);
       }
     }
     async function scanTone() {
       if (!isUuid(state.workspace_id) || !isUuid(state.user_id) || !$('websiteUrl').value.trim()) {
-        $('toneVoice').value ||= 'Helder, deskundig, menselijk en precies. Geen lege marketingtaal. Korte alinea’s en duidelijke bewijsvoering.';
+        $('toneVoice').value ||= 'Rustig, deskundig, menselijk en precies. Geen lege marketingtaal. Korte alinea’s en duidelijke bewijsvoering.';
         scoreBrief();
         toast('Lokale stijlrichting ingevuld.');
         return;
@@ -1804,7 +2312,7 @@
         return;
       }
 
-      $('outputTitle').textContent = 'Topic scan draait';
+      $('outputTitle').textContent = 'Hermes audit draait';
       $('outputSub').textContent = 'De agent zoekt eerste SEO-kansen.';
       $('outputStage').innerHTML = '<div class="empty"><div><div class="spinner"></div><div class="empty-title">Hermes kijkt mee.</div><p class="empty-copy">De aanvraag loopt via Netlify naar je Hetzner-agent. De geheime key blijft server-side.</p></div></div>';
       setBusy($('hermesAuditBtn'), true, 'Auditen...');
@@ -1823,10 +2331,10 @@
           })
         });
         renderHermesAudit(data);
-        toast('Topic scan ontvangen.');
+        toast('Hermes audit ontvangen.');
       } catch (error) {
-        toast(error.message || 'Topic scan mislukte.');
-        $('outputTitle').textContent = 'Topic scan mislukt';
+        toast(error.message || 'Hermes audit mislukte.');
+        $('outputTitle').textContent = 'Hermes audit mislukt';
         $('outputSub').textContent = 'Controleer of Hermes online is en Netlify env vars kloppen.';
         $('outputStage').innerHTML = `<div class="empty"><div><div class="empty-mark">!</div><div class="empty-title">Geen audit ontvangen.</div><p class="empty-copy">${esc(error.message || 'Hermes kon niet worden bereikt.')}</p></div></div>`;
       } finally {
@@ -1881,6 +2389,7 @@
       if (!text && state.verdict !== 'approved') return toast('Schrijf kort wat beter moet.');
       if (!state.lastResponse?.job?.id || state.lastResponse.status === 'preview' || !isUuid(state.workspace_id)) {
         localStorage.setItem(key('last_feedback'), text || 'Goedgekeurd');
+        markProgress('feedback_loop');
         toast('Feedback lokaal onthouden.');
         return;
       }
@@ -1890,6 +2399,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ workspace_id: state.workspace_id, user_id: state.user_id, job_id: state.lastResponse.job.id, variant_id: state.lastResponse.primary_variant?.id || '', verdict: state.verdict, category: 'focused_studio_feedback', feedback_text: text })
         });
+        markProgress('feedback_loop');
         toast('Feedback opgeslagen in Supabase.');
       } catch {
         toast('Feedback lokaal onthouden door backendfout.');
@@ -1904,9 +2414,10 @@
     function bind() {
       fieldIds.forEach(id => $(id)?.addEventListener('input', scoreBrief));
       $('generateBtn').addEventListener('click', generate);
+      $('topicScannerBtn')?.addEventListener('click', runTopicScanner);
       $('copyBtn').addEventListener('click', copyOutput);
-      $('scanToneBtn').addEventListener('click', scanTone);
-      $('hermesAuditBtn').addEventListener('click', runHermesAudit);
+      $('scanToneBtn')?.addEventListener('click', scanTone);
+      $('hermesAuditBtn')?.addEventListener('click', runHermesAudit);
       $('hermesPlaybookBtn')?.addEventListener('click', runHermesPlaybook);
       $('advancedToggle').addEventListener('click', () => $('advancedPanel').classList.toggle('open'));
       $('themeToggle').addEventListener('click', () => {
@@ -1916,10 +2427,12 @@
         localStorage.setItem(key('theme'), dark ? 'dark' : 'light');
       });
       document.querySelectorAll('[data-type]').forEach(btn => btn.addEventListener('click', () => {
-        state.contentType = btn.dataset.type;
+        state.contentType = normalizeContentType(btn.dataset.type);
         document.querySelectorAll('[data-type]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+        applyOutputMode();
         saveDraft();
+        scoreBrief();
       }));
     }
     function init() {
@@ -1929,6 +2442,7 @@
         $('themeToggle').textContent = savedTheme === 'dark' ? 'Licht' : 'Donker';
       }
       loadDraft();
+      renderProgress();
       bind();
       scoreBrief();
       loadContext();

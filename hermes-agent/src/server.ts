@@ -98,6 +98,20 @@ type GrowthPlaybookPayload = {
   editor_prompt?: string;
 };
 
+type TopicScanPayload = {
+  topic_summary?: string;
+  search_intent?: string;
+  funnel_stage?: string;
+  topic_variants?: string[];
+  audience_questions?: string[];
+  entity_terms?: string[];
+  existing_signals?: string[];
+  missing_angles?: Array<{ angle: string; why_it_matters: string; priority: string }>;
+  serp_expectation?: string;
+  recommended_next_step?: string;
+  editor_prompt?: string;
+};
+
 function clean(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -600,6 +614,105 @@ async function buildAiGrowthPlaybook(input: {
     };
   } catch (error) {
     console.error("OpenAI growth playbook failed", error);
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function buildAiTopicScan(input: {
+  url: string;
+  keyword: string;
+  companyName: string;
+  services: string;
+  targetAudience: string;
+  scan: PageScan | null;
+  scanError: string;
+}): Promise<TopicScanPayload | null> {
+  if (!openAiApiKey) return null;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+  const scan = input.scan;
+  const prompt = {
+    website: input.url,
+    topic_or_keyword: input.keyword,
+    company_name: input.companyName || "Onbekend bedrijf",
+    services: input.services,
+    target_audience: input.targetAudience,
+    page_signals: scan
+      ? {
+          title: scan.title,
+          meta_description: scan.metaDescription,
+          h1: scan.h1,
+          h2: scan.h2,
+          word_count: scan.wordCount,
+          internal_links: scan.internalLinks,
+          visible_text_sample: scan.sampleText,
+          keyword_in_title: scan.keywordInTitle,
+          keyword_in_h1: scan.keywordInH1,
+        }
+      : { error: input.scanError },
+  };
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${openAiApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: openAiModel,
+        temperature: 0.25,
+        max_completion_tokens: 1400,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content:
+              "Je bent Hermes, een SEO topic strategist. Je doet de eerste stap van topical authority: topic scan. Gebruik gemeten website-signalen en SEO-logica. Geen verzonnen zoekvolumes. Antwoord uitsluitend als geldig JSON-object.",
+          },
+          {
+            role: "user",
+            content:
+              `Maak een praktische topic scan in het Nederlands op basis van deze data:\n\n` +
+              `${JSON.stringify(prompt, null, 2)}\n\n` +
+              "Geef exact deze JSON-velden terug: topic_summary, search_intent, funnel_stage, topic_variants, audience_questions, entity_terms, existing_signals, missing_angles, serp_expectation, recommended_next_step, editor_prompt. " +
+              "missing_angles bevat objecten met angle, why_it_matters en priority. Maak dit bruikbaar als input voor de volgende stap: Topic map.",
+          },
+        ],
+      }),
+      signal: controller.signal,
+    });
+
+    const data = (await response.json().catch(() => null)) as
+      | { choices?: Array<{ message?: { content?: string } }>; error?: { message?: string } }
+      | null;
+
+    if (!response.ok) {
+      throw new Error(data?.error?.message || `OpenAI request mislukt met status ${response.status}.`);
+    }
+
+    const content = data?.choices?.[0]?.message?.content || "";
+    const parsed = parseJsonObject<TopicScanPayload>(content);
+    if (!parsed) return null;
+
+    return {
+      topic_summary: clean(parsed.topic_summary),
+      search_intent: clean(parsed.search_intent),
+      funnel_stage: clean(parsed.funnel_stage),
+      topic_variants: cleanStringArray(parsed.topic_variants, 10),
+      audience_questions: cleanStringArray(parsed.audience_questions, 10),
+      entity_terms: cleanStringArray(parsed.entity_terms, 14),
+      existing_signals: cleanStringArray(parsed.existing_signals, 8),
+      missing_angles: cleanObjectArray(parsed.missing_angles, ["angle", "why_it_matters", "priority"], 6),
+      serp_expectation: clean(parsed.serp_expectation),
+      recommended_next_step: clean(parsed.recommended_next_step),
+      editor_prompt: clean(parsed.editor_prompt),
+    };
+  } catch (error) {
+    console.error("OpenAI topic scan failed", error);
     return null;
   } finally {
     clearTimeout(timeout);
@@ -1152,6 +1265,142 @@ async function buildGrowthPlaybook(body: TaskBody) {
   };
 }
 
+async function buildTopicScan(body: TaskBody) {
+  const url = clean(body.url) || "onbekende website";
+  const keyword = clean(body.keyword) || "belangrijkste topic";
+  const companyName = clean(body.company_name);
+  const services = clean(body.services);
+  const targetAudience = clean(body.target_audience);
+  const normalizedUrl = normalizeUrl(url);
+
+  let scan: PageScan | null = null;
+  let scanError = "";
+  try {
+    scan = normalizedUrl ? await scanPage(normalizedUrl, keyword) : null;
+  } catch (error) {
+    scanError = error instanceof Error ? error.message : "Website kon niet worden opgehaald.";
+  }
+
+  const headingSignals = [...(scan?.h1 || []), ...(scan?.h2 || [])].slice(0, 8);
+  const baseTopicVariants = [
+    keyword,
+    `${keyword} kosten`,
+    `${keyword} voorbeelden`,
+    `${keyword} vergelijken`,
+    `${keyword} checklist`,
+    `beste ${keyword}`,
+  ];
+  const baseQuestions = [
+    `Wat is ${keyword}?`,
+    `Wanneer is ${keyword} relevant?`,
+    `Waar moet je op letten bij ${keyword}?`,
+    `Wat kost ${keyword}?`,
+    `Welke fouten maken mensen rond ${keyword}?`,
+  ];
+  const baseEntityTerms = [
+    keyword,
+    ...keyword.split(/\s+/).filter((term) => term.length > 3),
+    ...headingSignals.flatMap((heading) => heading.split(/\s+/).filter((term) => term.length > 5)).slice(0, 8),
+  ];
+  const existingSignals = scan
+    ? [
+        scan.title ? `Title gevonden: ${scan.title}` : "",
+        scan.h1.length ? `H1 gevonden: ${scan.h1.join(" | ")}` : "",
+        scan.h2.length ? `${scan.h2.length} H2-koppen gevonden` : "Weinig H2-structuur gevonden",
+        `${scan.wordCount} woorden op de gescande pagina`,
+        `${scan.internalLinks} interne links gevonden`,
+      ].filter(Boolean)
+    : [`Scan mislukt: ${scanError}`];
+  const missingAngles = [
+    {
+      angle: "Definitie en context",
+      why_it_matters: "Een topic heeft eerst een heldere uitleg nodig voordat Google en bezoekers de pagina goed kunnen plaatsen.",
+      priority: "high",
+    },
+    {
+      angle: "Keuzecriteria",
+      why_it_matters: "Bezoekers willen weten wanneer dit topic voor hen relevant is en welke optie logisch is.",
+      priority: "high",
+    },
+    {
+      angle: "Bewijs en voorbeelden",
+      why_it_matters: "Zonder cases, cijfers of voorbeelden blijft de content snel generiek.",
+      priority: "medium",
+    },
+  ];
+  const baseTopicScan = {
+    ok: true,
+    type: "topic_scan",
+    status: scan ? "scanned" : "fallback",
+    url: scan?.finalUrl || normalizedUrl || url,
+    keyword,
+    topic_summary: `De eerste topic scan voor "${keyword}" kijkt of de website dit onderwerp al duidelijk uitlegt, welke invalshoeken zichtbaar zijn en welke subtopics nodig zijn om autoriteit op te bouwen.`,
+    search_intent: "Gemengd: informeren, vergelijken en richting actie bewegen.",
+    funnel_stage: "TOFU/MOFU met kans op BOFU-pagina's",
+    topic_variants: [...new Set(baseTopicVariants)].slice(0, 8),
+    audience_questions: baseQuestions,
+    entity_terms: [...new Set(baseEntityTerms.map((term) => term.toLowerCase()))].slice(0, 12),
+    existing_signals: existingSignals,
+    missing_angles: missingAngles,
+    serp_expectation:
+      "Voor dit topic verwacht Hermes vaak een mix van uitlegpagina's, gidsen, vergelijkingspagina's en commerciele landingspagina's. Echte SERP-data kan later via een SEO API worden toegevoegd.",
+    recommended_next_step: "Maak hierna een Topic map: groepeer de varianten in hoofdthema's, subtopics en pagina-typen.",
+    editor_prompt: [
+      `Maak een topic map voor "${keyword}" voor ${companyName || scan?.finalUrl || "deze website"}.`,
+      services ? `Aanbod/context: ${services}.` : "",
+      targetAudience ? `Doelgroep: ${targetAudience}.` : "",
+      `Bestaande signalen: ${existingSignals.join(" | ")}.`,
+      `Topicvarianten: ${baseTopicVariants.join(", ")}.`,
+      "Groepeer dit in pillar page, ondersteunende artikelen, money pages en interne-linkroutes.",
+    ].filter(Boolean).join("\n"),
+  };
+
+  const aiTopicScan = await buildAiTopicScan({
+    url: baseTopicScan.url,
+    keyword,
+    companyName,
+    services,
+    targetAudience,
+    scan,
+    scanError,
+  });
+
+  if (!aiTopicScan) {
+    return {
+      ...baseTopicScan,
+      ai_enriched: false,
+      model: null,
+      strategy_source: "rules",
+    };
+  }
+
+  return {
+    ...baseTopicScan,
+    topic_summary: aiTopicScan.topic_summary || baseTopicScan.topic_summary,
+    search_intent: aiTopicScan.search_intent || baseTopicScan.search_intent,
+    funnel_stage: aiTopicScan.funnel_stage || baseTopicScan.funnel_stage,
+    topic_variants: aiTopicScan.topic_variants?.length
+      ? aiTopicScan.topic_variants
+      : baseTopicScan.topic_variants,
+    audience_questions: aiTopicScan.audience_questions?.length
+      ? aiTopicScan.audience_questions
+      : baseTopicScan.audience_questions,
+    entity_terms: aiTopicScan.entity_terms?.length ? aiTopicScan.entity_terms : baseTopicScan.entity_terms,
+    existing_signals: aiTopicScan.existing_signals?.length
+      ? aiTopicScan.existing_signals
+      : baseTopicScan.existing_signals,
+    missing_angles: aiTopicScan.missing_angles?.length
+      ? aiTopicScan.missing_angles
+      : baseTopicScan.missing_angles,
+    serp_expectation: aiTopicScan.serp_expectation || baseTopicScan.serp_expectation,
+    recommended_next_step: aiTopicScan.recommended_next_step || baseTopicScan.recommended_next_step,
+    editor_prompt: aiTopicScan.editor_prompt || baseTopicScan.editor_prompt,
+    ai_enriched: true,
+    model: openAiModel,
+    strategy_source: "openai",
+  };
+}
+
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 
@@ -1174,6 +1423,10 @@ app.post("/tasks", requireHermesKey, async (req, res) => {
 
   if (task === "growth_playbook") {
     return res.json(await buildGrowthPlaybook(body));
+  }
+
+  if (task === "topic_scan") {
+    return res.json(await buildTopicScan(body));
   }
 
   return res.json({

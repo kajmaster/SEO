@@ -363,14 +363,76 @@ function isReasonableKeyword(value: string): boolean {
   return !!keyword && keyword.length <= 90 && wordCount <= 10 && (!/[.!?]/.test(keyword) || wordCount <= 5);
 }
 
-function averageSentenceWords(value: string): number {
-  const sentences = stripHtml(value)
-    .split(/[.!?]+/)
-    .map((sentence) => sentence.trim())
-    .filter(Boolean);
-  if (!sentences.length) return 0;
-  const totalWords = sentences.reduce((sum, sentence) => sum + countWords(sentence), 0);
-  return totalWords / sentences.length;
+function isHomepageHeroRequest(input: GenerateContentRequest): boolean {
+  return /homepage\s+hero|websitecopy|hero-copy/i.test(
+    [
+      input.keyword,
+      input.xml_template_name,
+      input.xml_template,
+      input.source_content,
+    ]
+      .map((value) => sanitizeText(value))
+      .join(" "),
+  );
+}
+
+type ContentOutputMode = "websitecopy" | "linkedin" | "seo" | "topic_authority";
+
+function detectContentOutputMode(input: GenerateContentRequest): ContentOutputMode {
+  const text = [
+    input.keyword,
+    input.content_goal,
+    input.xml_template_name,
+    input.xml_template,
+    input.source_content,
+  ]
+    .map((value) => sanitizeText(value))
+    .join(" ")
+    .toLowerCase();
+
+  if (/linkedin|linked in|social post|sociale post/.test(text)) return "linkedin";
+  if (/topic authority|topical authority|topic map|expertkaart|pillar|supporting pages|supportpagina/.test(text)) {
+    return "topic_authority";
+  }
+  if (/websitecopy|homepage|hero-copy|hero copy|webcopy/.test(text)) return "websitecopy";
+  return "seo";
+}
+
+function outputModeInstruction(mode: ContentOutputMode, keyword: string): string {
+  if (mode === "linkedin") {
+    return [
+      `Schrijf 3 Nederlandse LinkedIn-postvarianten over: ${keyword}.`,
+      "Elke variant is direct plaatsbaar op LinkedIn.",
+      "Gebruik HTML in content met alleen <h1> voor de kernzin en daarna korte <p>-alinea's.",
+      "Structuur: sterke hook, persoonlijke/inhoudelijke observatie, duidelijke les, praktische consequentie, rustige afsluitende vraag.",
+      "Lengte: ongeveer 120-220 woorden per variant. Geen SEO-artikel, geen H2-koppen, geen meta-uitleg.",
+    ].join("\n");
+  }
+
+  if (mode === "websitecopy") {
+    return [
+      `Schrijf 3 compacte websitecopy-varianten voor: ${keyword}.`,
+      "Elke variant moet binnen 5 seconden duidelijk maken: voor wie, welk probleem, welke belofte en welke volgende stap.",
+      "Gebruik HTML met <h1>, een korte intro <p>, <h2>Waarom dit werkt</h2> met 3 <li>, <h2>Vertrouwen</h2> en <h2>Volgende stap</h2>.",
+      "Lengte: ongeveer 120-260 woorden per variant. Geen SEO-artikelstructuur.",
+    ].join("\n");
+  }
+
+  if (mode === "topic_authority") {
+    return [
+      `Maak 3 topic-authority plannen rond: ${keyword}.`,
+      "Elke variant is een expertkaart, geen artikel.",
+      "Gebruik HTML met <h1>, <h2>Pillar page</h2>, <h2>Supportpagina's</h2>, <h2>Doelgroepvragen</h2>, <h2>Bewijs</h2> en <h2>Interne linkroute</h2>.",
+      "Leg uit welke pagina eerst gemaakt moet worden en waarom die expertpositie opbouwt.",
+    ].join("\n");
+  }
+
+  return [
+    `Schrijf 3 sterke Nederlandse SEO-paginavarianten voor het zoekwoord: ${keyword}.`,
+    "Elke variant combineert zoekintentie, structuur, bewijs, interne links en CTA.",
+    "Gebruik HTML met <h1>, 3-5 <h2>, <p> en waar passend <ul>/<li>.",
+    "Lengte: ongeveer 420-700 woorden per variant.",
+  ].join("\n");
 }
 
 function collectQualityIssues(
@@ -389,7 +451,10 @@ function collectQualityIssues(
   const paragraphCount = (variant.content.match(/<p[\s>]/gi) || []).length;
   const forbiddenHits = findForbiddenHits(variant, forbiddenWords);
   const genericHits = collectGenericPhraseHits(variant);
-  const briefing = userBriefing(input).toLowerCase();
+  const mode = detectContentOutputMode(input);
+  const isHomepageHero = isHomepageHeroRequest(input) || mode === "websitecopy";
+  const isLinkedIn = mode === "linkedin";
+  const isTopicAuthority = mode === "topic_authority";
 
   for (const hit of forbiddenHits) {
     issues.push({
@@ -409,21 +474,42 @@ function collectQualityIssues(
     });
   }
 
-  if (wordCount < 100) {
+  if (isLinkedIn && wordCount < 70) {
+    issues.push({
+      severity: "blocker",
+      code: "too_short",
+      variant_index: variant.variant_index,
+      message: `Veel te kort voor een LinkedIn-post: ${wordCount} woorden.`,
+    });
+  } else if (isHomepageHero && wordCount < 60) {
+    issues.push({
+      severity: "blocker",
+      code: "too_short",
+      variant_index: variant.variant_index,
+      message: `Veel te kort voor homepage-copy: ${wordCount} woorden.`,
+    });
+  } else if (isTopicAuthority && wordCount < 120) {
+    issues.push({
+      severity: "blocker",
+      code: "too_short",
+      variant_index: variant.variant_index,
+      message: `Veel te kort voor een topic-authority plan: ${wordCount} woorden.`,
+    });
+  } else if (!isHomepageHero && !isLinkedIn && !isTopicAuthority && wordCount < 100) {
     issues.push({
       severity: "blocker",
       code: "too_short",
       variant_index: variant.variant_index,
       message: `Veel te kort om te beoordelen: ${wordCount} woorden.`,
     });
-  } else if (wordCount < 350) {
+  } else if (!isHomepageHero && !isLinkedIn && !isTopicAuthority && wordCount < 350) {
     issues.push({
       severity: "warning",
       code: "too_short_for_publication",
       variant_index: variant.variant_index,
       message: `Te kort voor publicatie, maar wel bruikbaar voor review: ${wordCount} woorden.`,
     });
-  } else if (wordCount < 600) {
+  } else if (!isHomepageHero && !isLinkedIn && !isTopicAuthority && wordCount < 600) {
     issues.push({
       severity: "warning",
       code: "thin_content",
@@ -439,7 +525,7 @@ function collectQualityIssues(
       variant_index: variant.variant_index,
       message: "Het opgegeven zoekwoord lijkt op een hele zin; gebruik volgende keer een kort onderwerp.",
     });
-  } else if (keyword && !plainContent.includes(keyword) && !variant.title.toLowerCase().includes(keyword)) {
+  } else if (!isHomepageHero && !isLinkedIn && keyword && !plainContent.includes(keyword) && !variant.title.toLowerCase().includes(keyword)) {
     issues.push({
       severity: "blocker",
       code: "missing_keyword",
@@ -448,7 +534,7 @@ function collectQualityIssues(
     });
   }
 
-  if (headingCount < 3) {
+  if (!isLinkedIn && headingCount < 3) {
     issues.push({
       severity: "warning",
       code: "weak_structure",
@@ -457,7 +543,7 @@ function collectQualityIssues(
     });
   }
 
-  if (paragraphCount < 5) {
+  if (!isHomepageHero && !isLinkedIn && paragraphCount < 5) {
     issues.push({
       severity: "warning",
       code: "few_paragraphs",
@@ -481,30 +567,6 @@ function collectQualityIssues(
       code: "cta_not_explicit",
       variant_index: variant.variant_index,
       message: "De gewenste CTA komt niet duidelijk genoeg terug.",
-    });
-  }
-
-  if (/(12\s*-?\s*jarige|twaalfjarige|door een kind|kindertaal)/i.test(briefing)) {
-    const avgSentence = averageSentenceWords(variant.content);
-    const simpleStyleSignals = /\b(super|gewoon|snap|makkelijk|mega|alsof|stel je voor|best wel|niet moeilijk|lekker duidelijk)\b/i.test(
-      plainContent,
-    );
-    if (avgSentence > 18 || !simpleStyleSignals) {
-      issues.push({
-        severity: "warning",
-        code: "briefing_style_not_visible",
-        variant_index: variant.variant_index,
-        message: "De briefing vraagt om een 12-jarige stijl, maar de tekst klinkt nog te volwassen of te formeel.",
-      });
-    }
-  }
-
-  if (/(grappig|humor|luchtig|speels)/i.test(briefing) && !/[!?]/.test(stripHtml(variant.content))) {
-    issues.push({
-      severity: "warning",
-      code: "briefing_humor_not_visible",
-      variant_index: variant.variant_index,
-      message: "De briefing vraagt om een grappige of speelse toon, maar die is nog niet zichtbaar genoeg.",
     });
   }
 
@@ -688,10 +750,6 @@ function normalizeContentPlan(raw: UnknownRecord): ContentPlan {
   };
 }
 
-function userBriefing(input: GenerateContentRequest): string {
-  return sanitizeText(input.source_content).slice(0, 1200);
-}
-
 export function buildDefaultPlan(
   input: GenerateContentRequest,
   context: Awaited<ReturnType<typeof loadGenerationContext>>,
@@ -701,7 +759,6 @@ export function buildDefaultPlan(
   const services = sanitizeText(brand.services);
   const audience = sanitizeText(brand.target_audience || brand.buyer_persona);
   const cta = sanitizeText(customer.primary_cta) || "Vraag een gesprek of offerte aan";
-  const briefing = userBriefing(input);
 
   return {
     searchIntent: input.content_goal === "inform" ? "informatief" : "commercieel onderzoekend",
@@ -725,12 +782,6 @@ export function buildDefaultPlan(
     mustAvoid: ["Absolute claims zonder bewijs", "Vage marketingtaal", "Nietszeggende buzzwords"],
     ctaDirection: cta,
     writingNotes: [
-      ...(briefing
-        ? [
-            `Volg deze gebruikersbriefing als harde schrijfrichting, inclusief toon, leeftijdsniveau, humor of stijltest: ${briefing}`,
-            "Neem de briefing niet letterlijk over als zichtbare tekst.",
-          ]
-        : []),
       "Schrijf helder Nederlands",
       "Maak de tekst menselijk en zakelijk",
       "Gebruik concrete tussenkoppen",
@@ -864,7 +915,7 @@ function buildEmergencyPrompt(
   const brand = context.brandProfile;
   const tone = context.toneProfile;
   const customer = context.customerPreferences;
-  const sourceContent = userBriefing(input).slice(0, 1800);
+  const sourceContent = sanitizeText(input.source_content).slice(0, 1800);
   const knowledgeContext = sanitizeText(context.knowledgeContext).slice(0, 1800);
   const learningRules = context.learningMemory.slice(0, 8);
   const forbiddenWords = context.forbiddenWords.slice(0, 20);
@@ -888,16 +939,13 @@ function buildEmergencyPrompt(
     `Kernboodschappen: ${plan.keyMessages.join(" | ")}`,
     `Bewijs/context: ${plan.proofPoints.join(" | ")}`,
     "",
-    sourceContent
-      ? `Gebruikersbriefing - verplicht volgen qua toon, stijl en inhoud, maar niet letterlijk kopieren:\n${sourceContent}`
-      : "",
+    sourceContent ? `Bronmateriaal:\n${sourceContent}` : "",
     knowledgeContext ? `Kennisbank:\n${knowledgeContext}` : "",
     learningRules.length ? `Leerregels:\n${learningRules.map((rule) => `- ${rule}`).join("\n")}` : "",
     forbiddenWords.length ? `Verboden woorden:\n${forbiddenWords.map((word) => `- ${word}`).join("\n")}` : "",
     "",
     "Eisen",
     "- 350-550 woorden.",
-    "- Als de briefing vraagt om een specifieke stijl, zoals grappig of alsof een 12-jarige het schreef, moet die stijl duidelijk terugkomen in woordkeuze, zinslengte en voorbeelden.",
     "- Gebruik HTML: exact 1 <h1>, meerdere <h2>, <p>, eventueel <ul><li>.",
     "- Geen meta-uitleg, geen excuses, geen melding dat dit een noodroute is.",
     "- Geen generieke zinnen zoals 'in een wereld waarin' of 'het draait om'.",
@@ -1370,7 +1418,7 @@ function buildPlanningPrompt(
     sanitizeText(input.xml_template) || sanitizeText(context.template?.xml_template);
   const templateName =
     sanitizeText(input.xml_template_name) || sanitizeText(context.template?.name);
-  const sourceContent = userBriefing(input).slice(0, 3000);
+  const sourceContent = sanitizeText(input.source_content).slice(0, 3000);
   const knowledgeContext = sanitizeText(context.knowledgeContext).slice(0, 5000);
 
   const lines = [
@@ -1396,12 +1444,7 @@ function buildPlanningPrompt(
   ];
 
   if (sourceContent) {
-    lines.push(
-      "",
-      "GEBRUIKERSBRIEFING",
-      "Volg deze briefing als harde inhouds- en stijlinstructie. Neem de tekst niet letterlijk over in de output.",
-      sourceContent,
-    );
+    lines.push("", "BRONMATERIAAL", sourceContent);
   }
 
   if (knowledgeContext) {
@@ -1517,11 +1560,26 @@ export function buildPrompt(
   const customer = context.customerPreferences;
   const xmlTemplate = sanitizeText(input.xml_template) || sanitizeText(context.template?.xml_template);
   const templateName = sanitizeText(input.xml_template_name) || sanitizeText(context.template?.name);
-  const sourceContent = userBriefing(input).slice(0, 2200);
+  const sourceContent = sanitizeText(input.source_content).slice(0, 2200);
   const knowledgeContext = sanitizeText(context.knowledgeContext).slice(0, 2200);
+  const outputMode = detectContentOutputMode({
+    ...input,
+    xml_template: xmlTemplate,
+    xml_template_name: templateName,
+    source_content: sourceContent,
+  });
+  const isHomepageHero = isHomepageHeroRequest({
+    ...input,
+    xml_template: xmlTemplate,
+    xml_template_name: templateName,
+    source_content: sourceContent,
+  });
 
   const lines = [
-    `Schrijf 1 sterke Nederlandse SEO-pagina voor het zoekwoord: ${input.keyword}.`,
+    outputModeInstruction(outputMode, input.keyword),
+    "",
+    "BELANGRIJK OUTPUTTYPE",
+    `Gekozen outputtype: ${outputMode}. Alles in de response moet deze vorm volgen.`,
     "",
     "DOEL",
     buildGoalInstruction(input.content_goal || "convince"),
@@ -1553,14 +1611,24 @@ export function buildPrompt(
     `Gewenste CTA: ${sanitizeText(customer.primary_cta)}`,
     "",
     "KWALITEITSEISEN",
-    "- Volg de gebruikersbriefing verplicht als stijlopdracht. Als de gebruiker vraagt om grappig, simpel, kinderlijk, formeel, premium of juist speels te schrijven, moet de output dat zichtbaar laten voelen.",
-    "- Neem de letterlijke briefingzin nooit over als paragraaf of kop.",
     "- Schrijf als een ervaren menselijke copywriter, niet als een standaard AI-assistent.",
-    "- Lever een echte, bruikbare reviewtekst op van ongeveer 420-620 woorden.",
+    outputMode === "linkedin"
+      ? "- Lever LinkedIn-posts op, geen artikel: ongeveer 120-220 woorden per variant."
+      : outputMode === "websitecopy" || isHomepageHero
+        ? "- Lever websitecopy op, geen artikel: ongeveer 120-260 woorden per variant."
+        : outputMode === "topic_authority"
+          ? "- Lever een strategische topic-authority kaart op, geen artikeltekst."
+          : "- Lever een echte, bruikbare SEO-reviewtekst op van ongeveer 420-700 woorden.",
     "- Schrijf specifiek op basis van de opgegeven website, diensten, tone-of-voice scan, feedbackregels en bronmateriaal.",
     "- Vermijd generieke B2B-zinnen zoals 'in een wereld waarin', 'het draait om' en lege containerwoorden.",
     "- Maak elke alinea inhoudelijk nuttig: uitleg, keuzehulp, nuance, bewijs, risicoverlaging of vervolgstap.",
-    "- Gebruik HTML in de content met exact een <h1>, 3-5 <h2>, <p> en waar passend <ul>/<li>.",
+    outputMode === "linkedin"
+      ? "- Gebruik HTML met een <h1> voor de kernzin en korte <p>-alinea's. Geen <h2> artikelkoppen."
+      : outputMode === "topic_authority"
+        ? "- Gebruik HTML als strategische kaart met duidelijke lijsten voor pillar, supportpagina's, vragen, bewijs en linkroute."
+        : isHomepageHero || outputMode === "websitecopy"
+      ? "- Gebruik HTML met exact: een <h1>, een korte <p>, een <h2>Waarom Turn.One</h2> met 3 <li>, een <h2>Vertrouwen</h2> en een <h2>Volgende stap</h2>."
+      : "- Gebruik HTML in de content met exact een <h1>, 3-5 <h2>, <p> en waar passend <ul>/<li>.",
     "- Schrijf geen placeholders, geen meta-uitleg, geen template-tags en geen opmerkingen over AI.",
     "- Gebruik geen verzonnen certificeringen, cijfers, klanten of garanties. Als bewijs ontbreekt, formuleer zorgvuldig.",
     "- Laat de CTA natuurlijk voelen en passend bij het bedrijf, niet als agressieve salescopy.",
@@ -1594,11 +1662,7 @@ export function buildPrompt(
   }
 
   if (sourceContent) {
-    lines.push(
-      "",
-      "GEBRUIKERSBRIEFING - VERPLICHT VOLGEN, NIET LETTERLIJK KOPIEREN",
-      sourceContent,
-    );
+    lines.push("", "BRONMATERIAAL", sourceContent);
   }
 
   if (xmlTemplate) {
@@ -1659,14 +1723,7 @@ export async function generateVariants(
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      const reason = "Volledige OpenAI-generatie duurde te lang.";
-      try {
-        return await generateEmergencyDraft(input, context, plan, reason);
-      } catch (emergencyError) {
-        const emergencyMessage =
-          emergencyError instanceof Error ? emergencyError.message : "Noodgeneratie mislukte.";
-        return buildFallbackDraft(input, context, plan, `${reason} ${emergencyMessage}`);
-      }
+      throw new Error("OpenAI duurde te lang. Probeer opnieuw met korter bronmateriaal of minder briefingtekst.");
     }
     throw error;
   } finally {
