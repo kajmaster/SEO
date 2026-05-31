@@ -1292,6 +1292,76 @@
           </div>
         </div>`;
     }
+    function topicMapFromAudit(audit) {
+      const existing = audit.topic_map;
+      if (existing && typeof existing === 'object') return existing;
+      const keyword = audit.keyword || keywordFromPrompt();
+      const clusters = Array.isArray(audit.clusters) ? audit.clusters : [];
+      const pageIdeas = Array.isArray(audit.page_ideas) ? audit.page_ideas : [];
+      const linkPlan = Array.isArray(audit.internal_link_plan) ? audit.internal_link_plan : [];
+      const metrics = audit.metrics || {};
+      return {
+        core_topic: keyword || 'Topic map',
+        authority_goal: `Bouw rond "${keyword || 'dit onderwerp'}" een topical hub die informeert, vergelijkt, vertrouwen geeft en naar actie stuurt.`,
+        nodes: [
+          {
+            topic: keyword || 'Hoofdtopic',
+            intent: 'Hoofdzoekintentie',
+            role: 'pillar',
+            content_type: 'Pillar / money page',
+            why: 'Centrale pagina die de zoekintentie opvangt en doorlinkt naar ondersteunende subtopics.'
+          },
+          ...clusters.slice(0, 5).map((cluster, index) => ({
+            topic: cluster.name || pageIdeas[index]?.title || `Subtopic ${index + 1}`,
+            intent: cluster.intent || 'Support',
+            role: index === clusters.length - 1 ? 'conversion support' : 'supporting cluster',
+            content_type: pageIdeas[index]?.format || 'Ondersteunende pagina',
+            why: cluster.angle || pageIdeas[index]?.why || 'Ondersteunt expertise, bewijs en interne linkkracht.'
+          }))
+        ],
+        authority_gaps: [
+          Number(metrics.word_count || 0) && Number(metrics.word_count || 0) < 650 ? 'Verdiep de pagina met meer keuzecriteria, bewijs en FAQ-content.' : '',
+          Array.isArray(metrics.h2) && metrics.h2.length < 4 ? 'Voeg meer duidelijke subtopics toe in de H2-structuur.' : '',
+          metrics.proof_signals === false ? 'Voeg E-E-A-T bewijs toe: cases, reviews, cijfers of auteursexpertise.' : '',
+          Number(metrics.internal_links || 0) < 5 ? 'Gebruik interne links om de pillar en subtopics als cluster te verbinden.' : ''
+        ].filter(Boolean),
+        interlink_moves: linkPlan.length ? linkPlan : [
+          `Link vanuit ondersteunende artikelen naar de belangrijkste ${keyword || 'pillar'}-pagina.`,
+          'Link vanuit de pillar terug naar bewijs, FAQ en conversiegerichte pagina’s.',
+          'Gebruik onderaan de pagina drie verwante artikelen als topical vervolgstap.'
+        ]
+      };
+    }
+    function topicMapFromPlaybook(playbook) {
+      const existing = playbook.topic_map;
+      if (existing && typeof existing === 'object') return existing;
+      const keyword = playbook.keyword || keywordFromPrompt();
+      const machine = Array.isArray(playbook.content_machine) ? playbook.content_machine : [];
+      const moneyPages = Array.isArray(playbook.money_pages) ? playbook.money_pages : [];
+      const supportNodes = machine.flatMap(item => (item.support_articles || []).map(article => ({
+        topic: article,
+        intent: 'Support',
+        role: 'supporting article',
+        content_type: 'Artikel',
+        why: `Ondersteunt de pillar "${item.pillar}" en linkt door naar ${item.conversion_link}.`
+      })));
+      return {
+        core_topic: keyword || playbook.board_title || 'Growth topic map',
+        authority_goal: playbook.positioning || `Maak van "${keyword || 'dit thema'}" een route van vraag naar vertrouwen naar conversie.`,
+        nodes: [
+          ...moneyPages.slice(0, 3).map(page => ({
+            topic: page.title || keyword || 'Money page',
+            intent: page.intent || 'Converteren',
+            role: 'money page',
+            content_type: 'Money page',
+            why: page.promise || page.why_now || 'Verbindt topical authority met conversie.'
+          })),
+          ...supportNodes.slice(0, 5)
+        ],
+        authority_gaps: Array.isArray(playbook.proof_to_collect) ? playbook.proof_to_collect : [],
+        interlink_moves: machine.map(item => `Link "${item.pillar}" naar ${item.conversion_link}.`).filter(Boolean)
+      };
+    }
     function renderHermesAudit(data) {
       const audit = data.hermes || data;
       const opportunities = Array.isArray(audit.opportunities) ? audit.opportunities : [];
@@ -1346,7 +1416,7 @@
             <p style="font-size:18px;line-height:1.6;margin:8px 0 14px">${esc(audit.content_angle || 'Gebruik deze scan als basis voor een scherpere briefing.')}</p>
             <ol>${brief.map(point => `<li>${esc(point)}</li>`).join('') || '<li>Maak de pagina specifieker op zoekintentie, bewijs en CTA.</li>'}</ol>
           </div>
-          ${renderTopicMap(audit.topic_map)}
+          ${renderTopicMap(topicMapFromAudit(audit))}
           <div class="hermes-command">
             <div class="command-card">
               <div class="eyebrow">Hermes command center</div>
@@ -1420,7 +1490,7 @@
             <p style="font-size:20px;line-height:1.55;margin:8px 0 12px">${esc(playbook.positioning || 'Maak van losse content een duidelijke route naar vertrouwen en conversie.')}</p>
             <p style="margin:0;color:rgba(21,24,21,.68)">${esc(playbook.audience_insight || 'De doelgroep zoekt zekerheid, bewijs en een heldere volgende stap.')}</p>
           </div>
-          ${renderTopicMap(playbook.topic_map)}
+          ${renderTopicMap(topicMapFromPlaybook(playbook))}
           <div class="audit-grid">
             ${moneyPages.map(page => `
               <article class="audit-card">
