@@ -812,6 +812,92 @@
       text-transform: uppercase;
     }
 
+    .topic-map {
+      margin-top: 18px;
+      border: 1px solid rgba(21,24,21,.1);
+      border-radius: 28px;
+      padding: 20px;
+      background:
+        radial-gradient(circle at 100% 0, rgba(247,107,21,.14), transparent 34%),
+        linear-gradient(135deg, rgba(255,255,255,.78), rgba(244,243,239,.72));
+    }
+
+    .topic-map-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+
+    .topic-map-head h3 {
+      margin: 4px 0 6px;
+      font-size: 24px;
+      letter-spacing: -.055em;
+    }
+
+    .topic-map-head p {
+      margin: 0;
+      max-width: 720px;
+      color: rgba(21,24,21,.68);
+      line-height: 1.55;
+    }
+
+    .topic-nodes {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .topic-node {
+      min-height: 150px;
+      border: 1px solid rgba(57,119,195,.14);
+      border-radius: 22px;
+      padding: 14px;
+      background: rgba(255,255,255,.7);
+    }
+
+    .topic-node strong {
+      display: block;
+      margin: 8px 0 6px;
+      font-size: 17px;
+      line-height: 1.1;
+      letter-spacing: -.035em;
+    }
+
+    .topic-node p {
+      margin: 0;
+      color: rgba(21,24,21,.64);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .topic-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .topic-chip {
+      display: inline-flex;
+      border-radius: 999px;
+      padding: 4px 8px;
+      background: rgba(57,119,195,.1);
+      color: rgba(21,24,21,.72);
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 850;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .topic-support {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
     .next-actions li {
       margin-bottom: 8px;
     }
@@ -853,7 +939,7 @@
 
     @media (max-width: 860px) {
       .topbar, .footer-actions, .result-head { align-items: flex-start; flex-direction: column; }
-      .details, .advanced, .feedback-grid, .audit-grid, .audit-metrics, .strategy-hero, .strategy-columns, .hermes-command, .impact-strip { grid-template-columns: 1fr; }
+      .details, .advanced, .feedback-grid, .audit-grid, .audit-metrics, .strategy-hero, .strategy-columns, .hermes-command, .impact-strip, .topic-nodes, .topic-support { grid-template-columns: 1fr; }
       .studio-card, .result { border-radius: 24px; }
     }
   </style>
@@ -1167,6 +1253,45 @@
       }));
       $('saveFeedbackBtn').addEventListener('click', saveFeedback);
     }
+    function renderTopicMap(map) {
+      if (!map || typeof map !== 'object') return '';
+      const nodes = Array.isArray(map.nodes) ? map.nodes : [];
+      const gaps = Array.isArray(map.authority_gaps) ? map.authority_gaps : [];
+      const moves = Array.isArray(map.interlink_moves) ? map.interlink_moves : [];
+      return `
+        <div class="topic-map">
+          <div class="topic-map-head">
+            <div>
+              <div class="eyebrow">Topical authority</div>
+              <h3>${esc(map.core_topic || 'Topic map')}</h3>
+              <p>${esc(map.authority_goal || 'Maak van losse pagina-informatie een duidelijke topical hub met subtopics, bewijs en interne links.')}</p>
+            </div>
+            <span class="badge">${esc(nodes.length || 0)} topics</span>
+          </div>
+          <div class="topic-nodes">
+            ${nodes.map(node => `
+              <article class="topic-node">
+                <div class="topic-meta">
+                  <span class="topic-chip">${esc(node.role || 'topic')}</span>
+                  <span class="topic-chip">${esc(node.intent || 'intent')}</span>
+                </div>
+                <strong>${esc(node.topic || 'Subtopic')}</strong>
+                <p>${esc(node.why || node.content_type || '')}</p>
+              </article>
+            `).join('') || '<article class="topic-node"><span class="topic-chip">pillar</span><strong>Start met een hoofdtopic</strong><p>Hermes bouwt hier de topic map zodra er genoeg scaninformatie is.</p></article>'}
+          </div>
+          <div class="topic-support">
+            <div class="strategy-list">
+              <h3>Authority gaps</h3>
+              <ol>${gaps.map(item => `<li>${esc(item)}</li>`).join('') || '<li>Geen grote topical gaps gevonden.</li>'}</ol>
+            </div>
+            <div class="strategy-list">
+              <h3>Interlink moves</h3>
+              <ol>${moves.map(item => `<li>${esc(item)}</li>`).join('') || '<li>Gebruik interne links om de hub te versterken.</li>'}</ol>
+            </div>
+          </div>
+        </div>`;
+    }
     function renderHermesAudit(data) {
       const audit = data.hermes || data;
       const opportunities = Array.isArray(audit.opportunities) ? audit.opportunities : [];
@@ -1221,6 +1346,7 @@
             <p style="font-size:18px;line-height:1.6;margin:8px 0 14px">${esc(audit.content_angle || 'Gebruik deze scan als basis voor een scherpere briefing.')}</p>
             <ol>${brief.map(point => `<li>${esc(point)}</li>`).join('') || '<li>Maak de pagina specifieker op zoekintentie, bewijs en CTA.</li>'}</ol>
           </div>
+          ${renderTopicMap(audit.topic_map)}
           <div class="hermes-command">
             <div class="command-card">
               <div class="eyebrow">Hermes command center</div>
@@ -1294,6 +1420,7 @@
             <p style="font-size:20px;line-height:1.55;margin:8px 0 12px">${esc(playbook.positioning || 'Maak van losse content een duidelijke route naar vertrouwen en conversie.')}</p>
             <p style="margin:0;color:rgba(21,24,21,.68)">${esc(playbook.audience_insight || 'De doelgroep zoekt zekerheid, bewijs en een heldere volgende stap.')}</p>
           </div>
+          ${renderTopicMap(playbook.topic_map)}
           <div class="audit-grid">
             ${moneyPages.map(page => `
               <article class="audit-card">
@@ -1331,11 +1458,18 @@
       const opportunities = Array.isArray(audit.opportunities) ? audit.opportunities : [];
       const brief = Array.isArray(audit.content_brief) ? audit.content_brief : [];
       const linkPlan = Array.isArray(audit.internal_link_plan) ? audit.internal_link_plan : [];
-      if (audit.editor_prompt) return audit.editor_prompt;
+      const topicMap = audit.topic_map || {};
+      const topicNodes = Array.isArray(topicMap.nodes) ? topicMap.nodes : [];
+      const topicPrompt = [
+        topicMap.authority_goal ? `Topic map doel: ${topicMap.authority_goal}` : '',
+        topicNodes.length ? `Topical authority structuur:\n- ${topicNodes.map(node => `${node.topic} (${node.intent}, ${node.role})`).join('\n- ')}` : ''
+      ].filter(Boolean).join('\n\n');
+      if (audit.editor_prompt) return [audit.editor_prompt, topicPrompt].filter(Boolean).join('\n\n');
       return [
         `Maak een hoogwaardige SEO-pagina over "${audit.keyword || keywordFromPrompt()}".`,
         audit.url ? `Gebruik deze geanalyseerde pagina als context: ${audit.url}.` : '',
         audit.executive_takeaway ? `Hermes diagnose: ${audit.executive_takeaway}` : '',
+        topicPrompt,
         audit.content_angle ? `Contenthoek: ${audit.content_angle}` : '',
         brief.length ? `Briefingpunten:\n- ${brief.join('\n- ')}` : '',
         opportunities.length ? `Belangrijkste kansen:\n- ${opportunities.map(item => `${item.title}: ${item.reason}`).join('\n- ')}` : '',
