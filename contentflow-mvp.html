@@ -974,7 +974,7 @@
             <span>Opdracht</span>
             <span id="briefScoreLabel">Briefing 0%</span>
           </div>
-          <textarea id="mainPrompt" class="big-input" placeholder="Bijv. Maak een SEO-pagina over boekhouder voor horeca. Richt je op startende restaurants die minder administratie willen. Gebruik een rustige, deskundige toon en eindig met een uitnodiging voor een kennismaking."></textarea>
+          <textarea id="mainPrompt" class="big-input" placeholder="Bijv. Maak een SEO-pagina over boekhouder voor horeca. Richt je op startende restaurants die minder administratie willen. Gebruik een heldere, deskundige toon en eindig met een uitnodiging voor een kennismaking."></textarea>
 
           <div class="choice-row" id="typeChoices">
             <button class="choice active" data-type="service_page">Servicepagina</button>
@@ -1040,9 +1040,8 @@
           <div class="footer-actions">
             <div class="status-line" id="statusLine">Je kunt meteen genereren. Zonder backend-context krijg je een lokale preview.</div>
             <div class="top-actions">
-              <button class="button" id="scanToneBtn">Scan website</button>
-              <button class="button" id="hermesAuditBtn">Hermes audit</button>
-              <button class="button" id="hermesPlaybookBtn">Hermes groeiplan</button>
+              <button class="button" id="scanToneBtn">Scan toon</button>
+              <button class="button" id="hermesAuditBtn">Topic scan</button>
               <button class="button primary" id="generateBtn">Maak concept met Hermes</button>
             </div>
           </div>
@@ -1063,7 +1062,7 @@
             <div class="empty">
               <div>
                 <div class="empty-mark">AI</div>
-                <div class="empty-title">Rustig. Eén opdracht is genoeg om te starten.</div>
+                <div class="empty-title">Eén goede opdracht is genoeg om te starten.</div>
                 <p class="empty-copy">Daarna kun je feedback geven. Die feedback wordt lokaal onthouden of, bij actieve backend-context, opgeslagen in Supabase.</p>
               </div>
             </div>
@@ -1375,7 +1374,7 @@
       const hermesPrompt = buildHermesPrompt(audit);
       const promptPreview = esc(hermesPrompt).replace(/\n/g, '<br>');
       state.lastHermesAudit = audit;
-      $('outputTitle').textContent = 'Hermes audit';
+      $('outputTitle').textContent = 'Topic scan';
       $('outputSub').textContent = audit.url ? `Analyse voor ${audit.url} · ${aiBadge}` : `SEO-kansen uit Hermes · ${aiBadge}`;
       $('outputStage').innerHTML = `
         <section class="audit-panel">
@@ -1612,7 +1611,7 @@
     }
     async function scanTone() {
       if (!isUuid(state.workspace_id) || !isUuid(state.user_id) || !$('websiteUrl').value.trim()) {
-        $('toneVoice').value ||= 'Rustig, deskundig, menselijk en precies. Geen lege marketingtaal. Korte alinea’s en duidelijke bewijsvoering.';
+        $('toneVoice').value ||= 'Helder, deskundig, menselijk en precies. Geen lege marketingtaal. Korte alinea’s en duidelijke bewijsvoering.';
         scoreBrief();
         toast('Lokale stijlrichting ingevuld.');
         return;
@@ -1646,7 +1645,7 @@
         return;
       }
 
-      $('outputTitle').textContent = 'Hermes audit draait';
+      $('outputTitle').textContent = 'Topic scan draait';
       $('outputSub').textContent = 'De agent zoekt eerste SEO-kansen.';
       $('outputStage').innerHTML = '<div class="empty"><div><div class="spinner"></div><div class="empty-title">Hermes kijkt mee.</div><p class="empty-copy">De aanvraag loopt via Netlify naar je Hetzner-agent. De geheime key blijft server-side.</p></div></div>';
       setBusy($('hermesAuditBtn'), true, 'Auditen...');
@@ -1665,10 +1664,10 @@
           })
         });
         renderHermesAudit(data);
-        toast('Hermes audit ontvangen.');
+        toast('Topic scan ontvangen.');
       } catch (error) {
-        toast(error.message || 'Hermes audit mislukte.');
-        $('outputTitle').textContent = 'Hermes audit mislukt';
+        toast(error.message || 'Topic scan mislukte.');
+        $('outputTitle').textContent = 'Topic scan mislukt';
         $('outputSub').textContent = 'Controleer of Hermes online is en Netlify env vars kloppen.';
         $('outputStage').innerHTML = `<div class="empty"><div><div class="empty-mark">!</div><div class="empty-title">Geen audit ontvangen.</div><p class="empty-copy">${esc(error.message || 'Hermes kon niet worden bereikt.')}</p></div></div>`;
       } finally {
@@ -1749,7 +1748,7 @@
       $('copyBtn').addEventListener('click', copyOutput);
       $('scanToneBtn').addEventListener('click', scanTone);
       $('hermesAuditBtn').addEventListener('click', runHermesAudit);
-      $('hermesPlaybookBtn').addEventListener('click', runHermesPlaybook);
+      $('hermesPlaybookBtn')?.addEventListener('click', runHermesPlaybook);
       $('advancedToggle').addEventListener('click', () => $('advancedPanel').classList.toggle('open'));
       $('themeToggle').addEventListener('click', () => {
         const dark = document.documentElement.dataset.theme !== 'dark';
