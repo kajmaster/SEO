@@ -45,6 +45,7 @@ type StrategyPayload = {
   page_ideas?: Array<{ title: string; why: string; format: string }>;
   internal_link_plan?: string[];
   topic_map?: TopicMapPayload;
+  cluster_plan?: ClusterPlanPayload;
   content_angle?: string;
   content_brief?: string[];
   editor_prompt?: string;
@@ -67,6 +68,21 @@ type TopicMapPayload = {
   interlink_moves?: string[];
 };
 
+type ClusterArticle = {
+  title: string;
+  intent: string;
+  format: string;
+  purpose: string;
+  links_to: string;
+};
+
+type ClusterPlanPayload = {
+  pillar_title?: string;
+  pillar_promise?: string;
+  supporting_articles?: ClusterArticle[];
+  publishing_order?: string[];
+};
+
 type GrowthPlaybookPayload = {
   board_title?: string;
   narrative_hook?: string;
@@ -75,6 +91,7 @@ type GrowthPlaybookPayload = {
   money_pages?: Array<{ title: string; intent: string; promise: string; why_now: string }>;
   content_machine?: Array<{ pillar: string; support_articles: string[]; conversion_link: string }>;
   topic_map?: TopicMapPayload;
+  cluster_plan?: ClusterPlanPayload;
   proof_to_collect?: string[];
   seven_day_sprint?: Array<{ day: string; action: string; outcome: string }>;
   demo_script?: string[];
@@ -249,6 +266,41 @@ function cleanTopicMap(value: unknown, fallback: Required<TopicMapPayload>): Req
   };
 }
 
+function cleanClusterPlan(value: unknown, fallback: Required<ClusterPlanPayload>): Required<ClusterPlanPayload> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return fallback;
+  const row = value as Record<string, unknown>;
+  const rawArticles = Array.isArray(row.supporting_articles) ? row.supporting_articles : [];
+  const supportingArticles = rawArticles
+    .map((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+      const article = item as Record<string, unknown>;
+      const title = clean(article.title);
+      const intent = clean(article.intent);
+      const format = clean(article.format);
+      const purpose = clean(article.purpose);
+      const linksTo = clean(article.links_to);
+      if (!title || !intent || !purpose) return null;
+      return {
+        title,
+        intent,
+        format: format || "Artikel",
+        purpose,
+        links_to: linksTo || fallback.pillar_title,
+      };
+    })
+    .filter((item): item is ClusterArticle => Boolean(item))
+    .slice(0, 8);
+
+  return {
+    pillar_title: clean(row.pillar_title) || fallback.pillar_title,
+    pillar_promise: clean(row.pillar_promise) || fallback.pillar_promise,
+    supporting_articles: supportingArticles.length ? supportingArticles : fallback.supporting_articles,
+    publishing_order: cleanStringArray(row.publishing_order, 8).length
+      ? cleanStringArray(row.publishing_order, 8)
+      : fallback.publishing_order,
+  };
+}
+
 function buildRuleTopicMap(args: {
   keyword: string;
   scan: PageScan | null;
@@ -296,6 +348,54 @@ function buildRuleTopicMap(args: {
       ? authorityGaps
       : ["Maak van losse content een zichtbaar systeem met pillar, supporting pages en bewijs."],
     interlink_moves: internalLinkPlan.slice(0, 6),
+  };
+}
+
+function buildRuleClusterPlan(args: {
+  keyword: string;
+  topicMap: Required<TopicMapPayload>;
+  pageIdeas: Array<{ title: string; why: string; format: string }>;
+}): Required<ClusterPlanPayload> {
+  const { keyword, topicMap, pageIdeas } = args;
+  const pillarTitle = `${keyword}: complete gids`;
+  const supportingArticles = topicMap.nodes
+    .filter((node) => node.role !== "pillar")
+    .slice(0, 6)
+    .map((node, index) => ({
+      title: pageIdeas[index]?.title || node.topic,
+      intent: node.intent || "Support",
+      format: pageIdeas[index]?.format || node.content_type || "Artikel",
+      purpose: pageIdeas[index]?.why || node.why || "Ondersteunt de pillar met extra context en bewijs.",
+      links_to: pillarTitle,
+    }));
+
+  return {
+    pillar_title: pillarTitle,
+    pillar_promise: `De centrale pagina die alle zoekintenties rond "${keyword}" samenbrengt en bezoekers richting de juiste actie stuurt.`,
+    supporting_articles: supportingArticles.length
+      ? supportingArticles
+      : [
+          {
+            title: `Wanneer is ${keyword} relevant?`,
+            intent: "Informeren",
+            format: "Artikel",
+            purpose: "Legt herkenbare situaties uit en bouwt eerste vertrouwen op.",
+            links_to: pillarTitle,
+          },
+          {
+            title: `${keyword}: opties en valkuilen`,
+            intent: "Overwegen",
+            format: "Keuzehulp",
+            purpose: "Helpt bezoekers vergelijken voordat ze contact opnemen.",
+            links_to: pillarTitle,
+          },
+        ],
+    publishing_order: [
+      `Publiceer eerst de pillar: ${pillarTitle}.`,
+      "Publiceer daarna twee ondersteunende artikelen met informerende en vergelijkende intent.",
+      "Voeg vervolgens bewijscontent toe: case, review, cijfers of praktijkvoorbeeld.",
+      "Sluit de cluster met interne links richting de conversiepagina.",
+    ],
   };
 }
 
@@ -362,8 +462,8 @@ async function buildAiStrategy(input: {
             content:
               `Maak een premium SEO-strategie in het Nederlands op basis van deze gemeten data.\n\n` +
               `${JSON.stringify(prompt, null, 2)}\n\n` +
-              "Geef exact deze JSON-velden terug: executive_takeaway, opportunities, clusters, page_ideas, internal_link_plan, topic_map, content_angle, content_brief, editor_prompt, next_actions. " +
-              "opportunities bevat objecten met title, reason, priority. clusters bevat name, intent, angle. page_ideas bevat title, why, format. topic_map bevat core_topic, authority_goal, nodes, authority_gaps en interlink_moves. nodes bevat topic, intent, role, content_type en why. Maak editor_prompt direct bruikbaar als briefing voor een SEO-pagina.",
+              "Geef exact deze JSON-velden terug: executive_takeaway, opportunities, clusters, page_ideas, internal_link_plan, topic_map, cluster_plan, content_angle, content_brief, editor_prompt, next_actions. " +
+              "opportunities bevat objecten met title, reason, priority. clusters bevat name, intent, angle. page_ideas bevat title, why, format. topic_map bevat core_topic, authority_goal, nodes, authority_gaps en interlink_moves. nodes bevat topic, intent, role, content_type en why. cluster_plan bevat pillar_title, pillar_promise, supporting_articles en publishing_order. supporting_articles bevat title, intent, format, purpose en links_to. Maak editor_prompt direct bruikbaar als briefing voor een SEO-pagina.",
           },
         ],
       }),
@@ -389,6 +489,7 @@ async function buildAiStrategy(input: {
       page_ideas: cleanObjectArray(parsed.page_ideas, ["title", "why", "format"], 6),
       internal_link_plan: cleanStringArray(parsed.internal_link_plan, 8),
       topic_map: parsed.topic_map,
+      cluster_plan: parsed.cluster_plan,
       content_angle: clean(parsed.content_angle),
       content_brief: cleanStringArray(parsed.content_brief, 10),
       editor_prompt: clean(parsed.editor_prompt),
@@ -463,8 +564,8 @@ async function buildAiGrowthPlaybook(input: {
             content:
               `Maak een premium Hermes Growth Playbook in het Nederlands op basis van deze context:\n\n` +
               `${JSON.stringify(prompt, null, 2)}\n\n` +
-              "Geef exact deze JSON-velden terug: board_title, narrative_hook, positioning, audience_insight, money_pages, content_machine, topic_map, proof_to_collect, seven_day_sprint, demo_script, editor_prompt. " +
-              "money_pages bevat objecten met title, intent, promise, why_now. content_machine bevat pillar, support_articles en conversion_link. topic_map bevat core_topic, authority_goal, nodes, authority_gaps en interlink_moves. nodes bevat topic, intent, role, content_type en why. seven_day_sprint bevat day, action, outcome. Maak het specifiek, verkoopbaar en direct bruikbaar in een gesprek met een partner of klant.",
+              "Geef exact deze JSON-velden terug: board_title, narrative_hook, positioning, audience_insight, money_pages, content_machine, topic_map, cluster_plan, proof_to_collect, seven_day_sprint, demo_script, editor_prompt. " +
+              "money_pages bevat objecten met title, intent, promise, why_now. content_machine bevat pillar, support_articles en conversion_link. topic_map bevat core_topic, authority_goal, nodes, authority_gaps en interlink_moves. nodes bevat topic, intent, role, content_type en why. cluster_plan bevat pillar_title, pillar_promise, supporting_articles en publishing_order. supporting_articles bevat title, intent, format, purpose en links_to. seven_day_sprint bevat day, action, outcome. Maak het specifiek, verkoopbaar en direct bruikbaar in een gesprek met een partner of klant.",
           },
         ],
       }),
@@ -491,6 +592,7 @@ async function buildAiGrowthPlaybook(input: {
       money_pages: cleanObjectArray(parsed.money_pages, ["title", "intent", "promise", "why_now"], 5),
       content_machine: cleanContentMachine(parsed.content_machine),
       topic_map: parsed.topic_map,
+      cluster_plan: parsed.cluster_plan,
       proof_to_collect: cleanStringArray(parsed.proof_to_collect, 8),
       seven_day_sprint: cleanObjectArray(parsed.seven_day_sprint, ["day", "action", "outcome"], 7),
       demo_script: cleanStringArray(parsed.demo_script, 7),
@@ -738,6 +840,11 @@ async function buildSeoAudit(body: TaskBody) {
     pageIdeas,
     internalLinkPlan,
   });
+  const clusterPlan = buildRuleClusterPlan({
+    keyword,
+    topicMap,
+    pageIdeas,
+  });
   const contentAngle = `Maak een pagina rond "${keyword}" die niet alleen uitlegt wat het is, maar de bezoeker helpt kiezen: wanneer is dit relevant, waar let je op, welk bewijs is er, en wat is de volgende stap?`;
   const contentBrief = [
     `Gebruik de huidige page title als startpunt: ${pageTitle}.`,
@@ -786,6 +893,7 @@ async function buildSeoAudit(body: TaskBody) {
     page_ideas: pageIdeas,
     internal_link_plan: internalLinkPlan,
     topic_map: topicMap,
+    cluster_plan: clusterPlan,
     content_angle: contentAngle,
     content_brief: contentBrief,
     editor_prompt: [
@@ -831,6 +939,7 @@ async function buildSeoAudit(body: TaskBody) {
       ? aiStrategy.internal_link_plan
       : baseAudit.internal_link_plan,
     topic_map: cleanTopicMap(aiStrategy.topic_map, topicMap),
+    cluster_plan: cleanClusterPlan(aiStrategy.cluster_plan, clusterPlan),
     content_angle: aiStrategy.content_angle || baseAudit.content_angle,
     content_brief: aiStrategy.content_brief?.length
       ? aiStrategy.content_brief
@@ -931,6 +1040,15 @@ async function buildGrowthPlaybook(body: TaskBody) {
       "Gebruik bewijsblokken als brug tussen informatieve content en conversiepagina.",
     ],
   });
+  const clusterPlan = buildRuleClusterPlan({
+    keyword,
+    topicMap,
+    pageIdeas: moneyPages.map((page) => ({
+      title: page.title,
+      why: page.why_now,
+      format: page.intent,
+    })),
+  });
   const proofToCollect = [
     "Een klantvoorbeeld met beginsituatie, aanpak en resultaat.",
     "Drie concrete vragen die klanten vaak stellen voor ze kopen.",
@@ -971,6 +1089,7 @@ async function buildGrowthPlaybook(body: TaskBody) {
     money_pages: moneyPages,
     content_machine: contentMachine,
     topic_map: topicMap,
+    cluster_plan: clusterPlan,
     proof_to_collect: proofToCollect,
     seven_day_sprint: sevenDaySprint,
     demo_script: [
@@ -1018,6 +1137,7 @@ async function buildGrowthPlaybook(body: TaskBody) {
       ? aiPlaybook.content_machine
       : basePlaybook.content_machine,
     topic_map: cleanTopicMap(aiPlaybook.topic_map, topicMap),
+    cluster_plan: cleanClusterPlan(aiPlaybook.cluster_plan, clusterPlan),
     proof_to_collect: aiPlaybook.proof_to_collect?.length
       ? aiPlaybook.proof_to_collect
       : basePlaybook.proof_to_collect,

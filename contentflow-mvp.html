@@ -898,6 +898,68 @@
       margin-top: 14px;
     }
 
+    .cluster-plan {
+      margin-top: 18px;
+      border: 1px solid rgba(57,119,195,.14);
+      border-radius: 28px;
+      padding: 20px;
+      background:
+        radial-gradient(circle at 0 100%, rgba(173,255,248,.44), transparent 30%),
+        rgba(255,255,255,.7);
+    }
+
+    .cluster-pillar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: start;
+      margin-bottom: 14px;
+    }
+
+    .cluster-pillar h3 {
+      margin: 5px 0 8px;
+      font-size: 25px;
+      letter-spacing: -.06em;
+    }
+
+    .cluster-pillar p {
+      margin: 0;
+      color: rgba(21,24,21,.68);
+      line-height: 1.55;
+    }
+
+    .cluster-articles {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .cluster-article {
+      border: 1px solid rgba(21,24,21,.1);
+      border-radius: 20px;
+      padding: 14px;
+      background: rgba(244,243,239,.7);
+    }
+
+    .cluster-article strong {
+      display: block;
+      margin: 8px 0 6px;
+      font-size: 16px;
+      letter-spacing: -.035em;
+      line-height: 1.12;
+    }
+
+    .cluster-article p {
+      margin: 0;
+      color: rgba(21,24,21,.64);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .cluster-order {
+      margin-top: 14px;
+    }
+
     .next-actions li {
       margin-bottom: 8px;
     }
@@ -939,7 +1001,7 @@
 
     @media (max-width: 860px) {
       .topbar, .footer-actions, .result-head { align-items: flex-start; flex-direction: column; }
-      .details, .advanced, .feedback-grid, .audit-grid, .audit-metrics, .strategy-hero, .strategy-columns, .hermes-command, .impact-strip, .topic-nodes, .topic-support { grid-template-columns: 1fr; }
+      .details, .advanced, .feedback-grid, .audit-grid, .audit-metrics, .strategy-hero, .strategy-columns, .hermes-command, .impact-strip, .topic-nodes, .topic-support, .cluster-pillar, .cluster-articles { grid-template-columns: 1fr; }
       .studio-card, .result { border-radius: 24px; }
     }
   </style>
@@ -1361,6 +1423,93 @@
         interlink_moves: machine.map(item => `Link "${item.pillar}" naar ${item.conversion_link}.`).filter(Boolean)
       };
     }
+    function renderClusterPlan(plan) {
+      if (!plan || typeof plan !== 'object') return '';
+      const articles = Array.isArray(plan.supporting_articles) ? plan.supporting_articles : [];
+      const order = Array.isArray(plan.publishing_order) ? plan.publishing_order : [];
+      return `
+        <div class="cluster-plan">
+          <div class="cluster-pillar">
+            <div>
+              <div class="eyebrow">Cluster plan</div>
+              <h3>${esc(plan.pillar_title || 'Pillar + ondersteunende artikelen')}</h3>
+              <p>${esc(plan.pillar_promise || 'Maak van de topic map een publiceerbare cluster met een centrale pillar en gerichte support content.')}</p>
+            </div>
+            <span class="badge">${esc(articles.length || 0)} artikelen</span>
+          </div>
+          <div class="cluster-articles">
+            ${articles.map(article => `
+              <article class="cluster-article">
+                <div class="topic-meta">
+                  <span class="topic-chip">${esc(article.intent || 'intent')}</span>
+                  <span class="topic-chip">${esc(article.format || 'format')}</span>
+                </div>
+                <strong>${esc(article.title || 'Ondersteunend artikel')}</strong>
+                <p>${esc(article.purpose || '')}</p>
+              </article>
+            `).join('') || '<article class="cluster-article"><span class="topic-chip">pillar</span><strong>Start met de pillar</strong><p>Hermes vult ondersteunende artikelen aan zodra er topicdata is.</p></article>'}
+          </div>
+          <div class="strategy-list cluster-order">
+            <h3>Publicatievolgorde</h3>
+            <ol>${order.map(item => `<li>${esc(item)}</li>`).join('') || '<li>Publiceer eerst de pillar, daarna support artikelen, daarna bewijs en interne links.</li>'}</ol>
+          </div>
+        </div>`;
+    }
+    function clusterPlanFromAudit(audit, topicMap) {
+      const existing = audit.cluster_plan;
+      if (existing && typeof existing === 'object') return existing;
+      const keyword = audit.keyword || keywordFromPrompt();
+      const pageIdeas = Array.isArray(audit.page_ideas) ? audit.page_ideas : [];
+      const nodes = Array.isArray(topicMap?.nodes) ? topicMap.nodes : [];
+      const pillarTitle = `${keyword || 'Hoofdtopic'}: complete gids`;
+      const supporting = nodes
+        .filter(node => node.role !== 'pillar')
+        .slice(0, 6)
+        .map((node, index) => ({
+          title: pageIdeas[index]?.title || node.topic,
+          intent: node.intent || 'Support',
+          format: pageIdeas[index]?.format || node.content_type || 'Artikel',
+          purpose: pageIdeas[index]?.why || node.why || 'Ondersteunt de pillar en bouwt topical authority op.',
+          links_to: pillarTitle
+        }));
+      return {
+        pillar_title: pillarTitle,
+        pillar_promise: `De centrale pagina die alle zoekvragen rond "${keyword || 'dit onderwerp'}" samenbrengt en doorstuurt naar actie.`,
+        supporting_articles: supporting,
+        publishing_order: [
+          `Publiceer eerst de pillar: ${pillarTitle}.`,
+          'Publiceer daarna de support artikelen met informerende en vergelijkende intent.',
+          'Voeg bewijscontent toe en link alles terug naar de pillar.',
+          'Gebruik de pillar om bezoekers door te sturen naar de conversiestap.'
+        ]
+      };
+    }
+    function clusterPlanFromPlaybook(playbook, topicMap) {
+      const existing = playbook.cluster_plan;
+      if (existing && typeof existing === 'object') return existing;
+      const keyword = playbook.keyword || keywordFromPrompt();
+      const machine = Array.isArray(playbook.content_machine) ? playbook.content_machine : [];
+      const moneyPages = Array.isArray(playbook.money_pages) ? playbook.money_pages : [];
+      const pillar = machine[0]?.pillar || moneyPages[0]?.title || `${keyword || 'Hoofdtopic'}: complete gids`;
+      const support = machine.flatMap(item => (item.support_articles || []).map(article => ({
+        title: article,
+        intent: 'Support',
+        format: 'Artikel',
+        purpose: `Ondersteunt "${item.pillar}" en stuurt door naar ${item.conversion_link}.`,
+        links_to: item.pillar || pillar
+      })));
+      return {
+        pillar_title: pillar,
+        pillar_promise: playbook.positioning || topicMap?.authority_goal || 'Maak van de topic map een contentcluster dat autoriteit en conversie verbindt.',
+        supporting_articles: support.slice(0, 8),
+        publishing_order: [
+          `Start met de pillar: ${pillar}.`,
+          'Publiceer de ondersteunende artikelen in volgorde van zoekintentie.',
+          'Verzamel bewijs en voeg dat toe aan pillar en money pages.',
+          'Leg interne links tussen pillar, support en conversiepagina.'
+        ]
+      };
+    }
     function renderHermesAudit(data) {
       const audit = data.hermes || data;
       const opportunities = Array.isArray(audit.opportunities) ? audit.opportunities : [];
@@ -1373,6 +1522,8 @@
       const aiBadge = audit.ai_enriched ? `OpenAI verrijkt${audit.model ? ` · ${audit.model}` : ''}` : 'Regel-scan';
       const hermesPrompt = buildHermesPrompt(audit);
       const promptPreview = esc(hermesPrompt).replace(/\n/g, '<br>');
+      const topicMap = topicMapFromAudit(audit);
+      const clusterPlan = clusterPlanFromAudit(audit, topicMap);
       state.lastHermesAudit = audit;
       $('outputTitle').textContent = 'Topic scan';
       $('outputSub').textContent = audit.url ? `Analyse voor ${audit.url} · ${aiBadge}` : `SEO-kansen uit Hermes · ${aiBadge}`;
@@ -1415,7 +1566,8 @@
             <p style="font-size:18px;line-height:1.6;margin:8px 0 14px">${esc(audit.content_angle || 'Gebruik deze scan als basis voor een scherpere briefing.')}</p>
             <ol>${brief.map(point => `<li>${esc(point)}</li>`).join('') || '<li>Maak de pagina specifieker op zoekintentie, bewijs en CTA.</li>'}</ol>
           </div>
-          ${renderTopicMap(topicMapFromAudit(audit))}
+          ${renderTopicMap(topicMap)}
+          ${renderClusterPlan(clusterPlan)}
           <div class="hermes-command">
             <div class="command-card">
               <div class="eyebrow">Hermes command center</div>
@@ -1464,6 +1616,8 @@
       const sprint = Array.isArray(playbook.seven_day_sprint) ? playbook.seven_day_sprint : [];
       const script = Array.isArray(playbook.demo_script) ? playbook.demo_script : [];
       const aiBadge = playbook.ai_enriched ? `OpenAI strategist${playbook.model ? ` · ${playbook.model}` : ''}` : 'Regel-playbook';
+      const topicMap = topicMapFromPlaybook(playbook);
+      const clusterPlan = clusterPlanFromPlaybook(playbook, topicMap);
       state.lastHermesAudit = playbook;
       $('outputTitle').textContent = playbook.board_title || 'Hermes groeiplan';
       $('outputSub').textContent = playbook.url ? `Groeiplan voor ${playbook.url} · ${aiBadge}` : `Hermes groeiplan · ${aiBadge}`;
@@ -1489,7 +1643,8 @@
             <p style="font-size:20px;line-height:1.55;margin:8px 0 12px">${esc(playbook.positioning || 'Maak van losse content een duidelijke route naar vertrouwen en conversie.')}</p>
             <p style="margin:0;color:rgba(21,24,21,.68)">${esc(playbook.audience_insight || 'De doelgroep zoekt zekerheid, bewijs en een heldere volgende stap.')}</p>
           </div>
-          ${renderTopicMap(topicMapFromPlaybook(playbook))}
+          ${renderTopicMap(topicMap)}
+          ${renderClusterPlan(clusterPlan)}
           <div class="audit-grid">
             ${moneyPages.map(page => `
               <article class="audit-card">
@@ -1527,11 +1682,15 @@
       const opportunities = Array.isArray(audit.opportunities) ? audit.opportunities : [];
       const brief = Array.isArray(audit.content_brief) ? audit.content_brief : [];
       const linkPlan = Array.isArray(audit.internal_link_plan) ? audit.internal_link_plan : [];
-      const topicMap = audit.topic_map || {};
+      const topicMap = audit.type === 'growth_playbook' ? topicMapFromPlaybook(audit) : topicMapFromAudit(audit);
+      const clusterPlan = audit.type === 'growth_playbook' ? clusterPlanFromPlaybook(audit, topicMap) : clusterPlanFromAudit(audit, topicMap);
       const topicNodes = Array.isArray(topicMap.nodes) ? topicMap.nodes : [];
+      const clusterArticles = Array.isArray(clusterPlan.supporting_articles) ? clusterPlan.supporting_articles : [];
       const topicPrompt = [
         topicMap.authority_goal ? `Topic map doel: ${topicMap.authority_goal}` : '',
-        topicNodes.length ? `Topical authority structuur:\n- ${topicNodes.map(node => `${node.topic} (${node.intent}, ${node.role})`).join('\n- ')}` : ''
+        topicNodes.length ? `Topical authority structuur:\n- ${topicNodes.map(node => `${node.topic} (${node.intent}, ${node.role})`).join('\n- ')}` : '',
+        clusterPlan.pillar_title ? `Cluster plan pillar: ${clusterPlan.pillar_title}` : '',
+        clusterArticles.length ? `Ondersteunende artikelen:\n- ${clusterArticles.map(article => `${article.title} (${article.intent})`).join('\n- ')}` : ''
       ].filter(Boolean).join('\n\n');
       if (audit.editor_prompt) return [audit.editor_prompt, topicPrompt].filter(Boolean).join('\n\n');
       return [
