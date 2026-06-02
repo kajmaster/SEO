@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SEO Tool Flowchart v2</title>
+  <style>
+    :root {
+      --paper: #fbf7ef;
+      --ink: #171717;
+      --muted: #6f6a61;
+      --line: rgba(23, 23, 23, 0.18);
+      --opportunity: #dfeeff;
+      --control: #e7f6eb;
+      --conversion: #fff0d4;
+      --output: #171717;
+      --card: rgba(255, 255, 255, 0.78);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 10% 4%, rgba(58, 125, 246, 0.16), transparent 30%),
+        radial-gradient(circle at 88% 8%, rgba(26, 150, 102, 0.14), transparent 28%),
+        linear-gradient(135deg, #fffdf8 0%, var(--paper) 100%);
+      font-family: "Aptos", "Segoe UI", sans-serif;
+    }
+
+    main {
+      width: min(1240px, calc(100vw - 28px));
+      margin: 14px auto;
+      padding: 24px;
+      background: rgba(255, 253, 248, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.92);
+      border-radius: 30px;
+      box-shadow: 0 24px 70px rgba(35, 28, 18, 0.16);
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 28px;
+      margin-bottom: 18px;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--muted);
+      font: 850 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(36px, 5vw, 62px);
+      line-height: 0.92;
+      letter-spacing: -0.065em;
+    }
+
+    .note {
+      max-width: 380px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.35;
+      text-align: right;
+    }
+
+    .board {
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 26px;
+      background: rgba(255, 255, 255, 0.62);
+    }
+
+    .streams {
+      display: grid;
+      gap: 16px;
+    }
+
+    .stream {
+      display: grid;
+      grid-template-columns: 210px 1fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .stream-label {
+      display: grid;
+      align-content: center;
+      min-height: 118px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: var(--card);
+    }
+
+    .stream-label strong {
+      display: block;
+      font-size: 24px;
+      line-height: 0.95;
+      letter-spacing: -0.055em;
+    }
+
+    .stream-label span {
+      display: block;
+      margin-top: 10px;
+      color: var(--muted);
+      font: 800 11px/1.25 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .step {
+      position: relative;
+      min-height: 118px;
+      padding: 14px 12px;
+      border: 1px solid rgba(23, 23, 23, 0.18);
+      border-radius: 20px;
+      background: #fff;
+    }
+
+    .step:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: -11px;
+      z-index: 2;
+      width: 16px;
+      height: 16px;
+      border-top: 2px solid rgba(23, 23, 23, 0.45);
+      border-right: 2px solid rgba(23, 23, 23, 0.45);
+      transform: translateY(-50%) rotate(45deg);
+      background: transparent;
+    }
+
+    .opportunity .step {
+      background: var(--opportunity);
+    }
+
+    .control .step {
+      background: var(--control);
+    }
+
+    .conversion .step {
+      background: var(--conversion);
+    }
+
+    .num {
+      display: inline-grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      margin-bottom: 12px;
+      color: #fff;
+      border-radius: 10px;
+      background: var(--ink);
+      font: 850 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .step strong {
+      display: block;
+      font-size: 15px;
+      line-height: 1.03;
+      letter-spacing: -0.035em;
+    }
+
+    .step span {
+      display: block;
+      margin-top: 7px;
+      color: #565047;
+      font-size: 11.5px;
+      line-height: 1.22;
+    }
+
+    @page {
+      size: A4 landscape;
+      margin: 7mm;
+    }
+
+    @media print {
+      body {
+        background: #fff;
+      }
+
+      main {
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <section>
+        <p class="eyebrow">SEO tool flowchart v2</p>
+        <h1>SEO-flowchart met concrete kansanalyse</h1>
+      </section>
+      <p class="note">
+        De structuur blijft gelijk aan de eerste flowchart. De bovenste lijn is vervangen door een concretere laag:
+        hoe de tool SEO-kansen vindt en omzet naar pagina-acties.
+      </p>
+    </header>
+
+    <section class="board" aria-label="SEO tool flowchart">
+      <div class="streams">
+        <section class="stream opportunity">
+          <div class="stream-label">
+            <strong>SEO Opportunity</strong>
+            <span>Nieuwe laag: kansen vinden en prioriteren</span>
+          </div>
+          <div class="steps">
+            <article class="step">
+              <em class="num">01</em>
+              <strong>Vraag ophalen</strong>
+              <span>URL, keyword, doelgroep en gewenst resultaat vastleggen.</span>
+            </article>
+            <article class="step">
+              <em class="num">02</em>
+              <strong>Intentie bepalen</strong>
+              <span>Zoeken mensen info, vergelijking, bewijs of aankoop?</span>
+            </article>
+            <article class="step">
+              <em class="num">03</em>
+              <strong>SERP vergelijken</strong>
+              <span>Topresultaten scannen op koppen, diepte, format en CTA.</span>
+            </article>
+            <article class="step">
+              <em class="num">04</em>
+              <strong>Gap vinden</strong>
+              <span>Wat mist op de huidige pagina versus wat Google beloont?</span>
+            </article>
+            <article class="step">
+              <em class="num">05</em>
+              <strong>Pagina-actie</strong>
+              <span>Kiezen: verbeteren, uitbreiden, nieuw maken of samenvoegen.</span>
+            </article>
+            <article class="step">
+              <em class="num">06</em>
+              <strong>Prioriteit score</strong>
+              <span>Impact, moeite, conversiewaarde en urgentie bepalen.</span>
+            </article>
+            <article class="step">
+              <em class="num">07</em>
+              <strong>Briefing klaar</strong>
+              <span>Concrete opdracht voor structuur, links, bewijs en CTA.</span>
+            </article>
+          </div>
+        </section>
+
+        <section class="stream control">
+          <div class="stream-label">
+            <strong>Content Control</strong>
+            <span>Ongewijzigd uit originele flow</span>
+          </div>
+          <div class="steps">
+            <article class="step">
+              <em class="num">01</em>
+              <strong>Merkcontext</strong>
+              <span>Bedrijf, aanbod en positionering.</span>
+            </article>
+            <article class="step">
+              <em class="num">02</em>
+              <strong>Tone of voice</strong>
+              <span>Hoe de tekst moet klinken.</span>
+            </article>
+            <article class="step">
+              <em class="num">03</em>
+              <strong>Schrijfstijl</strong>
+              <span>Lengte, ritme, eenvoud en vorm.</span>
+            </article>
+            <article class="step">
+              <em class="num">04</em>
+              <strong>Claims filter</strong>
+              <span>Wat wel en niet gezegd mag worden.</span>
+            </article>
+            <article class="step">
+              <em class="num">05</em>
+              <strong>Kennisbank</strong>
+              <span>Interne kennis, voorbeelden en bronnen.</span>
+            </article>
+            <article class="step">
+              <em class="num">06</em>
+              <strong>Feedbackregels</strong>
+              <span>Wat de tool moet leren van correcties.</span>
+            </article>
+            <article class="step">
+              <em class="num">07</em>
+              <strong>Publicatiecheck</strong>
+              <span>Taalcheck en laatste controle voor livegang.</span>
+            </article>
+          </div>
+        </section>
+
+        <section class="stream conversion">
+          <div class="stream-label">
+            <strong>Conversion Power</strong>
+            <span>Ongewijzigd uit originele flow</span>
+          </div>
+          <div class="steps">
+            <article class="step">
+              <em class="num">01</em>
+              <strong>Doelgroep-fit</strong>
+              <span>Past de pagina bij de juiste bezoeker?</span>
+            </article>
+            <article class="step">
+              <em class="num">02</em>
+              <strong>Aanbod-match</strong>
+              <span>Sluit het aanbod aan op de vraag?</span>
+            </article>
+            <article class="step">
+              <em class="num">03</em>
+              <strong>Funnel stage</strong>
+              <span>Informeren, overwegen of kopen.</span>
+            </article>
+            <article class="step">
+              <em class="num">04</em>
+              <strong>CTA-keuze</strong>
+              <span>Welke volgende stap is logisch?</span>
+            </article>
+            <article class="step">
+              <em class="num">05</em>
+              <strong>Bewijsblokken</strong>
+              <span>Reviews, cases, resultaten of garanties.</span>
+            </article>
+            <article class="step">
+              <em class="num">06</em>
+              <strong>Bezwaren</strong>
+              <span>Twijfels expliciet oplossen.</span>
+            </article>
+            <article class="step">
+              <em class="num">07</em>
+              <strong>Trust check</strong>
+              <span>Pagina-opbouw en vertrouwen controleren.</span>
+            </article>
+          </div>
+        </section>
+      </div>
+
+    </section>
+  </main>
+</body>
+</html>
