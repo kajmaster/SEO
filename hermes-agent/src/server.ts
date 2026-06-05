@@ -107,6 +107,10 @@ type TopicScanPayload = {
   entity_terms?: string[];
   existing_signals?: string[];
   missing_angles?: Array<{ angle: string; why_it_matters: string; priority: string }>;
+  pillar_page?: { title: string; intent: string; promise: string; cta: string };
+  supporting_pages?: Array<{ title: string; intent: string; angle: string; links_to: string }>;
+  internal_link_routes?: Array<{ from: string; to: string; anchor: string; reason: string }>;
+  proof_assets?: string[];
   serp_expectation?: string;
   recommended_next_step?: string;
   editor_prompt?: string;
@@ -214,6 +218,34 @@ function cleanObjectArray<T extends Record<string, string>>(
     })
     .filter((item): item is T => Boolean(item && keys.every((key) => item[key])))
     .slice(0, max);
+}
+
+function cleanTopicPillar(value: unknown): TopicScanPayload["pillar_page"] | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const row = value as Record<string, unknown>;
+  const pillar = {
+    title: clean(row.title),
+    intent: clean(row.intent),
+    promise: clean(row.promise),
+    cta: clean(row.cta),
+  };
+  return pillar.title && pillar.intent && pillar.promise ? pillar : undefined;
+}
+
+function cleanTopicSupportingPages(value: unknown): NonNullable<TopicScanPayload["supporting_pages"]> {
+  return cleanObjectArray<{ title: string; intent: string; angle: string; links_to: string }>(
+    value,
+    ["title", "intent", "angle", "links_to"],
+    8,
+  );
+}
+
+function cleanInternalLinkRoutes(value: unknown): NonNullable<TopicScanPayload["internal_link_routes"]> {
+  return cleanObjectArray<{ from: string; to: string; anchor: string; reason: string }>(
+    value,
+    ["from", "to", "anchor", "reason"],
+    10,
+  );
 }
 
 function cleanContentMachine(value: unknown): Array<{
@@ -678,8 +710,8 @@ async function buildAiTopicScan(input: {
             content:
               `Maak een praktische topic scan in het Nederlands op basis van deze data:\n\n` +
               `${JSON.stringify(prompt, null, 2)}\n\n` +
-              "Geef exact deze JSON-velden terug: topic_summary, search_intent, funnel_stage, topic_variants, audience_questions, entity_terms, existing_signals, missing_angles, serp_expectation, recommended_next_step, editor_prompt. " +
-              "missing_angles bevat objecten met angle, why_it_matters en priority. Maak dit bruikbaar als input voor de volgende stap: Topic map.",
+              "Geef exact deze JSON-velden terug: topic_summary, search_intent, funnel_stage, topic_variants, audience_questions, entity_terms, existing_signals, missing_angles, pillar_page, supporting_pages, internal_link_routes, proof_assets, serp_expectation, recommended_next_step, editor_prompt. " +
+              "missing_angles bevat objecten met angle, why_it_matters en priority. pillar_page bevat title, intent, promise en cta. supporting_pages bevat title, intent, angle en links_to. internal_link_routes bevat from, to, anchor en reason. Maak dit bruikbaar als concrete Topic Map.",
           },
         ],
       }),
@@ -707,6 +739,10 @@ async function buildAiTopicScan(input: {
       entity_terms: cleanStringArray(parsed.entity_terms, 14),
       existing_signals: cleanStringArray(parsed.existing_signals, 8),
       missing_angles: cleanObjectArray(parsed.missing_angles, ["angle", "why_it_matters", "priority"], 6),
+      pillar_page: cleanTopicPillar(parsed.pillar_page),
+      supporting_pages: cleanTopicSupportingPages(parsed.supporting_pages),
+      internal_link_routes: cleanInternalLinkRoutes(parsed.internal_link_routes),
+      proof_assets: cleanStringArray(parsed.proof_assets, 8),
       serp_expectation: clean(parsed.serp_expectation),
       recommended_next_step: clean(parsed.recommended_next_step),
       editor_prompt: clean(parsed.editor_prompt),
@@ -1328,6 +1364,45 @@ async function buildTopicScan(body: TaskBody) {
       priority: "medium",
     },
   ];
+  const pillarTitle = `${keyword}: complete gids en aanpak`;
+  const supportingPages = [
+    {
+      title: `${keyword} kosten en investering`,
+      intent: "commercial investigation",
+      angle: "Maak prijs, waarde en keuzecriteria concreet.",
+      links_to: pillarTitle,
+    },
+    {
+      title: `${keyword} voorbeelden en cases`,
+      intent: "proof",
+      angle: "Laat zien hoe het topic werkt in echte situaties.",
+      links_to: pillarTitle,
+    },
+    {
+      title: `${keyword} checklist`,
+      intent: "practical",
+      angle: "Help de lezer beoordelen waar hij nu staat.",
+      links_to: pillarTitle,
+    },
+    {
+      title: `${keyword} vergelijken`,
+      intent: "comparison",
+      angle: "Vergelijk opties, aanpakken of leveranciers zonder lege claims.",
+      links_to: pillarTitle,
+    },
+  ];
+  const internalLinkRoutes = supportingPages.map((page) => ({
+    from: page.title,
+    to: pillarTitle,
+    anchor: keyword,
+    reason: "Ondersteunende content bouwt topical authority op rond de hoofdpagina.",
+  }));
+  const proofAssets = [
+    "Klantcase of praktijkvoorbeeld",
+    "Veelgestelde vragen uit salesgesprekken",
+    "Concrete cijfers, processtappen of screenshots",
+    "Quote of expertise van een specialist",
+  ];
   const baseTopicScan = {
     ok: true,
     type: "topic_scan",
@@ -1342,6 +1417,15 @@ async function buildTopicScan(body: TaskBody) {
     entity_terms: [...new Set(baseEntityTerms.map((term) => term.toLowerCase()))].slice(0, 12),
     existing_signals: existingSignals,
     missing_angles: missingAngles,
+    pillar_page: {
+      title: pillarTitle,
+      intent: "Hoofdpagina die uitlegt, vertrouwen opbouwt en naar actie beweegt.",
+      promise: `Na deze pagina begrijpt de lezer wanneer ${keyword} relevant is en waarom ${companyName || "de aanbieder"} een logische keuze is.`,
+      cta: "Plan een kennismaking of vraag advies aan",
+    },
+    supporting_pages: supportingPages,
+    internal_link_routes: internalLinkRoutes,
+    proof_assets: proofAssets,
     serp_expectation:
       "Voor dit topic verwacht Hermes vaak een mix van uitlegpagina's, gidsen, vergelijkingspagina's en commerciele landingspagina's. Echte SERP-data kan later via een SEO API worden toegevoegd.",
     recommended_next_step: "Maak hierna een Topic map: groepeer de varianten in hoofdthema's, subtopics en pagina-typen.",
@@ -1351,7 +1435,9 @@ async function buildTopicScan(body: TaskBody) {
       targetAudience ? `Doelgroep: ${targetAudience}.` : "",
       `Bestaande signalen: ${existingSignals.join(" | ")}.`,
       `Topicvarianten: ${baseTopicVariants.join(", ")}.`,
-      "Groepeer dit in pillar page, ondersteunende artikelen, money pages en interne-linkroutes.",
+      `Pillar page: ${pillarTitle}.`,
+      `Ondersteunende pagina's: ${supportingPages.map((page) => page.title).join(", ")}.`,
+      "Werk dit uit als topic map met interne-linkroutes en bewijsstukken.",
     ].filter(Boolean).join("\n"),
   };
 
@@ -1392,6 +1478,14 @@ async function buildTopicScan(body: TaskBody) {
     missing_angles: aiTopicScan.missing_angles?.length
       ? aiTopicScan.missing_angles
       : baseTopicScan.missing_angles,
+    pillar_page: aiTopicScan.pillar_page || baseTopicScan.pillar_page,
+    supporting_pages: aiTopicScan.supporting_pages?.length
+      ? aiTopicScan.supporting_pages
+      : baseTopicScan.supporting_pages,
+    internal_link_routes: aiTopicScan.internal_link_routes?.length
+      ? aiTopicScan.internal_link_routes
+      : baseTopicScan.internal_link_routes,
+    proof_assets: aiTopicScan.proof_assets?.length ? aiTopicScan.proof_assets : baseTopicScan.proof_assets,
     serp_expectation: aiTopicScan.serp_expectation || baseTopicScan.serp_expectation,
     recommended_next_step: aiTopicScan.recommended_next_step || baseTopicScan.recommended_next_step,
     editor_prompt: aiTopicScan.editor_prompt || baseTopicScan.editor_prompt,
