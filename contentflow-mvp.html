@@ -1971,6 +1971,126 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
       toast('Hermes briefing staat nu in de editor.');
     }
+    function fieldValue(id) {
+      return ($(id)?.value || '').trim();
+    }
+    function wordsFrom(value) {
+      return String(value || '').split(/[,;\n]/).map(item => item.trim()).filter(Boolean);
+    }
+    function uniqList(items, max = 12) {
+      const seen = new Set();
+      const out = [];
+      items.filter(Boolean).forEach(item => {
+        const text = String(item).trim();
+        const key = text.toLowerCase();
+        if (!text || seen.has(key)) return;
+        seen.add(key);
+        out.push(text);
+      });
+      return out.slice(0, max);
+    }
+    function isUsefulText(value) {
+      const text = String(value || '').trim();
+      return text && text !== '-' && text.toLowerCase() !== 'topic';
+    }
+    function topicInputContext() {
+      return {
+        keyword: keywordFromPrompt(),
+        prompt: fieldValue('mainPrompt'),
+        company: fieldValue('companyName') || 'dit merk',
+        audience: fieldValue('targetAudience') || 'de belangrijkste doelgroep',
+        services: fieldValue('services') || 'het aanbod',
+        cta: fieldValue('primaryCta') || 'Plan een kennismaking',
+        tone: fieldValue('toneVoice'),
+        forbidden: fieldValue('forbiddenClaims'),
+        url: fieldValue('websiteUrl')
+      };
+    }
+    function buildSupportPages(keyword, ctx) {
+      return [
+        { title: `${keyword}: complete gids`, intent: 'Pillar page voor mensen die het onderwerp willen begrijpen en een keuze willen maken.', angle: `Leg uit wat ${keyword} betekent, wanneer het relevant is voor ${ctx.audience}, en hoe ${ctx.company} helpt.`, links_to: `${keyword}: aanpak en keuzehulp` },
+        { title: `${keyword} voorbeelden en praktijkcases`, intent: 'Bewijslaag voor bezoekers die willen zien of het echt werkt.', angle: 'Laat situaties, resultaten, klanttaal en concrete bewijsstukken zien.', links_to: `${keyword}: complete gids` },
+        { title: `${keyword} kosten, tijd en resultaat`, intent: 'Commerciele pagina voor mensen die risico, investering en opbrengst willen inschatten.', angle: 'Maak duidelijk wat iemand krijgt, welke keuzes invloed hebben en wat een logische volgende stap is.', links_to: `${keyword}: complete gids` },
+        { title: `${keyword} stappenplan`, intent: 'Procespagina voor bezoekers die willen weten hoe de samenwerking verloopt.', angle: 'Beschrijf intake, aanpak, oplevering, feedback en vervolgstap.', links_to: `${keyword}: aanpak en keuzehulp` },
+        { title: `${keyword} veelgemaakte fouten`, intent: 'Trustpagina die laat zien dat het merk de praktijk snapt.', angle: 'Benoem valkuilen, misverstanden en hoe je betere keuzes maakt.', links_to: `${keyword}: complete gids` },
+        { title: `${keyword} vergelijken met alternatieven`, intent: 'Keuzehulp voor bezoekers die meerdere oplossingen naast elkaar leggen.', angle: `Vergelijk ${ctx.services} met alternatieven zonder overdreven claims.`, links_to: `${keyword}: aanpak en keuzehulp` }
+      ];
+    }
+    function buildTopicQuestions(keyword, ctx) {
+      return [
+        `Wat is ${keyword} precies en wanneer heb je het nodig?`,
+        `Voor wie is ${keyword} vooral relevant binnen ${ctx.audience}?`,
+        `Welke problemen lost ${keyword} op?`,
+        `Waar moet je op letten voordat je een keuze maakt?`,
+        `Welke fouten zorgen dat ${keyword} weinig oplevert?`,
+        `Welke bewijzen, cases of voorbeelden maken de keuze geloofwaardig?`,
+        `Wat is de eerste veilige stap zonder meteen een groot traject te starten?`,
+        `Waarom zou iemand voor ${ctx.company} kiezen in plaats van een alternatief?`
+      ];
+    }
+    function buildEntityTerms(keyword, ctx) {
+      return uniqList([keyword, ...wordsFrom(ctx.services), ...wordsFrom(ctx.audience), 'zoekintentie', 'pillar page', 'supportpagina', 'interne links', 'bewijs', 'case study', 'veelgestelde vragen', 'conversie', 'trust', 'CTA'], 14);
+    }
+    function buildMissingAngles(keyword, ctx) {
+      return [
+        { angle: 'Pillar page met duidelijke keuzehulp', why_it_matters: `Zonder hoofdpagina blijft ${keyword} losse content. Een pillar page bundelt uitleg, bewijs en CTA.`, priority: 'high' },
+        { angle: 'Bewijslaag met cases, screenshots of klanttaal', why_it_matters: 'Expertpositie wordt pas geloofwaardig als bezoekers zien dat het merk praktijkervaring heeft.', priority: 'high' },
+        { angle: 'Vraaggestuurde supportpagina\'s', why_it_matters: 'Supportpagina\'s beantwoorden specifieke twijfels en geven Google meer context rond het topic.', priority: 'high' },
+        { angle: 'Interne linkroute naar de conversiepagina', why_it_matters: 'Elke ondersteunende pagina moet bezoekers en autoriteit richting de belangrijkste actie sturen.', priority: 'medium' },
+        { angle: 'Vergelijkings- en bezwaarcontent', why_it_matters: `Mensen die twijfelen zoeken alternatieven, risico's en kosten. Die content maakt ${ctx.company} betrouwbaarder.`, priority: 'medium' }
+      ];
+    }
+    function enrichTopicScan(rawScan) {
+      const ctx = topicInputContext();
+      const scan = rawScan && typeof rawScan === 'object' ? { ...rawScan } : {};
+      const weakLocal = scan.status === 'local' && !scan.ai_enriched;
+      const keyword = isUsefulText(scan.keyword) ? scan.keyword : ctx.keyword;
+      const supportPages = !weakLocal && Array.isArray(scan.supporting_pages) && scan.supporting_pages.length ? scan.supporting_pages : buildSupportPages(keyword, ctx);
+      const topicVariants = uniqList([...(Array.isArray(scan.topic_variants) ? scan.topic_variants : []), keyword, `${keyword} gids`, `${keyword} voorbeelden`, `${keyword} kosten`, `${keyword} stappenplan`, `${keyword} fouten`, `${keyword} vergelijken`, `${keyword} veelgestelde vragen`, ...supportPages.map(page => page.title)], 12);
+      const questions = uniqList([...(Array.isArray(scan.audience_questions) ? scan.audience_questions : []), ...buildTopicQuestions(keyword, ctx)], 12);
+      const entities = uniqList([...(Array.isArray(scan.entity_terms) ? scan.entity_terms : []), ...buildEntityTerms(keyword, ctx)], 16);
+      const pillar = scan.pillar_page || {
+        title: `${keyword}: aanpak en keuzehulp`,
+        intent: 'Hoofdpagina die zoekintentie, expertise, bewijs en conversie samenbrengt.',
+        promise: `Laat ${ctx.audience} begrijpen wat ${keyword} oplevert, welke keuzes belangrijk zijn en waarom ${ctx.company} een logische partner is.`,
+        cta: ctx.cta
+      };
+      const linkRoutes = Array.isArray(scan.internal_link_routes) && scan.internal_link_routes.length ? scan.internal_link_routes : supportPages.slice(0, 6).map(page => ({
+        from: page.title,
+        to: pillar.title,
+        anchor: keyword,
+        reason: 'Stuurt topical authority en bezoekers richting de belangrijkste hoofdpagina.'
+      }));
+      const proofAssets = uniqList([...(Array.isArray(scan.proof_assets) ? scan.proof_assets : []), 'Een korte klantcase of intern voorbeeld', 'Veelgestelde vragen uit salesgesprekken', 'Concrete screenshots, cijfers of voor/na-situaties', 'Quote van een specialist of klant', 'Processtappen die laten zien hoe het werk gebeurt'], 10);
+      const inputHints = [];
+      if (!ctx.url) inputHints.push('Voeg een website toe voor echte site-signalen.');
+      if (!fieldValue('targetAudience')) inputHints.push('Vul doelgroep in voor scherpere vragen.');
+      if (!fieldValue('services')) inputHints.push('Vul aanbod in voor betere supportpagina\'s.');
+      return {
+        ...scan,
+        ok: true,
+        type: 'topic_scan',
+        status: scan.status || 'local',
+        ai_enriched: Boolean(scan.ai_enriched),
+        keyword,
+        url: scan.url || ctx.url,
+        topic_summary: !weakLocal && isUsefulText(scan.topic_summary) ? scan.topic_summary : `${ctx.company} kan rond "${keyword}" autoriteit opbouwen met een duidelijke pillar page, ondersteunende vraagpagina's, bewijscontent en interne links naar de conversiestap.`,
+        search_intent: !weakLocal && isUsefulText(scan.search_intent) ? scan.search_intent : `Gemengd: uitleg voor orientatie, bewijs voor vertrouwen en keuzehulp richting ${ctx.cta}.`,
+        funnel_stage: isUsefulText(scan.funnel_stage) ? scan.funnel_stage : 'TOFU/MOFU met conversiekans',
+        topic_variants: topicVariants,
+        audience_questions: questions,
+        entity_terms: entities,
+        existing_signals: uniqList([...(Array.isArray(scan.existing_signals) ? scan.existing_signals : []), ctx.prompt ? `Briefing geeft richting: ${ctx.prompt.slice(0, 140)}${ctx.prompt.length > 140 ? '...' : ''}` : '', ctx.tone ? `Tone-of-voice beschikbaar: ${ctx.tone.slice(0, 120)}${ctx.tone.length > 120 ? '...' : ''}` : '', ...inputHints], 8),
+        missing_angles: !weakLocal && Array.isArray(scan.missing_angles) && scan.missing_angles.length ? scan.missing_angles : buildMissingAngles(keyword, ctx),
+        serp_expectation: !weakLocal && isUsefulText(scan.serp_expectation) ? scan.serp_expectation : `Voor "${keyword}" verwacht je meestal een mix van gidsen, vergelijkingen, praktische voorbeelden, FAQ's en commerciele dienstpagina's. Winnen vraagt dus niet om een losse tekst, maar om een cluster dat vragen, bewijs en keuzehulp afdekt.`,
+        pillar_page: pillar,
+        supporting_pages: supportPages,
+        internal_link_routes: linkRoutes,
+        proof_assets: proofAssets,
+        recommended_next_step: !weakLocal && isUsefulText(scan.recommended_next_step) ? scan.recommended_next_step : `Maak eerst de pillar page "${pillar.title}" en publiceer daarna 3 supportpagina's die teruglinken met anchor "${keyword}".`,
+        editor_prompt: !weakLocal && scan.editor_prompt ? scan.editor_prompt : [`Maak een SEO-briefing voor "${keyword}" voor ${ctx.company}.`, `Doelgroep: ${ctx.audience}.`, `Aanbod: ${ctx.services}.`, `CTA: ${ctx.cta}.`, `Maak een pillar page met deze ondersteunende pagina's: ${supportPages.slice(1, 5).map(page => page.title).join(', ')}.`, `Beantwoord deze belangrijkste vragen: ${questions.slice(0, 5).join(' | ')}.`, ctx.forbidden ? `Vermijd: ${ctx.forbidden}.` : ''].filter(Boolean).join('\n')
+      };
+    }
     function localTopicScanPreview() {
       const keyword = keywordFromPrompt();
       const company = $('companyName').value.trim() || 'dit merk';
@@ -2001,7 +2121,7 @@
       };
     }
     function renderTopicScan(data) {
-      const scan = data.hermes || data;
+      const scan = enrichTopicScan(data.hermes || data);
       const variants = Array.isArray(scan.topic_variants) ? scan.topic_variants : [];
       const questions = Array.isArray(scan.audience_questions) ? scan.audience_questions : [];
       const entities = Array.isArray(scan.entity_terms) ? scan.entity_terms : [];
