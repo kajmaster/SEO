@@ -867,20 +867,6 @@
     .article p, .article ul, .article ol { margin: 0 0 15px; }
     .article ul, .article ol { padding-left: 24px; }
 
-    .article.output-linkedin {
-      max-width: 720px;
-      margin: 0 auto;
-      border-left: 1px solid rgba(21,24,21,.1);
-      border-right: 1px solid rgba(21,24,21,.1);
-      font-size: 18px;
-      line-height: 1.62;
-    }
-
-    .article.output-linkedin h1 {
-      font-size: clamp(28px, 4vw, 48px);
-      line-height: 1;
-    }
-
     .quality-panel {
       padding: 20px;
       border-top: 1px solid rgba(33,32,28,.08);
@@ -1194,7 +1180,7 @@
       <section class="hero">
         <div class="eyebrow">AI content editor</div>
         <h1>Wat wil je maken?</h1>
-        <p class="hero-copy">Begin met één duidelijke opdracht. Kies daarna de vorm: websitecopy, LinkedIn, SEO of topic authority. ContentFlow gebruikt klantcontext, tone-of-voice, kennisbank en feedbackregels op de achtergrond.</p>
+        <p class="hero-copy">Begin met een duidelijke SEO-opdracht. Kies daarna tussen een publiceerbare SEO-webpagina of een topical-authority kaart. ContentFlow gebruikt klantcontext, tone-of-voice, kennisbank en feedbackregels op de achtergrond.</p>
       </section>
 
       <section class="progress-board" aria-label="Projectvoortgang">
@@ -1224,28 +1210,18 @@
             <span>Opdracht</span>
             <span id="briefScoreLabel">Briefing 0%</span>
           </div>
-          <textarea id="mainPrompt" class="big-input" placeholder="Bijv. Maak een scherpe homepage-sectie voor Turn.One over AI-training voor teams. Richt je op ondernemers die AI praktisch willen gebruiken. Toon: nuchter, slim en menselijk."></textarea>
+          <textarea id="mainPrompt" class="big-input" placeholder="Bijv. Maak een SEO-webpagina over AI-training voor MKB-teams. Focus op zoekintentie, vertrouwen, voorbeelden en een rustige CTA."></textarea>
 
           <div class="mode-grid" id="typeChoices">
-            <button class="mode-card active" data-type="websitecopy">
-              <small>Website</small>
-              <strong>Websitecopy</strong>
-              <span>Hero, secties, trust en CTA. Voor pagina's die meteen duidelijk moeten zijn.</span>
-            </button>
-            <button class="mode-card" data-type="linkedin">
-              <small>Social</small>
-              <strong>LinkedIn</strong>
-              <span>Een menselijke post met hook, body, ritme en afsluitende vraag.</span>
-            </button>
-            <button class="mode-card" data-type="seo">
+            <button class="mode-card active" data-type="seo">
               <small>Search</small>
-              <strong>SEO</strong>
-              <span>Een pagina met zoekintentie, structuur, bewijs, interne links en CTA.</span>
+              <strong>SEO-webpagina</strong>
+              <span>Een vindbare webpagina met zoekintentie, structuur, bewijs, interne links en CTA.</span>
             </button>
             <button class="mode-card" data-type="topic_authority">
               <small>Strategie</small>
-              <strong>Topic authority</strong>
-              <span>Een expertkaart met pillar, supportpagina's, vragen en linkroute.</span>
+              <strong>Topical authority</strong>
+              <span>Een topic map met pillar, supportpagina's, doelgroepvragen, bewijs en linkroute.</span>
             </button>
           </div>
 
@@ -1351,10 +1327,12 @@
     };
     const $ = (id) => document.getElementById(id);
     const key = (id) => 'cf_focus_studio_' + id;
+    const activeContentTypes = ['seo', 'topic_authority'];
+    const savedContentType = localStorage.getItem(key('contentType'));
     const state = {
       workspace_id: localStorage.getItem(key('workspace_id')) || '',
       user_id: localStorage.getItem(key('user_id')) || '',
-      contentType: localStorage.getItem(key('contentType')) || 'websitecopy',
+      contentType: activeContentTypes.includes(savedContentType) ? savedContentType : 'seo',
       lastResponse: null,
       hermesStudioToken: '',
       verdict: 'improve'
@@ -1362,66 +1340,24 @@
     const fieldIds = ['mainPrompt','keyword','contentGoal','primaryCta','companyName','websiteUrl','services','targetAudience','toneVoice','forbiddenClaims','workspaceId','userId'];
     const progressItems = [
       { id: 'foundation', label: 'Fundament', copy: 'TypeScript backend, Supabase opslag en basiseditor staan.' },
-      { id: 'topic_authority', label: 'Expertpositie', copy: 'Topicscanner maakt een Topic Map met zoekthema’s, supportpagina’s en interne links.' },
-      { id: 'content_output', label: 'Publiceerbare tekst', copy: 'Conceptgeneratie gebruikt merkcontext en topic-context.' },
+      { id: 'topic_authority', label: 'Expertpositie', copy: 'Topicscanner maakt een topic map met zoekthema’s, supportpagina’s en interne links.' },
+      { id: 'content_output', label: 'SEO-webpagina', copy: 'Conceptgeneratie gebruikt merkcontext en topic-context voor een publiceerbare SEO-pagina.' },
       { id: 'feedback_loop', label: 'Zelflerend systeem', copy: 'Feedback wordt opgeslagen en maakt volgende output beter.' }
     ];
 
     const progressActions = {
       foundation: 'Controleer context',
-      topic_authority: 'Start topicscanner',
-      content_output: 'Maak concept',
+      topic_authority: 'Scan topical authority',
+      content_output: 'Maak SEO-webpagina',
       feedback_loop: 'Geef feedback'
     };
 
     const outputModes = {
-      websitecopy: {
-        label: 'Websitecopy',
-        loadingTitle: 'Websitecopy wordt gemaakt',
-        loadingCopy: 'We maken geen lang artikel, maar duidelijke copy met belofte, bewijs en CTA.',
-        templateName: 'ContentFlow Websitecopy',
-        goal: 'convert',
-        className: 'output-websitecopy',
-        instructions: [
-          'OUTPUTTYPE: WEBSITECOPY.',
-          'Maak websiteklare copy, geen SEO-artikel.',
-          'Gebruik HTML met: <h1>, korte intro, 3 voordelen of blokken, bewijs/trustregel en CTA.',
-          'Doel: binnen 5 seconden duidelijk maken voor wie dit is, welk probleem wordt opgelost en wat de volgende stap is.'
-        ],
-        criteria: [
-          ['Duidelijkheid', 'Binnen 5 seconden snap je de belofte.'],
-          ['Doelgroep', 'De lezer herkent zichzelf.'],
-          ['Bewijs', 'Geen lege claims, wel trust of context.'],
-          ['CTA', 'Een logische volgende stap.'],
-          ['Merkfit', 'Klinkt nuchter en Turn.One-waardig.']
-        ]
-      },
-      linkedin: {
-        label: 'LinkedIn',
-        loadingTitle: 'LinkedIn-post wordt gemaakt',
-        loadingCopy: 'We maken een post die menselijk leest, met hook, ritme en afsluitende vraag.',
-        templateName: 'ContentFlow LinkedIn',
-        goal: 'inform',
-        className: 'output-linkedin',
-        instructions: [
-          'OUTPUTTYPE: LINKEDIN.',
-          'Maak 3 LinkedIn-postvarianten, geen SEO-pagina.',
-          'Gebruik HTML met: <h1>Hook</h1>, korte alinea’s in <p>, eventueel bullets, en een afsluitende vraag.',
-          'Schrijf persoonlijk, helder en menselijk. Geen hashtags tenzij ze echt waarde toevoegen.'
-        ],
-        criteria: [
-          ['Hook', 'De eerste zin maakt nieuwsgierig.'],
-          ['Menselijk', 'Geen marketingfolder, wel echte observatie.'],
-          ['Ritme', 'Korte alinea’s, goede flow.'],
-          ['Punt', 'Een duidelijke gedachte of les.'],
-          ['Afsluiter', 'Een vraag of zachte call-to-action.']
-        ]
-      },
       seo: {
-        label: 'SEO',
-        loadingTitle: 'SEO-pagina wordt gemaakt',
+        label: 'SEO-webpagina',
+        loadingTitle: 'SEO-webpagina wordt gemaakt',
         loadingCopy: 'We bouwen een pagina rond zoekintentie, structuur, bewijs, interne links en CTA.',
-        templateName: 'ContentFlow SEO',
+        templateName: 'ContentFlow SEO-webpagina',
         goal: 'convince',
         className: 'output-seo',
         instructions: [
@@ -1439,10 +1375,10 @@
         ]
       },
       topic_authority: {
-        label: 'Topic authority',
-        loadingTitle: 'Topic authority scan draait',
+        label: 'Topical authority',
+        loadingTitle: 'Topical authority scan draait',
         loadingCopy: 'We maken een expertkaart met hoofdtopic, supportpagina’s, vragen, bewijs en linkroute.',
-        templateName: 'ContentFlow Topic authority',
+        templateName: 'ContentFlow Topical authority',
         goal: 'inform',
         className: 'output-topic-authority',
         instructions: [
@@ -1579,7 +1515,7 @@
       const mode = currentMode();
       $('contextBadge').textContent = backendReady ? 'Backend actief' : 'Preview mode';
       $('contextBadge').className = backendReady ? 'badge ok' : 'badge warn';
-      $('generateBtn').textContent = state.contentType === 'topic_authority' ? 'Scan topic authority' : `Maak ${mode.label}`;
+      $('generateBtn').textContent = state.contentType === 'topic_authority' ? 'Scan topical authority' : `Maak ${mode.label}`;
       $('statusLine').textContent = backendReady
         ? `${mode.label}: backend-context actief. ${mode.loadingCopy}`
         : `${mode.label}: preview mode actief. ${mode.loadingCopy}`;
@@ -1608,17 +1544,19 @@
     }
     function normalizeContentType(type) {
       const aliases = {
-        service_page: 'websitecopy',
-        landing_page: 'websitecopy',
+        websitecopy: 'seo',
+        linkedin: 'seo',
+        service_page: 'seo',
+        landing_page: 'seo',
         article: 'seo',
         comparison: 'seo'
       };
-      const normalized = aliases[type] || type || 'websitecopy';
-      return outputModes[normalized] ? normalized : 'websitecopy';
+      const normalized = aliases[type] || type || 'seo';
+      return activeContentTypes.includes(normalized) ? normalized : 'seo';
     }
     function currentMode() {
       state.contentType = normalizeContentType(state.contentType);
-      return outputModes[state.contentType] || outputModes.websitecopy;
+      return outputModes[state.contentType] || outputModes.seo;
     }
     function applyOutputMode() {
       const mode = currentMode();
@@ -1627,19 +1565,17 @@
       });
       if ($('generateBtn')) {
         const label = state.contentType === 'topic_authority'
-          ? 'Scan topic authority'
+          ? 'Scan topical authority'
           : `Maak ${mode.label}`;
         $('generateBtn').dataset.label = label;
         $('generateBtn').textContent = label;
       }
       if ($('contentGoal') && mode.goal) $('contentGoal').value = mode.goal;
       const placeholders = {
-        websitecopy: 'Bijv. Maak een scherpe homepage-sectie voor Turn.One over AI-training voor teams. Richt je op ondernemers die AI praktisch willen gebruiken. Toon: nuchter, slim en menselijk.',
-        linkedin: 'Bijv. Schrijf een LinkedIn-post over waarom AI-training pas waarde krijgt als mensen maandag iets anders doen. Maak het persoonlijk, scherp en praktisch.',
         seo: 'Bijv. Maak een SEO-pagina over AI-training voor MKB-teams. Focus op zoekintentie, vertrouwen, voorbeelden en een rustige CTA.',
-        topic_authority: 'Bijv. Breng topic authority in kaart voor AI-training voor teams. Welke pillar page, supportpagina’s, vragen, begrippen en interne links zijn nodig?'
+        topic_authority: 'Bijv. Breng topical authority in kaart voor AI-training voor teams. Welke pillar page, supportpagina’s, vragen, begrippen en interne links zijn nodig?'
       };
-      if ($('mainPrompt')) $('mainPrompt').placeholder = placeholders[state.contentType] || placeholders.websitecopy;
+      if ($('mainPrompt')) $('mainPrompt').placeholder = placeholders[state.contentType] || placeholders.seo;
     }
     function modeInstruction() {
       return outputTemplateText();
@@ -1647,7 +1583,7 @@
     function buildQualityReport(variant, mode) {
       const content = String(variant?.content || '').replace(/<[^>]+>/g, ' ');
       const words = content.trim().split(/\s+/).filter(Boolean).length;
-      const criteria = mode.criteria || outputModes.websitecopy.criteria;
+      const criteria = mode.criteria || outputModes.seo.criteria;
       const base = Number(variant?.quality_score || 74) || 74;
       const dimensions = criteria.map(([label, fallbackNote], index) => ({
         label,
@@ -1732,28 +1668,9 @@
       const mode = currentMode();
       const intro = prompt || 'Maak een heldere SEO-pagina die vertrouwen opbouwt en uitlegt waarom deze oplossing relevant is.';
       let content = '';
-      if (state.contentType === 'linkedin') {
+      if (state.contentType === 'topic_authority') {
         content = `
-          <h1>${esc(keyword)}</h1>
-          <p><strong>De meeste content voelt niet slecht omdat de schrijver niets weet.</strong></p>
-          <p>Het voelt slecht omdat de kennis nergens scherp bij elkaar staat.</p>
-          <p>Voor ${esc(company)} betekent dat: eerst begrijpen voor wie we schrijven, welke pijn speelt, welk bewijs er is en welke volgende stap logisch voelt.</p>
-          <p>Daarna pas schrijven.</p>
-          <p>Goede AI-content begint dus niet bij een prompt. Het begint bij context.</p>
-          <p>Welke kennis zou jij eerst vastleggen voordat je content laat schrijven?</p>`;
-      } else if (state.contentType === 'websitecopy') {
-        content = `
-          <h1>${esc(keyword)} zonder losse AI-hype</h1>
-          <p>${esc(company)} helpt ${esc(audience)} om ${esc(services)} helder, praktisch en betrouwbaar toe te passen.</p>
-          <h2>Waarom dit werkt</h2>
-          <ul>
-            <li><strong>Snel duidelijk.</strong> Bezoekers snappen direct voor wie dit is en wat het oplevert.</li>
-            <li><strong>Bewijsbaar.</strong> De tekst vraagt om voorbeelden, klanttaal en concrete situaties.</li>
-            <li><strong>Rustige CTA.</strong> De volgende stap voelt logisch: ${esc(cta)}.</li>
-          </ul>`;
-      } else if (state.contentType === 'topic_authority') {
-        content = `
-          <h1>Topic authority rond ${esc(keyword)}</h1>
+          <h1>Topical authority rond ${esc(keyword)}</h1>
           <h2>Pillar page</h2>
           <p><strong>${esc(keyword)}: complete gids en aanpak.</strong> Leg het hoofdonderwerp breed uit en stuur door naar verdiepende pagina's.</p>
           <h2>Supportpagina's</h2>
