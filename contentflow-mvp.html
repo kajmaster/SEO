@@ -250,6 +250,31 @@
       font-size: 12px;
     }
 
+    .button.context-button {
+      min-height: 38px;
+      border-color: rgba(57,119,195,.45);
+      background:
+        linear-gradient(135deg, rgba(234,252,255,.92), rgba(255,255,255,.72)),
+        var(--cf-glass);
+      color: var(--cf-ink);
+      box-shadow: 0 14px 34px rgba(57,119,195,.16);
+    }
+
+    .button.context-button::before {
+      content: "↳";
+      color: var(--cf-blue);
+      font-weight: 900;
+    }
+
+    [data-theme="dark"] .button.context-button {
+      border-color: rgba(95,171,255,.48);
+      background:
+        linear-gradient(135deg, rgba(57,119,195,.28), rgba(173,255,248,.12)),
+        var(--cf-glass);
+      color: #f7f4ea;
+      box-shadow: 0 16px 42px rgba(57,119,195,.22);
+    }
+
     .button:disabled {
       cursor: wait;
       opacity: .58;
@@ -394,19 +419,19 @@
 
     .mode-grid {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-      margin-top: 16px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 18px;
     }
 
     .mode-card {
       display: grid;
-      min-height: 118px;
+      min-height: 146px;
       align-content: start;
-      gap: 8px;
+      gap: 10px;
       border: 1px solid rgba(33,32,28,.1);
-      border-radius: 22px;
-      padding: 16px;
+      border-radius: 26px;
+      padding: clamp(18px, 2.4vw, 24px);
       background: var(--cf-glass);
       color: var(--cf-ink);
       cursor: pointer;
@@ -432,14 +457,15 @@
     }
 
     .mode-card strong {
-      font-size: 17px;
+      font-size: clamp(20px, 2vw, 28px);
       letter-spacing: -.04em;
     }
 
     .mode-card span {
       color: var(--cf-muted);
-      font-size: 12px;
-      line-height: 1.42;
+      max-width: 42ch;
+      font-size: 14px;
+      line-height: 1.5;
     }
 
     .details {
@@ -515,6 +541,8 @@
     }
 
     .progress-board {
+      /* Internal roadmap state stays in localStorage; the customer-facing studio should stay focused. */
+      display: none;
       max-width: 980px;
       margin: -8px auto 28px;
       border: 1px solid var(--cf-card-border);
@@ -1172,7 +1200,7 @@
         </div>
         <div class="top-actions">
           <span class="badge warn" id="contextBadge">Preview mode</span>
-          <button class="button small" id="advancedToggle">Context</button>
+          <button class="button small context-button" id="advancedToggle">Context invullen</button>
           <button class="button small" id="themeToggle">Donker</button>
         </div>
       </header>
