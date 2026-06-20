@@ -921,7 +921,7 @@ function buildEmergencyPrompt(
   const forbiddenWords = context.forbiddenWords.slice(0, 20);
 
   return [
-    "OpenAI was net te traag in de volledige generatie. Schrijf daarom nu snel 1 echte, compacte Nederlandse SEO-pagina.",
+    "OpenAI was net te traag in de volledige generatie. Schrijf daarom nu 1 echte Nederlandse SEO-pagina die ondanks de noodroute inhoudelijk bruikbaar is.",
     "Belangrijk: dit mag GEEN fallback-template zijn. Schrijf alsof een menselijke copywriter dit voor review oplevert.",
     "",
     `Reden noodroute: ${reason}`,
@@ -945,9 +945,10 @@ function buildEmergencyPrompt(
     forbiddenWords.length ? `Verboden woorden:\n${forbiddenWords.map((word) => `- ${word}`).join("\n")}` : "",
     "",
     "Eisen",
-    "- 350-550 woorden.",
+    "- 650-900 woorden.",
     "- Gebruik HTML: exact 1 <h1>, meerdere <h2>, <p>, eventueel <ul><li>.",
     "- Geen meta-uitleg, geen excuses, geen melding dat dit een noodroute is.",
+    "- Neem de ruwe prompt of opdrachtzin niet zichtbaar over in de pagina.",
     "- Geen generieke zinnen zoals 'in een wereld waarin' of 'het draait om'.",
     "- Maak het concreet met de aangeleverde context. Als bewijs ontbreekt, formuleer eerlijk en voorzichtig.",
     "",
@@ -1618,7 +1619,7 @@ export function buildPrompt(
         ? "- Lever websitecopy op, geen artikel: ongeveer 120-260 woorden per variant."
         : outputMode === "topic_authority"
           ? "- Lever een strategische topic-authority kaart op, geen artikeltekst."
-          : "- Lever een echte, bruikbare SEO-reviewtekst op van ongeveer 420-700 woorden.",
+          : "- Lever een publiceerbare, langere SEO-webpagina op van ongeveer 900-1400 woorden. Geen korte reviewtekst of outline.",
     "- Schrijf specifiek op basis van de opgegeven website, diensten, tone-of-voice scan, feedbackregels en bronmateriaal.",
     "- Vermijd generieke B2B-zinnen zoals 'in een wereld waarin', 'het draait om' en lege containerwoorden.",
     "- Maak elke alinea inhoudelijk nuttig: uitleg, keuzehulp, nuance, bewijs, risicoverlaging of vervolgstap.",
@@ -1630,6 +1631,7 @@ export function buildPrompt(
       ? "- Gebruik HTML met exact: een <h1>, een korte <p>, een <h2>Waarom Turn.One</h2> met 3 <li>, een <h2>Vertrouwen</h2> en een <h2>Volgende stap</h2>."
       : "- Gebruik HTML in de content met exact een <h1>, 3-5 <h2>, <p> en waar passend <ul>/<li>.",
     "- Schrijf geen placeholders, geen meta-uitleg, geen template-tags en geen opmerkingen over AI.",
+    "- Neem de ruwe prompt, interne briefing, contentplanlabels of opdrachtzin nooit zichtbaar over in titel, meta description of content.",
     "- Gebruik geen verzonnen certificeringen, cijfers, klanten of garanties. Als bewijs ontbreekt, formuleer zorgvuldig.",
     "- Laat de CTA natuurlijk voelen en passend bij het bedrijf, niet als agressieve salescopy.",
   ];
@@ -1677,6 +1679,7 @@ export function buildPrompt(
   lines.push(
     "",
     "Maak de tekst concreet genoeg om aan een klant te laten zien. Geen kale templatezinnen.",
+    "Controleer voor het teruggeven dat de zichtbare content geen ruwe promptzin of interne instructielabels bevat.",
     "Geef exact geldig JSON terug in dit formaat:",
     '{"variants":[{"title":"string","meta_description":"string","content":"string","seo_score":80,"quality_score":85,"quality_notes":["string"],"quality_summary":"string"}]}',
   );
@@ -1707,7 +1710,7 @@ export async function generateVariants(
         model: CONTENT_MODEL,
         response_format: { type: "json_object" },
         temperature: 0.52,
-        max_tokens: 2800,
+        max_tokens: 4800,
         messages: [
           {
             role: "system",
