@@ -84,6 +84,7 @@ $sourceRoot = Resolve-GstackSource -ExplicitSource $GstackSource
 $gitBash = Get-GitBashPath
 $agentsSkillsDir = Join-Path $repoRoot '.agents\skills'
 $repoGstackPath = Join-Path $agentsSkillsDir 'gstack'
+$repoSkillsSourceDir = Join-Path $repoRoot 'skills'
 
 Write-Host "Repo root: $repoRoot"
 Write-Host "GStack source: $sourceRoot"
@@ -95,6 +96,15 @@ if ($CheckOnly) {
 
 New-Item -ItemType Directory -Force -Path $agentsSkillsDir | Out-Null
 Ensure-Junction -LinkPath $repoGstackPath -TargetPath $sourceRoot
+
+if (Test-Path $repoSkillsSourceDir) {
+  Get-ChildItem -Path $repoSkillsSourceDir -Directory | ForEach-Object {
+    $skillFile = Join-Path $_.FullName 'SKILL.md'
+    if (Test-Path $skillFile) {
+      Ensure-Junction -LinkPath (Join-Path $agentsSkillsDir $_.Name) -TargetPath $_.FullName
+    }
+  }
+}
 
 $bashRepoGstackPath = Convert-ToGitBashPath $repoGstackPath
 $setupCommand = "cd '$bashRepoGstackPath' && ./setup --host codex --quiet"
