@@ -9,6 +9,9 @@ const UUID_REGEX =
 
 const CONTENT_MODEL = process.env.OPENAI_CONTENT_MODEL || "gpt-4o-mini";
 const FAST_CONTENT_MODEL = process.env.OPENAI_FAST_CONTENT_MODEL || "gpt-4o-mini";
+const SEO_MIN_PUBLISHABLE_WORDS = 900;
+const SEO_MIN_REVIEW_WORDS = 700;
+const SEO_MAX_TARGET_WORDS = 1400;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -378,6 +381,10 @@ function isHomepageHeroRequest(input: GenerateContentRequest): boolean {
 
 type ContentOutputMode = "websitecopy" | "linkedin" | "seo" | "topic_authority";
 
+function isSeoOutputMode(mode: ContentOutputMode): boolean {
+  return mode === "seo";
+}
+
 function detectContentOutputMode(input: GenerateContentRequest): ContentOutputMode {
   const text = [
     input.keyword,
@@ -429,10 +436,50 @@ function outputModeInstruction(mode: ContentOutputMode, keyword: string): string
 
   return [
     `Schrijf 3 sterke Nederlandse SEO-paginavarianten voor het zoekwoord: ${keyword}.`,
-    "Elke variant combineert zoekintentie, structuur, bewijs, interne links en CTA.",
-    "Gebruik HTML met <h1>, 3-5 <h2>, <p> en waar passend <ul>/<li>.",
-    "Lengte: ongeveer 420-700 woorden per variant.",
+    "Elke variant is een publiceerbare long-form SEO-webpagina, geen outline, briefing of korte reviewtekst.",
+    `Lengte: ongeveer ${SEO_MIN_PUBLISHABLE_WORDS}-${SEO_MAX_TARGET_WORDS} woorden per variant.`,
+    "Gebruik HTML met exact 1 <h1>, daarna 5-8 inhoudelijke <h2>-secties, <p> en minstens één praktische <ul>/<li> waar dat helpt.",
+    "Bouw de pagina rond zoekintentie, probleem, aanpak, keuzecriteria, bewijs/context, proces, FAQ waar nuttig en een natuurlijke CTA.",
+    "Neem de ruwe prompt, opdrachtzin of interne briefing nooit zichtbaar over.",
   ].join("\n");
+}
+
+function collectPromptEchoCandidates(input: GenerateContentRequest, plan: ContentPlan): string[] {
+  const sourceLines = sanitizeText(input.source_content)
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const rawCandidates = [
+    input.xml_template,
+    input.xml_template_name,
+    ...sourceLines.slice(0, 4),
+    ...plan.recommendedStructure,
+  ];
+
+  return uniqueRules(
+    rawCandidates
+      .map((candidate) => sanitizeText(candidate).replace(/\s+/g, " ").trim())
+      .filter((candidate) => {
+        const words = candidate.split(/\s+/).filter(Boolean).length;
+        return candidate.length >= 35 && words >= 6 && !isReasonableKeyword(candidate);
+      })
+      .map((candidate) => candidate.slice(0, 140)),
+    12,
+  );
+}
+
+function containsPromptEcho(text: string, candidates: string[]): string | null {
+  const normalizedText = stripHtml(text).replace(/\s+/g, " ").toLowerCase();
+  for (const candidate of candidates) {
+    const normalizedCandidate = candidate.replace(/\s+/g, " ").toLowerCase();
+    if (normalizedCandidate.length >= 35 && normalizedText.includes(normalizedCandidate.slice(0, 90))) {
+      return candidate;
+    }
+  }
+  if (/\b(paginadoel|contentplan|bronmateriaal|schrijf een seo|maak een seo|gebruik deze structuur als gids)\b/i.test(normalizedText)) {
+    return "interne briefing- of promptlabels";
+  }
+  return null;
 }
 
 function collectQualityIssues(
@@ -455,6 +502,8 @@ function collectQualityIssues(
   const isHomepageHero = isHomepageHeroRequest(input) || mode === "websitecopy";
   const isLinkedIn = mode === "linkedin";
   const isTopicAuthority = mode === "topic_authority";
+  const isSeo = isSeoOutputMode(mode);
+  const promptEcho = containsPromptEcho(text, collectPromptEchoCandidates(input, plan));
 
   for (const hit of forbiddenHits) {
     issues.push({
@@ -471,6 +520,15 @@ function collectQualityIssues(
       code: "placeholder_content",
       variant_index: variant.variant_index,
       message: "De tekst bevat placeholder- of fallbacktaal.",
+    });
+  }
+
+  if (promptEcho) {
+    issues.push({
+      severity: "blocker",
+      code: "prompt_echo",
+      variant_index: variant.variant_index,
+      message: `De tekst lijkt interne prompt/briefing over te nemen: ${promptEcho}`,
     });
   }
 
@@ -495,26 +553,26 @@ function collectQualityIssues(
       variant_index: variant.variant_index,
       message: `Veel te kort voor een topic-authority plan: ${wordCount} woorden.`,
     });
-  } else if (!isHomepageHero && !isLinkedIn && !isTopicAuthority && wordCount < 100) {
+  } else if (isSeo && wordCount < 350) {
     issues.push({
       severity: "blocker",
       code: "too_short",
       variant_index: variant.variant_index,
       message: `Veel te kort om te beoordelen: ${wordCount} woorden.`,
     });
-  } else if (!isHomepageHero && !isLinkedIn && !isTopicAuthority && wordCount < 350) {
+  } else if (isSeo && wordCount < SEO_MIN_REVIEW_WORDS) {
     issues.push({
-      severity: "warning",
+      severity: "blocker",
       code: "too_short_for_publication",
       variant_index: variant.variant_index,
-      message: `Te kort voor publicatie, maar wel bruikbaar voor review: ${wordCount} woorden.`,
+      message: `Te kort voor een bruikbare SEO-pagina: ${wordCount} woorden.`,
     });
-  } else if (!isHomepageHero && !isLinkedIn && !isTopicAuthority && wordCount < 600) {
+  } else if (isSeo && wordCount < SEO_MIN_PUBLISHABLE_WORDS) {
     issues.push({
       severity: "warning",
       code: "thin_content",
       variant_index: variant.variant_index,
-      message: `Nog wat dun voor premium SEO: ${wordCount} woorden.`,
+      message: `Nog te dun voor publicatie als volledige SEO-pagina: ${wordCount} woorden.`,
     });
   }
 
@@ -534,7 +592,14 @@ function collectQualityIssues(
     });
   }
 
-  if (!isLinkedIn && headingCount < 3) {
+  if (isSeo && headingCount < 5) {
+    issues.push({
+      severity: "warning",
+      code: "weak_structure",
+      variant_index: variant.variant_index,
+      message: "De SEO-pagina heeft minder dan 5 duidelijke secties.",
+    });
+  } else if (!isLinkedIn && headingCount < 3) {
     issues.push({
       severity: "warning",
       code: "weak_structure",
@@ -543,7 +608,14 @@ function collectQualityIssues(
     });
   }
 
-  if (!isHomepageHero && !isLinkedIn && paragraphCount < 5) {
+  if (isSeo && paragraphCount < 7) {
+    issues.push({
+      severity: "warning",
+      code: "few_paragraphs",
+      variant_index: variant.variant_index,
+      message: "De SEO-pagina heeft te weinig uitgewerkte paragrafen voor long-form content.",
+    });
+  } else if (!isHomepageHero && !isLinkedIn && paragraphCount < 5) {
     issues.push({
       severity: "warning",
       code: "few_paragraphs",
@@ -654,8 +726,9 @@ function runQualityControl(
       issues: allIssues.slice(0, 20),
       applied_rules: [
         "Geen verboden woorden uit feedback of briefing",
-        "Onder 100 woorden wordt geblokkeerd; 100-600 woorden krijgt een duidelijke waarschuwing",
+        `SEO-pagina's onder ${SEO_MIN_REVIEW_WORDS} woorden worden geblokkeerd; ${SEO_MIN_REVIEW_WORDS}-${SEO_MIN_PUBLISHABLE_WORDS} woorden krijgt een publicatiewaarschuwing`,
         "Zoekwoord moet zichtbaar terugkomen",
+        "Geen prompt-echo of interne briefinglabels",
         "Geen placeholder- of fallbacktaal",
         "Structuur, CTA, meta en generieke zinnen worden meegewogen",
       ],
@@ -802,16 +875,28 @@ export function buildFallbackVariants(
   const audience = sanitizeText(brand.target_audience || brand.buyer_persona) || "B2B-beslissers";
   const cta = plan.ctaDirection || "Vraag een gesprek of offerte aan";
   const keyword = input.keyword;
+  const servicesSummary = services || "de beschikbare diensten en expertise";
+  const proofSummary = plan.proofPoints.length
+    ? plan.proofPoints.slice(0, 4).join(", ")
+    : "werkwijze, ervaring, klantcontext en concrete voorbeelden";
   const baseSections = [
     `<h1>${keyword}</h1>`,
-    `<p>${keyword} is voor ${audience.toLowerCase()} vooral belangrijk wanneer keuzes betrouwbaar, uitlegbaar en concreet uitvoerbaar moeten zijn. ${companyName} helpt om die afweging helder te maken met een aanpak die past bij de context van de klant.</p>`,
+    `<p>${keyword} is voor ${audience.toLowerCase()} vooral belangrijk wanneer een keuze niet alleen goed moet klinken, maar ook betrouwbaar, uitlegbaar en uitvoerbaar moet zijn. ${companyName} helpt om die afweging scherper te maken met inhoud die vertrekt vanuit de situatie van de klant, niet vanuit losse claims.</p>`,
     `<h2>Waarom ${keyword} belangrijk is</h2>`,
-    `<p>Een goede pagina over ${keyword} moet niet alleen uitleg geven, maar ook laten zien wanneer de dienst relevant is, welke risico's ermee worden verlaagd en welke vervolgstap logisch is.</p>`,
-    services ? `<h2>Relevante expertise</h2><p>De belangrijkste context vanuit de organisatie: ${services}.</p>` : "",
+    `<p>Een goede pagina over ${keyword} moet niet alleen uitleg geven. De lezer wil herkennen wanneer het onderwerp speelt, welke risico's bij een verkeerde keuze horen en welke criteria helpen om aanbieders of oplossingen te vergelijken. Zonder die laag blijft content dun: de tekst noemt het onderwerp, maar helpt niemand om een betere beslissing te nemen.</p>`,
+    `<h2>Wanneer dit speelt</h2>`,
+    `<p>Dit onderwerp wordt relevant zodra er intern vragen ontstaan over timing, investering, verantwoordelijkheid of resultaat. Vaak is er al behoefte aan verbetering, maar ontbreekt nog de taal om het probleem scherp uit te leggen. Dan moet de pagina laten zien wat er op het spel staat, welke keuzes logisch zijn en wat een realistische vervolgstap is.</p>`,
+    `<h2>Relevante expertise</h2>`,
+    `<p>De belangrijkste context vanuit de organisatie is ${servicesSummary}. Die context moet worden vertaald naar herkenbare situaties: waar loopt de doelgroep tegenaan, welke keuze probeert men te maken en hoe helpt de aanpak om twijfel te verminderen? Een sterke SEO-pagina maakt expertise concreet zonder bewijs te verzinnen.</p>`,
     `<h2>Aanpak</h2>`,
-    `<p>De aanpak begint met het scherp krijgen van de situatie, de doelgroep en het gewenste resultaat. Daarna wordt de inhoud opgebouwd rond concrete vragen, heldere argumentatie en een duidelijke call-to-action.</p>`,
+    `<p>De aanpak begint met het scherp krijgen van de situatie, de doelgroep en het gewenste resultaat. Daarna wordt de inhoud opgebouwd rond concrete vragen, heldere argumentatie en een duidelijke call-to-action. Voor ${keyword} betekent dit dat de pagina eerst context geeft, daarna keuzes uitlegt en pas daarna richting contact of offerte beweegt.</p>`,
+    `<ul><li>Maak duidelijk welk probleem de lezer herkent.</li><li>Leg uit welke keuzes of criteria belangrijk zijn.</li><li>Gebruik alleen bewijs dat echt uit briefing, kennisbank of klantcontext komt.</li><li>Sluit af met een vervolgstap die past bij de koopfase.</li></ul>`,
+    `<h2>Bewijs en vertrouwen</h2>`,
+    `<p>Betrouwbaarheid ontstaat door concrete context. Denk aan ${proofSummary}. Als harde cases, cijfers of certificeringen ontbreken, is het beter om eerlijk te formuleren wat de aanpak doet en welke vragen de lezer kan stellen. Dat voelt sterker dan generieke beloftes, omdat de tekst laat zien hoe iemand verantwoord kan kiezen.</p>`,
+    `<h2>Veelgestelde vragen</h2>`,
+    `<p><strong>Wanneer is ${keyword} een logische stap?</strong> Wanneer de huidige aanpak te weinig duidelijkheid, vertrouwen of richting geeft. <strong>Waar moet ik op letten?</strong> Let op inhoudelijke onderbouwing, aansluiting op doelgroep en een helder proces na het eerste contact. <strong>Wat levert een goede aanpak op?</strong> Minder ruis in de keuze, betere verwachtingen en een pagina die verkoopgesprekken ondersteunt.</p>`,
     `<h2>Volgende stap</h2>`,
-    `<p>${cta}.</p>`,
+    `<p>Wie met ${keyword} aan de slag wil, begint het beste met een korte inhoudelijke check: wat zoekt de doelgroep, welke informatie ontbreekt nu en welk bewijs is beschikbaar? Vanuit daar wordt duidelijk of een verdiepende SEO-pagina, servicepagina of ondersteunende content logisch is. ${cta}.</p>`,
   ].filter(Boolean);
 
   const variants: GeneratedVariant[] = [
@@ -823,10 +908,10 @@ export function buildFallbackVariants(
       content: baseSections.join("\n"),
       word_count: countWords(baseSections.join(" ")),
       seo_score: 76,
-      quality_score: 74,
+      quality_score: 70,
       quality_notes: ["Fallback door backend-timeout", reason],
-      quality_summary: "Werkbare fallbackvariant zodat de flow niet vastloopt.",
-      combined_score: scoreVariant(76, 74),
+      quality_summary: "Fallbackconcept voor review; niet automatisch als publiceerbare eindversie gebruiken.",
+      combined_score: scoreVariant(76, 70),
       is_primary: true,
     },
     {
@@ -840,10 +925,10 @@ export function buildFallbackVariants(
         .replace("Volgende stap", "Plan een gerichte vervolgstap"),
       word_count: countWords(baseSections.join(" ")),
       seo_score: 74,
-      quality_score: 73,
+      quality_score: 69,
       quality_notes: ["Fallback door backend-timeout", "Commercielere variant"],
-      quality_summary: "Alternatieve invalshoek met meer nadruk op besluitvorming.",
-      combined_score: scoreVariant(74, 73),
+      quality_summary: "Fallbackconcept met nadruk op besluitvorming; eindredactie blijft nodig.",
+      combined_score: scoreVariant(74, 69),
       is_primary: false,
     },
     {
@@ -857,10 +942,10 @@ export function buildFallbackVariants(
         .replace("De aanpak begint", "Een consultatieve aanpak begint"),
       word_count: countWords(baseSections.join(" ")),
       seo_score: 73,
-      quality_score: 75,
+      quality_score: 70,
       quality_notes: ["Fallback door backend-timeout", "Inhoudelijkere variant"],
-      quality_summary: "Consultatieve fallbackvariant voor verdere review.",
-      combined_score: scoreVariant(73, 75),
+      quality_summary: "Consultatieve fallbackvariant voor review; aanvullen met echt bewijs voor publicatie.",
+      combined_score: scoreVariant(73, 70),
       is_primary: false,
     },
   ];
@@ -921,7 +1006,7 @@ function buildEmergencyPrompt(
   const forbiddenWords = context.forbiddenWords.slice(0, 20);
 
   return [
-    "OpenAI was net te traag in de volledige generatie. Schrijf daarom nu snel 1 echte, compacte Nederlandse SEO-pagina.",
+    "OpenAI was net te traag in de volledige generatie. Schrijf daarom nu 1 echte Nederlandse SEO-pagina die ondanks de noodroute inhoudelijk bruikbaar is.",
     "Belangrijk: dit mag GEEN fallback-template zijn. Schrijf alsof een menselijke copywriter dit voor review oplevert.",
     "",
     `Reden noodroute: ${reason}`,
@@ -945,9 +1030,10 @@ function buildEmergencyPrompt(
     forbiddenWords.length ? `Verboden woorden:\n${forbiddenWords.map((word) => `- ${word}`).join("\n")}` : "",
     "",
     "Eisen",
-    "- 350-550 woorden.",
+    "- 900-1200 woorden.",
     "- Gebruik HTML: exact 1 <h1>, meerdere <h2>, <p>, eventueel <ul><li>.",
     "- Geen meta-uitleg, geen excuses, geen melding dat dit een noodroute is.",
+    "- Neem de ruwe prompt of opdrachtzin niet zichtbaar over in de pagina.",
     "- Geen generieke zinnen zoals 'in een wereld waarin' of 'het draait om'.",
     "- Maak het concreet met de aangeleverde context. Als bewijs ontbreekt, formuleer eerlijk en voorzichtig.",
     "",
@@ -983,12 +1069,12 @@ export async function generateEmergencyDraft(
         model: FAST_CONTENT_MODEL,
         response_format: { type: "json_object" },
         temperature: 0.45,
-        max_tokens: 2600,
+        max_tokens: 3600,
         messages: [
           {
             role: "system",
             content:
-              "Je bent een snelle Nederlandse B2B eindredacteur. Je schrijft compacte, echte reviewconcepten en retourneert alleen geldig JSON.",
+              "Je bent een snelle Nederlandse B2B SEO-eindredacteur. Je schrijft volledige, concrete reviewconcepten en retourneert alleen geldig JSON.",
           },
           {
             role: "user",
@@ -1215,9 +1301,10 @@ function looksLikePublishableArticle(variant: GeneratedVariant): boolean {
   const headingCount = (content.match(/<h2[\s>]/gi) || []).length;
   const paragraphCount = (content.match(/<p[\s>]/gi) || []).length;
   return (
-    wordCount >= 420 &&
-    headingCount >= 3 &&
-    paragraphCount >= 4 &&
+    wordCount >= SEO_MIN_PUBLISHABLE_WORDS &&
+    wordCount <= SEO_MAX_TARGET_WORDS + 250 &&
+    headingCount >= 5 &&
+    paragraphCount >= 7 &&
     !/geen content ontvangen|fallback|placeholder|lorem ipsum/i.test(content)
   );
 }
@@ -1249,7 +1336,7 @@ function markVariantQuality(variants: GeneratedVariant[]): GeneratedVariant[] {
       ? variant.quality_notes
       : [
           ...variant.quality_notes,
-          "Kwaliteitswaarschuwing: bruikbaar voor review, maar nog niet sterk genoeg als eindversie.",
+          "Kwaliteitswaarschuwing: nog niet sterk genoeg als publiceerbare long-form SEO-eindversie.",
         ],
   }));
 }
@@ -1618,7 +1705,7 @@ export function buildPrompt(
         ? "- Lever websitecopy op, geen artikel: ongeveer 120-260 woorden per variant."
         : outputMode === "topic_authority"
           ? "- Lever een strategische topic-authority kaart op, geen artikeltekst."
-          : "- Lever een echte, bruikbare SEO-reviewtekst op van ongeveer 420-700 woorden.",
+          : "- Lever een publiceerbare, langere SEO-webpagina op van ongeveer 900-1400 woorden. Geen korte reviewtekst of outline.",
     "- Schrijf specifiek op basis van de opgegeven website, diensten, tone-of-voice scan, feedbackregels en bronmateriaal.",
     "- Vermijd generieke B2B-zinnen zoals 'in een wereld waarin', 'het draait om' en lege containerwoorden.",
     "- Maak elke alinea inhoudelijk nuttig: uitleg, keuzehulp, nuance, bewijs, risicoverlaging of vervolgstap.",
@@ -1628,8 +1715,9 @@ export function buildPrompt(
         ? "- Gebruik HTML als strategische kaart met duidelijke lijsten voor pillar, supportpagina's, vragen, bewijs en linkroute."
         : isHomepageHero || outputMode === "websitecopy"
       ? "- Gebruik HTML met exact: een <h1>, een korte <p>, een <h2>Waarom Turn.One</h2> met 3 <li>, een <h2>Vertrouwen</h2> en een <h2>Volgende stap</h2>."
-      : "- Gebruik HTML in de content met exact een <h1>, 3-5 <h2>, <p> en waar passend <ul>/<li>.",
+      : "- Gebruik HTML in de content met exact een <h1>, 5-8 inhoudelijke <h2>, <p> en waar passend <ul>/<li>.",
     "- Schrijf geen placeholders, geen meta-uitleg, geen template-tags en geen opmerkingen over AI.",
+    "- Neem de ruwe prompt, interne briefing, contentplanlabels of opdrachtzin nooit zichtbaar over in titel, meta description of content.",
     "- Gebruik geen verzonnen certificeringen, cijfers, klanten of garanties. Als bewijs ontbreekt, formuleer zorgvuldig.",
     "- Laat de CTA natuurlijk voelen en passend bij het bedrijf, niet als agressieve salescopy.",
   ];
@@ -1677,6 +1765,7 @@ export function buildPrompt(
   lines.push(
     "",
     "Maak de tekst concreet genoeg om aan een klant te laten zien. Geen kale templatezinnen.",
+    "Controleer voor het teruggeven dat de zichtbare content geen ruwe promptzin of interne instructielabels bevat.",
     "Geef exact geldig JSON terug in dit formaat:",
     '{"variants":[{"title":"string","meta_description":"string","content":"string","seo_score":80,"quality_score":85,"quality_notes":["string"],"quality_summary":"string"}]}',
   );
@@ -1707,7 +1796,7 @@ export async function generateVariants(
         model: CONTENT_MODEL,
         response_format: { type: "json_object" },
         temperature: 0.52,
-        max_tokens: 2800,
+        max_tokens: 4800,
         messages: [
           {
             role: "system",
@@ -2016,9 +2105,9 @@ function buildContentQualityReport(args: {
       label: "Publiceerbaarheid",
       score: clampScore(
         primaryVariant.quality_score +
-          (wordCount >= 600 ? 6 : wordCount >= 420 ? 0 : -14) +
-          (headingCount >= 4 ? 5 : -5) +
-          (paragraphCount >= 6 ? 4 : -4),
+          (wordCount >= SEO_MIN_PUBLISHABLE_WORDS ? 6 : wordCount >= SEO_MIN_REVIEW_WORDS ? -4 : -18) +
+          (headingCount >= 5 ? 5 : -7) +
+          (paragraphCount >= 7 ? 4 : -6),
       ),
       note: "Kijkt of de pagina lang, gestructureerd en compleet genoeg voelt voor review.",
     },
@@ -2033,8 +2122,10 @@ function buildContentQualityReport(args: {
     dimensions.reduce((sum, dimension) => sum + dimension.score, 0) / dimensions.length,
   );
   const risks = [
-    ...(wordCount < 600 ? ["Tekst is mogelijk nog te kort voor een premium SEO-pagina."] : []),
-    ...(headingCount < 4 ? ["Structuur kan sterker: voeg meer duidelijke tussenkoppen toe."] : []),
+    ...(wordCount < SEO_MIN_PUBLISHABLE_WORDS
+      ? [`Tekst is nog korter dan de doelrange van ${SEO_MIN_PUBLISHABLE_WORDS}-${SEO_MAX_TARGET_WORDS} woorden.`]
+      : []),
+    ...(headingCount < 5 ? ["Structuur kan sterker: voeg meer duidelijke tussenkoppen toe."] : []),
     ...(proofPoints.length < 2 ? ["Bewijs is nog dun: voeg cases, voorbeelden of harde context toe."] : []),
     ...(variants.length < 3 ? ["Er zijn minder varianten dan gewenst gegenereerd."] : []),
   ];
