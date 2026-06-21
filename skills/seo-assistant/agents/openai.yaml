@@ -1,0 +1,4 @@
+interface:
+  display_name: "SEO-assistant"
+  short_description: "Klantvriendelijke SEO workflow"
+  default_prompt: "Use $seo-assistant to guide a client from rough request to SEO briefing, structure, and final page."

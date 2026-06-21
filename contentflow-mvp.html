@@ -1454,7 +1454,17 @@
       const text = await response.text();
       let data = null;
       try { data = text ? JSON.parse(text) : null; } catch { data = { error: text }; }
-      if (!response.ok) throw new Error(data?.error || data?.message || 'Request mislukt.');
+      if (!response.ok) {
+        const rawMessage = data?.error || data?.message || '';
+        const message = /<!doctype|<html|<body|error response/i.test(String(rawMessage))
+          ? `Backend endpoint gaf geen JSON terug (${response.status}). Draait Netlify dev of is de function gedeployed?`
+          : rawMessage || `Request mislukt (${response.status}).`;
+        const error = new Error(message);
+        error.status = response.status;
+        error.stage = data?.stage || '';
+        error.payload = data;
+        throw error;
+      }
       return data;
     }
     function setBusy(button, busy, label) {
@@ -1695,14 +1705,12 @@
       }
     }
     function localPreview() {
-      const prompt = $('mainPrompt').value.trim();
       const keyword = keywordFromPrompt();
       const company = $('companyName').value.trim() || 'jouw bedrijf';
       const audience = $('targetAudience').value.trim() || 'de juiste doelgroep';
       const services = $('services').value.trim() || 'het aanbod';
       const cta = $('primaryCta').value.trim() || 'Plan een kennismaking';
       const mode = currentMode();
-      const intro = prompt || 'Maak een heldere SEO-pagina die vertrouwen opbouwt en uitlegt waarom deze oplossing relevant is.';
       let content = '';
       if (state.contentType === 'topic_authority') {
         content = `
@@ -1720,19 +1728,21 @@
           <p>Elke supportpagina linkt terug naar de pillar page met een duidelijke anchor rond ${esc(keyword)}.</p>`;
       } else {
         content = `
-          <h1>${esc(keyword)}: een pagina die vertrouwen opbouwt</h1>
-          <p>${esc(intro)}</p>
-          <h2>Voor wie deze pagina bedoeld is</h2>
-          <p>Deze pagina richt zich op ${esc(audience)}. De tekst moet snel duidelijk maken waarom ${esc(company)} relevant is en welke keuze de bezoeker met vertrouwen kan maken.</p>
-          <h2>Wat het aanbod sterk maakt</h2>
-          <p>De basis voor de inhoud is: ${esc(services)}. Een sterke pagina vertaalt dit niet naar losse claims, maar naar herkenbare situaties, bewijs en duidelijke vervolgstappen.</p>
+          <h1>${esc(keyword)}: structuurpreview voor een SEO-pagina</h1>
+          <p>Dit is een lokale structuurpreview. De echte SEO-output komt uit de TypeScript backend, gebruikt OpenAI en haalt workspace-context op. Gebruik deze preview alleen om te controleren of onderwerp, doelgroep, aanbod en CTA goed zijn ingevuld.</p>
+          <h2>Lezer en zoekintentie</h2>
+          <p>De pagina moet aansluiten op ${esc(audience)} en uitleggen welke keuze iemand rond ${esc(keyword)} probeert te maken. Een sterke versie begint bij het probleem van de bezoeker, niet bij een herhaling van de opdracht.</p>
+          <h2>Context vanuit ${esc(company)}</h2>
+          <p>Beschikbare aanbodcontext: ${esc(services)}. De backend hoort dit uit te werken naar concrete situaties, keuzecriteria, bewijs en nuance zonder claims te verzinnen.</p>
           <h2>Aanpak</h2>
-          <ul><li>Begin met het probleem van de bezoeker.</li><li>Laat zien wat de oplossing oplevert.</li><li>Gebruik merktaal, klantbewijs en feedbackregels.</li></ul>
+          <ul><li>Begin met het probleem van de bezoeker.</li><li>Leg criteria en risico's uit.</li><li>Gebruik merktaal, klantbewijs en feedbackregels.</li><li>Sluit af met een rustige vervolgstap.</li></ul>
+          <h2>Publicatie-eis</h2>
+          <p>Voor publicatie moet de backend een volledige Nederlandse SEO-pagina van ongeveer 900-1400 woorden maken met meerdere uitgewerkte secties. Deze lokale preview is daar bewust geen vervanging voor.</p>
           <h2>Volgende stap</h2>
           <p>${esc(cta)}.</p>`;
       }
-      const variant = { id: 'local-preview-variant', title: `${mode.label}: ${keyword}`, content, seo_score: 74, quality_score: 78, word_count: content.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).filter(Boolean).length };
-      return { status: 'preview', job: { id: 'local-preview' }, primary_variant: variant, quality_report: buildQualityReport(variant, mode) };
+      const variant = { id: 'local-preview-variant', title: `Lokale preview: ${mode.label} voor ${keyword}`, content, seo_score: 58, quality_score: 58, word_count: content.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).filter(Boolean).length, quality_summary: 'Lokale structuurpreview, geen gegenereerde SEO-eindtekst.' };
+      return { status: 'preview', fallback_reason: 'Geen geldige backend-context beschikbaar.', job: { id: 'local-preview' }, primary_variant: variant, quality_report: buildQualityReport(variant, mode) };
     }
     function showLoading() {
       const mode = currentMode();
@@ -1746,9 +1756,15 @@
       const mode = currentMode();
       const report = data.quality_report || data.result?.quality_report || buildQualityReport(v, mode);
       $('outputTitle').textContent = v.title || 'Concept';
-      $('outputSub').textContent = data.status === 'preview' ? `${mode.label} · lokale preview` : `${mode.label} · opgeslagen via TypeScript backend`;
+      const fallbackReason = data.fallback_reason || data.result?.fallback_reason || data.quality_control?.applied_rules?.find?.(rule => /fallback|noodgeneratie/i.test(rule));
+      $('outputSub').textContent = data.status === 'preview'
+        ? `${mode.label} · lokale structuurpreview, geen backend-output`
+        : fallbackReason
+          ? `${mode.label} · backend-output met waarschuwing`
+          : `${mode.label} · opgeslagen via TypeScript backend`;
       $('outputStage').innerHTML = `
         <article class="article ${esc(mode.className || '')}" id="articleOutput">${v.content || '<p>Geen inhoud.</p>'}</article>
+        ${fallbackReason ? `<div class="empty" style="min-height:auto;margin:18px 0;padding:18px;text-align:left"><div><div class="empty-title">Let op: controle nodig.</div><p class="empty-copy">${esc(fallbackReason)}</p></div></div>` : ''}
         ${renderQualityPanel(report, mode)}
         <div class="feedback">
           <div class="eyebrow">Feedback</div>
@@ -1770,6 +1786,23 @@
         btn.classList.add('active');
       }));
       $('saveFeedbackBtn').addEventListener('click', saveFeedback);
+    }
+    function renderBackendError(error, stage) {
+      state.lastResponse = null;
+      const mode = currentMode();
+      const message = error?.message || 'De backend gaf geen bruikbare SEO-output terug.';
+      $('outputTitle').textContent = 'Backendgeneratie mislukt';
+      $('outputSub').textContent = `${mode.label} · geen lokale pseudo-output getoond`;
+      $('outputStage').innerHTML = `
+        <div class="empty">
+          <div>
+            <div class="empty-mark">!</div>
+            <div class="empty-title">Geen publiceerbare backend-output ontvangen.</div>
+            <p class="empty-copy">${esc(message)}</p>
+            ${stage ? `<p class="empty-copy">Stage: ${esc(stage)}</p>` : ''}
+            <p class="empty-copy">Controleer de Netlify function logs, OpenAI environment variables of probeer opnieuw met korter bronmateriaal. ContentFlow toont hier bewust geen lokale vervangtekst.</p>
+          </div>
+        </div>`;
     }
     function renderHermesAudit(data) {
       const audit = data.hermes || data;
@@ -2367,9 +2400,8 @@
         renderOutput(data);
         markProgress('content_output');
       } catch (error) {
-        renderOutput(localPreview());
-        markProgress('content_output');
-        toast('Backend lukte niet, preview getoond.');
+        renderBackendError(error, error?.stage);
+        toast('Backendgeneratie mislukt. Geen lokale pseudo-output getoond.');
       } finally {
         setBusy($('generateBtn'), false);
       }
