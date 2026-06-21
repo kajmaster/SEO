@@ -1455,7 +1455,11 @@
       let data = null;
       try { data = text ? JSON.parse(text) : null; } catch { data = { error: text }; }
       if (!response.ok) {
-        const error = new Error(data?.error || data?.message || 'Request mislukt.');
+        const rawMessage = data?.error || data?.message || '';
+        const message = /<!doctype|<html|<body|error response/i.test(String(rawMessage))
+          ? `Backend endpoint gaf geen JSON terug (${response.status}). Draait Netlify dev of is de function gedeployed?`
+          : rawMessage || `Request mislukt (${response.status}).`;
+        const error = new Error(message);
         error.status = response.status;
         error.stage = data?.stage || '';
         error.payload = data;
