@@ -1731,20 +1731,72 @@
         generate();
       });
     }
+    function briefingTemplateText() {
+      return [
+        '',
+        'Korte briefing:',
+        `- Bedrijfsnaam en regio: ${$('companyName').value.trim() || ''}`,
+        `- Product/dienst: ${$('services').value.trim() || ''}`,
+        `- Doelgroep: ${$('targetAudience').value.trim() || ''}`,
+        '- Waarom kiezen klanten hiervoor:',
+        '- Ervaring/specialisatie:',
+        '- Bewijs dat genoemd mag worden:',
+        `- Gewenste actie na lezen: ${$('primaryCta').value.trim() || ''}`,
+        `- Toon: ${$('toneVoice').value.trim() || ''}`,
+      ].join('\n');
+    }
+    function friendlyGenerationIssue(error) {
+      const message = String(error?.message || '');
+      if (/te kort|too_short|woorden/i.test(message)) {
+        return 'De eerste versie was nog te dun voor een goede SEO-pagina. Met iets meer bedrijfscontext kan de tekst langer, specifieker en overtuigender worden.';
+      }
+      if (/zoekwoord|keyword/i.test(message)) {
+        return 'Het onderwerp is nog niet scherp genoeg. Kies een kort zoekwoord of onderwerp waar de pagina echt over moet gaan.';
+      }
+      if (/prompt|opdrachtzin|echo/i.test(message)) {
+        return 'De tekst leek nog te veel op de ruwe opdracht. Met een korte briefing kan ik er echte webcopy van maken.';
+      }
+      return 'De eerste versie was nog niet sterk genoeg om als SEO-pagina te gebruiken. Vul de briefing aan, dan kan de volgende versie concreter worden.';
+    }
     function renderBackendError(error) {
-      const message = error?.message || 'De backend kon geen betrouwbare output maken.';
+      const questions = briefingQuestions();
+      const message = friendlyGenerationIssue(error);
       state.lastResponse = null;
-      $('outputTitle').textContent = 'Generatie gestopt';
-      $('outputSub').textContent = 'Er is geen lokale nep-preview getoond, zodat slechte output niet als succes lijkt.';
+      $('outputTitle').textContent = 'Briefing aanvullen';
+      $('outputSub').textContent = 'De kwaliteitscheck hield een zwakke versie tegen. Dat is goed; nu maken we de input scherper.';
       $('outputStage').innerHTML = `
         <div class="empty">
           <div>
-            <div class="empty-mark">!</div>
-            <div class="empty-title">Geen publiceerbare SEO-output ontvangen.</div>
+            <div class="empty-mark">?</div>
+            <div class="empty-title">Ik mis nog context voor een sterke pagina.</div>
             <p class="empty-copy">${esc(message)}</p>
-            <p class="empty-copy">Vul extra briefingcontext in of probeer opnieuw. Als dit blijft gebeuren, controleer de Netlify function logs en OpenAI/Supabase environment variables.</p>
+            <ol style="text-align:left;max-width:760px;margin:18px auto 0;line-height:1.7">
+              ${questions.map(item => `<li>${esc(item.question)}</li>`).join('')}
+            </ol>
+            <div class="choice-row" style="justify-content:center;margin-top:18px">
+              <button class="button primary" id="errorBriefingFocusBtn">Briefing aanvullen</button>
+              <button class="button ghost" id="errorBriefingTemplateBtn">Zet vragen in editor</button>
+              <button class="button ghost" id="errorAssumeBtn">Probeer met aannames</button>
+            </div>
           </div>
         </div>`;
+      $('errorBriefingFocusBtn')?.addEventListener('click', () => {
+        const first = questions.find(item => $(item.field));
+        const target = first ? $(first.field) : $('mainPrompt');
+        target?.focus();
+        target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+      $('errorBriefingTemplateBtn')?.addEventListener('click', () => {
+        $('mainPrompt').value = `${$('mainPrompt').value.trim()}${briefingTemplateText()}`;
+        scoreBrief();
+        $('mainPrompt').focus();
+        $('mainPrompt').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+      $('errorAssumeBtn')?.addEventListener('click', () => {
+        $('mainPrompt').value = `${$('mainPrompt').value.trim()}\n\nGa door met voorzichtige aannames. Maak een volledige SEO-pagina van 900-1400 woorden. Verzin geen bewijs, reviews, cijfers of garanties.`;
+        scoreBrief();
+        generate();
+      });
     }
     async function loadContext() {
       try {
@@ -2447,7 +2499,7 @@
         markProgress('content_output');
       } catch (error) {
         renderBackendError(error);
-        toast('Generatie gestopt: backend gaf geen betrouwbare output.');
+        toast('Briefing aanvullen voor een betere SEO-pagina.');
       } finally {
         setBusy($('generateBtn'), false);
       }
