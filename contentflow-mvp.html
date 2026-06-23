@@ -1715,7 +1715,7 @@
             </ol>
             <div class="choice-row" style="justify-content:center;margin-top:18px">
               <button class="button primary" id="briefingFocusBtn">Briefing aanvullen</button>
-              <button class="button ghost" id="briefingAssumeBtn">Toch doorgaan met aannames</button>
+              <button class="button ghost" id="briefingAssumeBtn">Vul aannames in</button>
             </div>
           </div>
         </div>`;
@@ -1726,10 +1726,52 @@
         target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       });
       $('briefingAssumeBtn')?.addEventListener('click', () => {
-        $('mainPrompt').value = `${$('mainPrompt').value.trim()}\n\nGa door met voorzichtige aannames. Verzin geen bewijs, reviews, cijfers of garanties.`;
-        scoreBrief();
-        generate();
+        applyAssumptionBriefing();
       });
+    }
+    function cleanTopic(value) {
+      return String(value || '').replace(/^(maak|schrijf|genereer)\s+(een\s+)?/i, '').replace(/\s+/g, ' ').trim();
+    }
+    function assumedBriefingValues() {
+      const keyword = keywordFromPrompt();
+      const topic = cleanTopic(keyword) || 'deze dienst';
+      const company = $('companyName').value.trim() || 'het bedrijf';
+      const services = $('services').value.trim() || topic;
+      const audience = $('targetAudience').value.trim() || `mensen of organisaties die zoeken naar ${topic}`;
+      const cta = $('primaryCta').value.trim() || 'Neem contact op voor een korte kennismaking';
+      const tone = $('toneVoice').value.trim() || 'nuchter, deskundig, helder en lokaal waar passend';
+      return { keyword, topic, company, services, audience, cta, tone };
+    }
+    function assumptionBriefingText() {
+      const b = assumedBriefingValues();
+      return [
+        '',
+        'Korte briefing met voorzichtige aannames:',
+        `- Bedrijfsnaam en regio: ${b.company}. Regio is niet hard opgegeven; schrijf daarom algemeen en noem geen specifieke plaats tenzij die elders in de input staat.`,
+        `- Product/dienst: ${b.services}.`,
+        `- Doelgroep: ${b.audience}.`,
+        `- Waarom klanten hiervoor kiezen: benadruk duidelijke communicatie, zorgvuldige werkwijze, praktische uitleg, betrouwbaarheid en een logische volgende stap. Maak dit niet groter dan bewezen is.`,
+        '- Ervaring/specialisatie: er zijn geen harde jaren of certificaten opgegeven. Noem dus geen aantallen jaren, keurmerken of garanties. Formuleer ervaring voorzichtig als werkwijze en expertise.',
+        '- Bewijs dat genoemd mag worden: er zijn nog geen reviews, cases, cijfers of foto\'s opgegeven. Gebruik daarom geen nep-bewijs; bouw vertrouwen met procesuitleg, transparantie, aandachtspunten en veelgestelde vragen.',
+        `- Gewenste actie na lezen: ${b.cta}.`,
+        `- Toon: ${b.tone}.`,
+        '- Lengte en structuur: maak een volledige SEO-pagina van 900-1400 woorden met exact 1 H1, 5-8 H2-secties, praktische lijst, FAQ waar logisch en een natuurlijke CTA.',
+        '- Belangrijk: echo de ruwe opdracht niet en schrijf geen interne briefinglabels in de zichtbare pagina.',
+      ].join('\n');
+    }
+    function applyAssumptionBriefing({ generateAfter = true } = {}) {
+      const b = assumedBriefingValues();
+      if (!$('services').value.trim()) $('services').value = b.services;
+      if (!$('targetAudience').value.trim()) $('targetAudience').value = b.audience;
+      if (!$('primaryCta').value.trim()) $('primaryCta').value = b.cta;
+      if (!$('toneVoice').value.trim()) $('toneVoice').value = b.tone;
+      const current = $('mainPrompt').value.trim();
+      const assumed = assumptionBriefingText();
+      const withoutOldAssumptions = current.replace(/\n*Korte briefing met voorzichtige aannames:[\s\S]*$/i, '').trim();
+      $('mainPrompt').value = `${withoutOldAssumptions}${assumed}\n\nGa door met deze aannames. Verzin geen bewijs, reviews, cijfers, jaartallen, certificaten of garanties.`;
+      scoreBrief();
+      toast('Aannames ingevuld in de briefing.');
+      if (generateAfter) generate();
     }
     function briefingTemplateText() {
       return [
@@ -1776,7 +1818,7 @@
             <div class="choice-row" style="justify-content:center;margin-top:18px">
               <button class="button primary" id="errorBriefingFocusBtn">Briefing aanvullen</button>
               <button class="button ghost" id="errorBriefingTemplateBtn">Zet vragen in editor</button>
-              <button class="button ghost" id="errorAssumeBtn">Probeer met aannames</button>
+              <button class="button ghost" id="errorAssumeBtn">Vul aannames in</button>
             </div>
           </div>
         </div>`;
@@ -1793,9 +1835,7 @@
         $('mainPrompt').scrollIntoView({ behavior: 'smooth', block: 'center' });
       });
       $('errorAssumeBtn')?.addEventListener('click', () => {
-        $('mainPrompt').value = `${$('mainPrompt').value.trim()}\n\nGa door met voorzichtige aannames. Maak een volledige SEO-pagina van 900-1400 woorden. Verzin geen bewijs, reviews, cijfers of garanties.`;
-        scoreBrief();
-        generate();
+        applyAssumptionBriefing();
       });
     }
     async function loadContext() {
