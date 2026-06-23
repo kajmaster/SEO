@@ -428,10 +428,10 @@ function outputModeInstruction(mode: ContentOutputMode, keyword: string): string
   }
 
   return [
-    `Schrijf 3 sterke Nederlandse SEO-paginavarianten voor het zoekwoord: ${keyword}.`,
-    "Elke variant combineert zoekintentie, structuur, bewijs, interne links en CTA.",
-    "Gebruik HTML met <h1>, 3-5 <h2>, <p> en waar passend <ul>/<li>.",
-    "Lengte: ongeveer 420-700 woorden per variant.",
+    `Schrijf een publiceerbare Nederlandse SEO-pagina voor het zoekwoord: ${keyword}.`,
+    "Variant 1 is de primaire eindversie: 900-1400 woorden, exact 1 <h1>, 5-8 nuttige <h2>-secties, concrete uitleg, bewijs/context, bezwaren, FAQ waar relevant en een natuurlijke CTA.",
+    "Varianten 2 en 3 mogen kortere invalshoekvarianten zijn, maar moeten nog steeds substantieel zijn: minimaal 650 woorden, duidelijke H2-structuur en geen losse schets.",
+    "Gebruik HTML met <h1>, <h2>, <p> en waar passend <ul>/<li>. Geen ruwe briefing, geen prompt-echo en geen interne labels.",
   ].join("\n");
 }
 
@@ -449,12 +449,15 @@ function collectQualityIssues(
   const wordCount = variant.word_count || countWords(variant.content);
   const headingCount = (variant.content.match(/<h[23][\s>]/gi) || []).length;
   const paragraphCount = (variant.content.match(/<p[\s>]/gi) || []).length;
+  const h1Count = (variant.content.match(/<h1[\s>]/gi) || []).length;
   const forbiddenHits = findForbiddenHits(variant, forbiddenWords);
   const genericHits = collectGenericPhraseHits(variant);
   const mode = detectContentOutputMode(input);
   const isHomepageHero = isHomepageHeroRequest(input) || mode === "websitecopy";
   const isLinkedIn = mode === "linkedin";
   const isTopicAuthority = mode === "topic_authority";
+  const isSeoPage = !isHomepageHero && !isLinkedIn && !isTopicAuthority;
+  const rawPrompt = sanitizeText(input.source_content).split(/\n{2,}/)[0] || "";
 
   for (const hit of forbiddenHits) {
     issues.push({
@@ -495,26 +498,19 @@ function collectQualityIssues(
       variant_index: variant.variant_index,
       message: `Veel te kort voor een topic-authority plan: ${wordCount} woorden.`,
     });
-  } else if (!isHomepageHero && !isLinkedIn && !isTopicAuthority && wordCount < 100) {
+  } else if (isSeoPage && wordCount < 650) {
     issues.push({
       severity: "blocker",
       code: "too_short",
       variant_index: variant.variant_index,
-      message: `Veel te kort om te beoordelen: ${wordCount} woorden.`,
+      message: `Veel te kort voor een publiceerbare SEO-pagina: ${wordCount} woorden.`,
     });
-  } else if (!isHomepageHero && !isLinkedIn && !isTopicAuthority && wordCount < 350) {
+  } else if (isSeoPage && wordCount < 900) {
     issues.push({
       severity: "warning",
       code: "too_short_for_publication",
       variant_index: variant.variant_index,
-      message: `Te kort voor publicatie, maar wel bruikbaar voor review: ${wordCount} woorden.`,
-    });
-  } else if (!isHomepageHero && !isLinkedIn && !isTopicAuthority && wordCount < 600) {
-    issues.push({
-      severity: "warning",
-      code: "thin_content",
-      variant_index: variant.variant_index,
-      message: `Nog wat dun voor premium SEO: ${wordCount} woorden.`,
+      message: `Nog korter dan de SEO-richtlijn van 900-1400 woorden: ${wordCount} woorden.`,
     });
   }
 
@@ -534,7 +530,23 @@ function collectQualityIssues(
     });
   }
 
-  if (!isLinkedIn && headingCount < 3) {
+  if (isSeoPage && h1Count !== 1) {
+    issues.push({
+      severity: "blocker",
+      code: "invalid_h1_count",
+      variant_index: variant.variant_index,
+      message: `SEO-pagina moet exact 1 H1 hebben; gevonden: ${h1Count}.`,
+    });
+  }
+
+  if (isSeoPage && headingCount < 5) {
+    issues.push({
+      severity: "warning",
+      code: "weak_structure",
+      variant_index: variant.variant_index,
+      message: "De SEO-structuur heeft minder dan 5 inhoudelijke tussenkoppen.",
+    });
+  } else if (!isLinkedIn && headingCount < 3) {
     issues.push({
       severity: "warning",
       code: "weak_structure",
@@ -543,7 +555,14 @@ function collectQualityIssues(
     });
   }
 
-  if (!isHomepageHero && !isLinkedIn && paragraphCount < 5) {
+  if (isSeoPage && paragraphCount < 8) {
+    issues.push({
+      severity: "warning",
+      code: "few_paragraphs",
+      variant_index: variant.variant_index,
+      message: "De SEO-pagina heeft te weinig uitgewerkte paragrafen.",
+    });
+  } else if (!isHomepageHero && !isLinkedIn && paragraphCount < 5) {
     issues.push({
       severity: "warning",
       code: "few_paragraphs",
@@ -576,6 +595,15 @@ function collectQualityIssues(
       code: "generic_phrase",
       variant_index: variant.variant_index,
       message: `Generieke AI-achtige formulering gevonden: "${phrase}".`,
+    });
+  }
+
+  if (rawPrompt && countWords(rawPrompt) >= 5 && countWords(rawPrompt) <= 45 && containsPhrase(text, rawPrompt)) {
+    issues.push({
+      severity: "blocker",
+      code: "prompt_echo",
+      variant_index: variant.variant_index,
+      message: "De tekst echoot de ruwe opdracht van de gebruiker.",
     });
   }
 
@@ -654,8 +682,10 @@ function runQualityControl(
       issues: allIssues.slice(0, 20),
       applied_rules: [
         "Geen verboden woorden uit feedback of briefing",
-        "Onder 100 woorden wordt geblokkeerd; 100-600 woorden krijgt een duidelijke waarschuwing",
+        "SEO-pagina's onder 650 woorden worden geblokkeerd; 650-900 woorden krijgen een waarschuwing",
+        "SEO-pagina's hebben exact 1 H1 en bij voorkeur 5-8 inhoudelijke H2-secties",
         "Zoekwoord moet zichtbaar terugkomen",
+        "Ruwe gebruikersprompt mag niet zichtbaar terugkomen in de content",
         "Geen placeholder- of fallbacktaal",
         "Structuur, CTA, meta en generieke zinnen worden meegewogen",
       ],
@@ -765,17 +795,18 @@ export function buildDefaultPlan(
     pageAngle: `${input.keyword} uitgelegd vanuit aanpak, risicoverlaging en concrete waarde`,
     targetReader: audience || "B2B-beslisser die aanbieders vergelijkt",
     recommendedStructure: [
-      `Wat ${input.keyword} betekent`,
-      "Wanneer dit belangrijk is",
-      "Onze aanpak",
-      "Voordelen voor besluitvorming",
+      `Wat ${input.keyword} betekent en voor wie dit relevant is`,
+      "Wanneer dit speelt en welke problemen ermee samenhangen",
+      "Belangrijkste keuzes, risico's en aandachtspunten",
+      "Aanpak en werkwijze",
+      "Bewijs, ervaring en vertrouwen",
       "Veelgestelde vragen",
       "Volgende stap",
     ],
     keyMessages: [
       `${input.keyword} vraagt om een duidelijke, betrouwbare aanpak.`,
       services || "De dienst moet concreet aansluiten op de situatie van de klant.",
-      "Goede content maakt risico's, keuzes en vervolgstappen helder.",
+      "Een goede pagina maakt zoekintentie, risico's, bewijs, keuzes en vervolgstappen helder.",
     ],
     proofPoints: ["Heldere methode", "Concrete uitleg", "Duidelijke vervolgstap"],
     mustInclude: [input.keyword, cta],
@@ -921,8 +952,8 @@ function buildEmergencyPrompt(
   const forbiddenWords = context.forbiddenWords.slice(0, 20);
 
   return [
-    "OpenAI was net te traag in de volledige generatie. Schrijf daarom nu 1 echte Nederlandse SEO-pagina die ondanks de noodroute inhoudelijk bruikbaar is.",
-    "Belangrijk: dit mag GEEN fallback-template zijn. Schrijf alsof een menselijke copywriter dit voor review oplevert.",
+    "OpenAI was net te traag in de volledige generatie. Schrijf daarom nu 1 echte Nederlandse SEO-reviewpagina die ondanks de noodroute inhoudelijk bruikbaar is.",
+    "Belangrijk: dit mag GEEN template zijn. Schrijf alsof een menselijke copywriter dit voor review oplevert.",
     "",
     `Reden noodroute: ${reason}`,
     `Zoekwoord: ${input.keyword}`,
@@ -945,8 +976,8 @@ function buildEmergencyPrompt(
     forbiddenWords.length ? `Verboden woorden:\n${forbiddenWords.map((word) => `- ${word}`).join("\n")}` : "",
     "",
     "Eisen",
-    "- 650-900 woorden.",
-    "- Gebruik HTML: exact 1 <h1>, meerdere <h2>, <p>, eventueel <ul><li>.",
+    "- 650-900 woorden als noodroute; liever langer als dat binnen de tijd past.",
+    "- Gebruik HTML: exact 1 <h1>, 5-7 <h2>, <p>, eventueel <ul><li>.",
     "- Geen meta-uitleg, geen excuses, geen melding dat dit een noodroute is.",
     "- Neem de ruwe prompt of opdrachtzin niet zichtbaar over in de pagina.",
     "- Geen generieke zinnen zoals 'in een wereld waarin' of 'het draait om'.",
@@ -984,7 +1015,7 @@ export async function generateEmergencyDraft(
         model: FAST_CONTENT_MODEL,
         response_format: { type: "json_object" },
         temperature: 0.45,
-        max_tokens: 2600,
+        max_tokens: 3400,
         messages: [
           {
             role: "system",
@@ -1215,10 +1246,12 @@ function looksLikePublishableArticle(variant: GeneratedVariant): boolean {
   const wordCount = countWords(content);
   const headingCount = (content.match(/<h2[\s>]/gi) || []).length;
   const paragraphCount = (content.match(/<p[\s>]/gi) || []).length;
+  const h1Count = (content.match(/<h1[\s>]/gi) || []).length;
   return (
-    wordCount >= 420 &&
-    headingCount >= 3 &&
-    paragraphCount >= 4 &&
+    wordCount >= 650 &&
+    h1Count === 1 &&
+    headingCount >= 5 &&
+    paragraphCount >= 8 &&
     !/geen content ontvangen|fallback|placeholder|lorem ipsum/i.test(content)
   );
 }
@@ -1619,8 +1652,9 @@ export function buildPrompt(
         ? "- Lever websitecopy op, geen artikel: ongeveer 120-260 woorden per variant."
         : outputMode === "topic_authority"
           ? "- Lever een strategische topic-authority kaart op, geen artikeltekst."
-          : "- Lever een publiceerbare, langere SEO-webpagina op van ongeveer 900-1400 woorden. Geen korte reviewtekst of outline.",
+          : "- Lever variant 1 als publiceerbare SEO-pagina van 900-1400 woorden. Varianten 2 en 3 mogen kortere alternatieve invalshoeken zijn.",
     "- Schrijf specifiek op basis van de opgegeven website, diensten, tone-of-voice scan, feedbackregels en bronmateriaal.",
+    "- Begin niet met een herhaling van de opdracht. Vertaal briefing en context naar lezersgerichte copy.",
     "- Vermijd generieke B2B-zinnen zoals 'in een wereld waarin', 'het draait om' en lege containerwoorden.",
     "- Maak elke alinea inhoudelijk nuttig: uitleg, keuzehulp, nuance, bewijs, risicoverlaging of vervolgstap.",
     outputMode === "linkedin"
@@ -1629,8 +1663,8 @@ export function buildPrompt(
         ? "- Gebruik HTML als strategische kaart met duidelijke lijsten voor pillar, supportpagina's, vragen, bewijs en linkroute."
         : isHomepageHero || outputMode === "websitecopy"
       ? "- Gebruik HTML met exact: een <h1>, een korte <p>, een <h2>Waarom Turn.One</h2> met 3 <li>, een <h2>Vertrouwen</h2> en een <h2>Volgende stap</h2>."
-      : "- Gebruik HTML in de content met exact een <h1>, 3-5 <h2>, <p> en waar passend <ul>/<li>.",
-    "- Schrijf geen placeholders, geen meta-uitleg, geen template-tags en geen opmerkingen over AI.",
+      : "- Gebruik HTML in de primaire SEO-content met exact een <h1>, 5-8 inhoudelijke <h2>, <p> en waar passend <ul>/<li>.",
+    "- Schrijf geen placeholders, geen meta-uitleg, geen template-tags, geen interne briefinglabels en geen opmerkingen over AI.",
     "- Neem de ruwe prompt, interne briefing, contentplanlabels of opdrachtzin nooit zichtbaar over in titel, meta description of content.",
     "- Gebruik geen verzonnen certificeringen, cijfers, klanten of garanties. Als bewijs ontbreekt, formuleer zorgvuldig.",
     "- Laat de CTA natuurlijk voelen en passend bij het bedrijf, niet als agressieve salescopy.",
@@ -1680,6 +1714,7 @@ export function buildPrompt(
     "",
     "Maak de tekst concreet genoeg om aan een klant te laten zien. Geen kale templatezinnen.",
     "Controleer voor het teruggeven dat de zichtbare content geen ruwe promptzin of interne instructielabels bevat.",
+    "Als bedrijfscontext of bewijs ontbreekt: benoem geen nepfeiten, maar schrijf voorzichtig en maak de pagina alsnog nuttig met keuzehulp, proces, risico's en vragen.",
     "Geef exact geldig JSON terug in dit formaat:",
     '{"variants":[{"title":"string","meta_description":"string","content":"string","seo_score":80,"quality_score":85,"quality_notes":["string"],"quality_summary":"string"}]}',
   );
@@ -1694,7 +1729,7 @@ export async function generateVariants(
 ): Promise<GeneratedDraft> {
   const env = getBackendEnv();
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20000);
+  const timeout = setTimeout(() => controller.abort(), 32000);
   let response: Response;
   try {
     response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -1710,7 +1745,7 @@ export async function generateVariants(
         model: CONTENT_MODEL,
         response_format: { type: "json_object" },
         temperature: 0.52,
-        max_tokens: 4800,
+        max_tokens: 5600,
         messages: [
           {
             role: "system",
@@ -2019,9 +2054,9 @@ function buildContentQualityReport(args: {
       label: "Publiceerbaarheid",
       score: clampScore(
         primaryVariant.quality_score +
-          (wordCount >= 600 ? 6 : wordCount >= 420 ? 0 : -14) +
-          (headingCount >= 4 ? 5 : -5) +
-          (paragraphCount >= 6 ? 4 : -4),
+          (wordCount >= 900 ? 8 : wordCount >= 650 ? 0 : -18) +
+          (headingCount >= 5 ? 5 : -6) +
+          (paragraphCount >= 8 ? 4 : -5),
       ),
       note: "Kijkt of de pagina lang, gestructureerd en compleet genoeg voelt voor review.",
     },
@@ -2036,8 +2071,8 @@ function buildContentQualityReport(args: {
     dimensions.reduce((sum, dimension) => sum + dimension.score, 0) / dimensions.length,
   );
   const risks = [
-    ...(wordCount < 600 ? ["Tekst is mogelijk nog te kort voor een premium SEO-pagina."] : []),
-    ...(headingCount < 4 ? ["Structuur kan sterker: voeg meer duidelijke tussenkoppen toe."] : []),
+    ...(wordCount < 900 ? ["Tekst is korter dan de richtlijn van 900-1400 woorden voor een sterke SEO-pagina."] : []),
+    ...(headingCount < 5 ? ["Structuur kan sterker: mik op 5-8 duidelijke H2-secties."] : []),
     ...(proofPoints.length < 2 ? ["Bewijs is nog dun: voeg cases, voorbeelden of harde context toe."] : []),
     ...(variants.length < 3 ? ["Er zijn minder varianten dan gewenst gegenereerd."] : []),
   ];

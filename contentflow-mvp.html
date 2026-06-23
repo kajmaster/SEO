@@ -1672,6 +1672,80 @@
           </div>
         </div>`;
     }
+    function countPlainWords(value) {
+      return String(value || '').trim().split(/\s+/).filter(Boolean).length;
+    }
+    function briefingQuestions() {
+      const items = [];
+      if (!$('companyName').value.trim()) items.push({ field: 'companyName', question: 'Wat is de bedrijfsnaam en in welke plaats/regio werkt het bedrijf?' });
+      if (!$('services').value.trim()) items.push({ field: 'services', question: 'Wat verkoopt of levert het bedrijf precies?' });
+      if (!$('targetAudience').value.trim()) items.push({ field: 'targetAudience', question: 'Voor wie is deze pagina bedoeld?' });
+      if (!$('services').value.trim() || !$('mainPrompt').value.trim().match(/waarom|onderscheid|verschil|sterk|kiest/i)) {
+        items.push({ field: 'services', question: 'Waarom kiezen klanten voor dit bedrijf in plaats van een alternatief?' });
+      }
+      items.push({ field: 'mainPrompt', question: 'Hoelang bestaat het bedrijf of welke ervaring/specialisatie mogen we noemen?' });
+      items.push({ field: 'mainPrompt', question: 'Welk bewijs mogen we gebruiken, zoals reviews, voorbeelden, foto\'s, certificaten of garanties?' });
+      if (!$('primaryCta').value.trim()) items.push({ field: 'primaryCta', question: 'Wat moet de lezer na het lezen doen: bellen, mailen, offerte aanvragen, bestellen of iets anders?' });
+      if (!$('toneVoice').value.trim()) items.push({ field: 'toneVoice', question: 'Welke toon past bij het bedrijf: nuchter, luxe, informeel, zakelijk, lokaal of deskundig?' });
+      return items.slice(0, 8);
+    }
+    function shouldAskForBriefing() {
+      if (state.contentType === 'topic_authority') return false;
+      const prompt = $('mainPrompt').value.trim();
+      if (/ga door|zonder extra input|zonder briefing|maak aannames|met aannames/i.test(prompt)) return false;
+      const filledSignals = ['companyName','services','targetAudience','primaryCta','toneVoice','websiteUrl']
+        .filter(id => $(id).value.trim().length > 4).length;
+      const promptWords = countPlainWords(prompt);
+      const missingCore = ['companyName','services','targetAudience','primaryCta']
+        .filter(id => !$(id).value.trim()).length;
+      return promptWords > 0 && (promptWords <= 18 || missingCore >= 3) && filledSignals < 4;
+    }
+    function renderBriefingGate() {
+      const questions = briefingQuestions();
+      $('outputTitle').textContent = 'Eerst een korte briefing';
+      $('outputSub').textContent = 'De aanvraag is nog te dun voor een goede SEO-pagina.';
+      $('outputStage').innerHTML = `
+        <div class="empty">
+          <div>
+            <div class="empty-mark">?</div>
+            <div class="empty-title">Ik schrijf nog geen eindtekst.</div>
+            <p class="empty-copy">Beantwoord eerst wat je weet. Overslaan mag, maar zonder deze context wordt de SEO-output snel generiek.</p>
+            <ol style="text-align:left;max-width:760px;margin:18px auto 0;line-height:1.7">
+              ${questions.map(item => `<li>${esc(item.question)}</li>`).join('')}
+            </ol>
+            <div class="choice-row" style="justify-content:center;margin-top:18px">
+              <button class="button primary" id="briefingFocusBtn">Briefing aanvullen</button>
+              <button class="button ghost" id="briefingAssumeBtn">Toch doorgaan met aannames</button>
+            </div>
+          </div>
+        </div>`;
+      $('briefingFocusBtn')?.addEventListener('click', () => {
+        const first = questions.find(item => $(item.field));
+        const target = first ? $(first.field) : $('mainPrompt');
+        target?.focus();
+        target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+      $('briefingAssumeBtn')?.addEventListener('click', () => {
+        $('mainPrompt').value = `${$('mainPrompt').value.trim()}\n\nGa door met voorzichtige aannames. Verzin geen bewijs, reviews, cijfers of garanties.`;
+        scoreBrief();
+        generate();
+      });
+    }
+    function renderBackendError(error) {
+      const message = error?.message || 'De backend kon geen betrouwbare output maken.';
+      state.lastResponse = null;
+      $('outputTitle').textContent = 'Generatie gestopt';
+      $('outputSub').textContent = 'Er is geen lokale nep-preview getoond, zodat slechte output niet als succes lijkt.';
+      $('outputStage').innerHTML = `
+        <div class="empty">
+          <div>
+            <div class="empty-mark">!</div>
+            <div class="empty-title">Geen publiceerbare SEO-output ontvangen.</div>
+            <p class="empty-copy">${esc(message)}</p>
+            <p class="empty-copy">Vul extra briefingcontext in of probeer opnieuw. Als dit blijft gebeuren, controleer de Netlify function logs en OpenAI/Supabase environment variables.</p>
+          </div>
+        </div>`;
+    }
     async function loadContext() {
       try {
         const data = await requestJson(ENDPOINTS.studioContext);
@@ -1702,7 +1776,7 @@
       const services = $('services').value.trim() || 'het aanbod';
       const cta = $('primaryCta').value.trim() || 'Plan een kennismaking';
       const mode = currentMode();
-      const intro = prompt || 'Maak een heldere SEO-pagina die vertrouwen opbouwt en uitlegt waarom deze oplossing relevant is.';
+      const intro = `${esc(company)} helpt ${esc(audience)} met ${esc(keyword)} door het aanbod concreet te maken, vertrouwen op te bouwen en naar een logische vervolgstap te sturen.`;
       let content = '';
       if (state.contentType === 'topic_authority') {
         content = `
@@ -1721,7 +1795,7 @@
       } else {
         content = `
           <h1>${esc(keyword)}: een pagina die vertrouwen opbouwt</h1>
-          <p>${esc(intro)}</p>
+          <p>${intro}</p>
           <h2>Voor wie deze pagina bedoeld is</h2>
           <p>Deze pagina richt zich op ${esc(audience)}. De tekst moet snel duidelijk maken waarom ${esc(company)} relevant is en welke keuze de bezoeker met vertrouwen kan maken.</p>
           <h2>Wat het aanbod sterk maakt</h2>
@@ -1738,7 +1812,7 @@
       const mode = currentMode();
       $('outputTitle').textContent = mode.loadingTitle;
       $('outputSub').textContent = 'ContentFlow verwerkt je opdracht in de gekozen vorm.';
-      $('outputStage').innerHTML = `<div class="empty"><div><div class="spinner"></div><div class="empty-title">Even schrijven.</div><p class="empty-copy">${esc(mode.loadingCopy)} Met backend-context wordt dit opgeslagen in Supabase. Anders krijg je direct een lokale preview.</p></div></div>`;
+      $('outputStage').innerHTML = `<div class="empty"><div><div class="spinner"></div><div class="empty-title">Even schrijven.</div><p class="empty-copy">${esc(mode.loadingCopy)} De backend maakt alleen output als de kwaliteitspoort dit accepteert.</p></div></div>`;
     }
     function renderOutput(data) {
       state.lastResponse = data;
@@ -2332,6 +2406,11 @@
         await runTopicScanner();
         return;
       }
+      if (shouldAskForBriefing()) {
+        renderBriefingGate();
+        toast('Eerst korte briefing aanvullen voor betere SEO-output.');
+        return;
+      }
       showLoading();
       setBusy($('generateBtn'), true, 'Maken...');
       try {
@@ -2367,9 +2446,8 @@
         renderOutput(data);
         markProgress('content_output');
       } catch (error) {
-        renderOutput(localPreview());
-        markProgress('content_output');
-        toast('Backend lukte niet, preview getoond.');
+        renderBackendError(error);
+        toast('Generatie gestopt: backend gaf geen betrouwbare output.');
       } finally {
         setBusy($('generateBtn'), false);
       }
