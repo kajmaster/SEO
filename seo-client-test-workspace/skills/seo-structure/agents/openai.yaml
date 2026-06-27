@@ -1,0 +1,4 @@
+interface:
+  display_name: "SEO-structure"
+  short_description: "Structuur voor SEO-pagina's"
+  default_prompt: "Use $seo-structure to design the page outline and section flow before writing."

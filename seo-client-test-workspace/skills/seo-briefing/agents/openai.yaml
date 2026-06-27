@@ -1,0 +1,4 @@
+interface:
+  display_name: "SEO-briefing"
+  short_description: "Briefing voor SEO-pagina's"
+  default_prompt: "Use $seo-briefing to turn a rough page request into a clear SEO content brief."

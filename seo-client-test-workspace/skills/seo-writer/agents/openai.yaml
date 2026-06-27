@@ -1,0 +1,4 @@
+interface:
+  display_name: "SEO-writer"
+  short_description: "Lange Nederlandse B2B SEO-pagina's"
+  default_prompt: "Use $seo-writer to write a long Dutch B2B SEO page or improve SEO generation instructions."

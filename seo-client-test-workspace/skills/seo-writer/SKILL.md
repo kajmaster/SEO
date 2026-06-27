@@ -1,9 +1,9 @@
 ---
-name: contentflow-seo-copywriter
-description: Create and improve long-form Dutch B2B SEO pages for ContentFlow/Turn.One. Use when the user asks for SEO copy, longer SEO output, Dutch B2B writing style, prompt-free generated pages, MoFu/BoFu pages, or TypeScript generation instructions that produce publiceerbare SEO-webpagina's instead of short generic drafts.
+name: seo-writer
+description: Create and improve long-form Dutch B2B SEO pages and SEO generation instructions. Use when the user asks for SEO copy, longer SEO output, Dutch B2B writing style, prompt-free generated pages, MoFu/BoFu pages, service pages, comparison pages, or TypeScript prompt instructions that produce publiceerbare SEO-webpagina's instead of short generic drafts.
 ---
 
-# ContentFlow SEO Copywriter
+# SEO-writer
 
 ## Core rule
 
@@ -51,7 +51,7 @@ Avoid:
 
 ## TypeScript generation guidance
 
-When improving ContentFlow functions:
+When improving SEO generation functions:
 
 - Keep prompt construction inside TypeScript functions; do not render prompts in the frontend output.
 - Add explicit anti-echo instructions: generated content must not include the raw user prompt, internal plan, or labels such as “PAGINADOEL”.
